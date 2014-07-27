@@ -7,14 +7,14 @@ import sys
 import math
 
 ## LOGGING
-def setuplog(logname):
+def setuplog(logname, logpath='logs/'):
     # Set up logging (from Logging Cookbook, Python online resources).
     # Name of log will be: lognamedDATETIME.log (spaces in logname replaced by '_')
 
     logging.basicConfig(level=logging.DEBUG,
                         format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                         datefmt='%m-%d %H:%M',
-                        filename='logs/' + logname.replace(' ','_') + datetime.now().strftime('%Y-%m-%d_%H-%M-%S')+'.log',
+                        filename= logpath + logname.replace(' ','_') + datetime.now().strftime('%Y-%m-%d_%H-%M-%S')+'.log',
                         filemode='w')
             
     # define a Handler which writes INFO messages or higher to the sys.stderr

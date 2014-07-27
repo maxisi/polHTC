@@ -29,14 +29,14 @@ process_name, psr, det, run, injkind, pdif, nSTR = sys.argv
 # note: arguments are taken as strings: need to convert to numerical values.
 n = int(nSTR)
 
+pathname = g.analysis_path(det, run, psr, injkind, pdif)
+
 # setup log
-g.setuplog('process_%(det)s%(run)s_%(psr)s_%(injkind)s%(pdif)s_' % locals()) # argument added to log filename
+g.setuplog('process_%(det)s%(run)s_%(psr)s_%(injkind)s%(pdif)s_' % locals(), logpath=pathname+'/logs/')
 log = logging.getLogger('InjSrch Process')
 
 
 ## SETUP
-
-pathname = g.analysis_path(det, run, psr, injkind, pdif)
 
 log.info('Import search-injection data.')
 

@@ -167,7 +167,7 @@ else:
 subfile_lines = [
                 'Universe = Vanilla',
                 'Executable = ' + project_dir + '/injsrch_process.py',
-                'initialdir = ' + project_dir + '/' + pathname + '/',
+                'initialdir = ' + project_dir + '/',
                 'arguments = "%(psr)s, %(det)s, %(run)s, %(kind)s, %(pdif)s, $(Process)"' % locals(),
                 'Output = ' + scratch_dir + 'injsrch-$(Process).out',
                 'Error = ' + scratch_dir + 'injsrch-$(Process).err',
