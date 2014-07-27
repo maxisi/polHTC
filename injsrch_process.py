@@ -49,7 +49,7 @@ try:
         hinj = f['inj/h'][n]
         polinj = f['inj/pol'][n]
         incinj = f['inj/inc'][n]
-except IOError:
+except:
     log.error('FATAL: did not find injsrch info in: ' + pathname, exc_info=True)
     
 log.info('Create PSR-det pair and load data and std.')
