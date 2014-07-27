@@ -95,13 +95,13 @@ for m in g.search_methods:
 
         
         # define covariance matrix
-        cov = (V.T.dot(W**2)).dot(V) # See 'Covariance' page in Polarizations tab of LIGO 2013 Notebook
+        cov = np.dot(np.dot(V.T, W**2), V) # See 'Covariance' page in Polarizations tab of LIGO 2013 Notebook
         
         VtW = V.T.dot(W)
-        Utb = np.dot(U.T,b)
+        Utb = np.dot(U.T, b)
         
         # results:
-        a = VtW.dot(Utb.T)
+        a = np.dot(VtW, Utb.T)
         
         # strength:
         if injkind in ['GR', 'G4v']:
