@@ -15,7 +15,9 @@ Creates and pickles corresponding pandas DataFrame 'pulsar_parameters'.
 '''
 
 # SET UP LOG
-g.setuplog('psrcat')
+date = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+g.setuplog(date + '_psrcat')
+
 log = logging.getLogger('psrcat')
 
 

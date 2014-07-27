@@ -14,7 +14,7 @@ def setuplog(logname, logpath='logs/'):
     logging.basicConfig(level=logging.DEBUG,
                         format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                         datefmt='%m-%d %H:%M',
-                        filename= logpath + logname.replace(' ','_') + datetime.now().strftime('%Y-%m-%d_%H-%M-%S')+'.log',
+                        filename= logpath + logname.replace(' ','_') + '.log',
                         filemode='w')
             
     # define a Handler which writes INFO messages or higher to the sys.stderr
@@ -621,7 +621,7 @@ paths = {
             }
             
 def analysis_path(det, run, psr, kind, pdif):
-    analysis = 'injsrch' + det + run + '_' + psr + '_' + kind + pdif
+    analysis = 'injsrch_' + det + run + '_' + psr + '_' + kind + pdif
     pathname = 'analyses/' + det + '/' + run + '/' + analysis
     return pathname
     

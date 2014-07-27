@@ -32,7 +32,7 @@ n = int(nSTR)
 pathname = g.analysis_path(det, run, psr, injkind, pdif)
 
 # setup log
-g.setuplog('process_%(det)s%(run)s_%(psr)s_%(injkind)s%(pdif)s_' % locals(), logpath=pathname+'/logs/')
+g.setuplog('p'+ nSTR, logpath=pathname+'/logs/')
 log = logging.getLogger('InjSrch Process')
 
 
