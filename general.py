@@ -44,6 +44,7 @@ periodLIGO = 1/16384.       # LIGO data sampling period (s), from M. Pitkin
 
 c = 299792458.              # Speed of light (m/s)
 
+search_methods = ['GR', 'G4v', 'AP', 'Sid']
 
 
 
@@ -639,8 +640,6 @@ pcat = {
         'm' : - np.pi/2.,
         '0' : 0
         }
-
-search_methods = ['GR', 'G4v', 'AP', 'Sid']
 
 
 
