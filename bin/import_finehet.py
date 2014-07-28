@@ -42,10 +42,10 @@ def imp(det, run, origin_path, destination_path):
     
     # obtain names of PSRs in directory
     allpsrs = [f.strip(pre).strip(pst) for f in fnames]
-
+    
     # open each finehet file and import to hdf5
     for psr in allpsrs:
-    
+        print psr #
         filename = pre + psr + pst
         
         with open(origin_path + filename, 'r') as f_txt:
