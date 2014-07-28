@@ -124,8 +124,14 @@ log.info('Preparing injection parameters.')
 
 # create ninj random values for pol and inc
 random.seed(2)
-polinj = [random.uniform(pol_range[0], pol_range[1]) for n in np.arange(0, ninj)]
-incinj = [random.uniform(inc_range[0], inc_range[1]) for n in np.arange(0, ninj)]
+
+pols = [random.uniform(pol_range[0], pol_range[1]) for n in np.arange(0, ninj)]
+polinj = np.zeros(ninst) # empty vector (most instantiations won't have injections)
+polinj[injLocations] = pols # injection strength index (indicates hinj for each inst)
+
+incs = [random.uniform(inc_range[0], inc_range[1]) for n in np.arange(0, ninj)]
+incinj = np.zeros(ninst) # empty vector (most instantiations won't have injections)
+incinj[injLocations] = incs # injection strength index (indicates hinj for each inst)
 
 
 ## SAVE ARRAYS
@@ -134,13 +140,17 @@ log.info('Saving rehetereodyne, injection and search parameters')
 try:
     f = h5py.File(pathname + '/info.hdf5', 'w')
     
-    f.create_dataset('srch/freq', data = freq)
-    f.create_dataset('srch/pol', data = polsrch)
-    f.create_dataset('srch/inc', data = incsrch)
+    srch_grp = f.create_group('srch')
     
-    f.create_dataset('inj/h', data = hinj)
-    f.create_dataset('inj/pol', data = polinj)
-    f.create_dataset('inj/inc', data = incinj)
+    srch_grp.create_dataset('freq', data = freq)
+    srch_grp.create_dataset('pol', data = polsrch)
+    srch_grp.create_dataset('inc', data = incsrch)
+    
+    inj_grp = f.create_group('inj')
+    
+    inj_grp.create_dataset('h', data = hinj)
+    inj_grp.create_dataset('pol', data = polinj)
+    inj_grp.create_dataset('inc', data = incinj)
     
     f.close()
 except:

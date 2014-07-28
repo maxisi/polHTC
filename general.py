@@ -471,8 +471,9 @@ class Results(object):
                 
                 # save recovered h and s
                 for m in search_methods:
-                    f.create_dataset(m + '/hrec', data = self.hrec[m])
-                    f.create_dataset(m + '/srec', data = self.srec[m])
+                    grp = create_group(m)
+                    grp.create_dataset('hrec', data = self.hrec[m])
+                    grp.create_dataset('srec', data = self.srec[m])
         except:
             message = 'Unable to save collected results to: ' + export_path
             self.log.error(message, exc_info=True)
