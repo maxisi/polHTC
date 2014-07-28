@@ -160,6 +160,8 @@ except:
 
 # WRITE SUBMIT FILE
 
+log.info('Write submit file.')
+
 home = os.path.expanduser('~')
 project_dir = home + '/polHTC'
 

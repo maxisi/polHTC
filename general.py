@@ -215,7 +215,7 @@ class Detector(object):
         try:
             with h5py.File(self.vecpath, 'r') as f:
                 # make sure time series are the same            
-                if any([f['/time'][:]!=np.array(t)]):
+                if any(f['/time'][:]!=np.array(t)):
                     self.log.warning('Detector vectors do not agree with time series.')
                     return False
                 else:
