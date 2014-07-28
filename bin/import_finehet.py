@@ -31,7 +31,7 @@ def imp(det, run, origin_path, destination_path):
     Imports det, run data for all pulsars in origin_path to destination_path (hdf5)
     '''
     
-    print('Importing: ')
+    print('Importing finehet from: ' + origin_path + '\nPSRs: ')
     
     pre = 'finehet_'
     pst = '_' + det
@@ -84,7 +84,7 @@ def imp(det, run, origin_path, destination_path):
         except:
             print '\nCould not import: ' + psr
     
-        print '\n' + det + ' ' + run + ' data for' + str(len(imported)) + ' PSRs imported to: ' + destination_path
+    print '\n' + det + ' ' + run + ' data for' + str(len(imported)) + ' PSRs imported to: ' + destination_path
 
 
 if run == 'S5':
