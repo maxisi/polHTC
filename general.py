@@ -544,6 +544,7 @@ class Cluster(object):
         elif 'atlas' in self.hostname:
             # get result of hostname -s command in bash
             hs = self.hostname.split('.')[0]
+            if hs == 'atlas3': hs = 'atlas3.atlas.aei.uni-hannover.de'
             self.scratch_dir = '/atlas/user/' + hs + '/max.isi/'
             self.public_dir  =  '/home/max.isi/WWW/LSC/'
             
