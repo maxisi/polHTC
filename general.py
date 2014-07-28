@@ -396,7 +396,7 @@ class Results(object):
         
         self.paths = {
                     'analysis' : analysis_path(det, run, psr, kind, pdif),
-                    'export'   : 'results_' + det + run + '_' + psr + '_' + kind + pdif + .'hdf5'
+                    'export'   : 'results_' + det + run + '_' + psr + '_' + kind + pdif + '.hdf5'
                     }
                     
         # Initialize result containers (DELIBERATELY NOT CONCISE TO SUPPORT NUMPY 2.6.6)
@@ -510,7 +510,7 @@ class Results(object):
         
         self.log.info('Getting analysis statistics.')
         
-        type_names = {'h' : 'hrec', 's' = 'srec'}
+        type_names = {'h' : 'hrec', 's' : 'srec'}
         
         # Initialize stats container: method/h or s/ stat kind
         self.stats = {}
