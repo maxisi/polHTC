@@ -7,7 +7,6 @@ import logging
 import numpy as np
 import random
 import h5py
-import socket
 
 import general as g
 
@@ -155,16 +154,10 @@ home = os.path.expanduser('~')
 project_dir = home + '/polHTC'
 
 # get hostname to determine what server we are on
-hostname = socket.gethostname()
+cluster = g.Cluster()
 
-if 'ldas' in hostname:
-    scratch_dir = '/usr1/max.isi/'
-elif 'atlas' in hostname:
-    # get result of hostname -s command in bash
-    hs = hostname.split('.')[0]
-    scratch_dir = '/atlas/user/' + hs + '/max.isi/'
-else:
-    scratch_dir = project_dir + '/logs/'
+# define scratch space
+scratch_dir = cluster.scratch_dir
     
 subfile_lines = [
                 'Universe = Vanilla',

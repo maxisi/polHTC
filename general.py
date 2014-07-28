@@ -5,6 +5,7 @@ import cPickle as pickle
 import h5py
 import sys
 import math
+import socket
 
 ## LOGGING
 def setuplog(logname, logpath='logs/'):
@@ -382,6 +383,173 @@ class Pair(object):
         
         return np.array(dm)
 
+class Results(object):
+    def __init__(self, det, run, psr, kind, pdif):
+
+        self.log = logging.getlogger('Results')
+
+        self.det = det
+        self.run = run
+        self.psr = psr
+        self.injkind = kind
+        self.pdif = pdif
+        
+        self.paths = {
+                    'analysis' : analysis_path(det, run, psr, kind, pdif),
+                    'export'   : 'results_' + det + run + '_' + psr + '_' + kind + pdif + .'hdf5'
+                    }
+                    
+        # Initialize result containers (DELIBERATELY NOT CONCISE TO SUPPORT NUMPY 2.6.6)
+        self.hrec = {} # recovered strength
+        self.srec = {} # recovery significance
+        for m in search_methods:
+            self.hrec[m] = []
+            self.srec[m] = []
+
+    def collect(self):
+        '''
+        Collects results from multiple files in analysis_path/results as produced by
+        submitting several injsrch_process jobs to Condor.
+        '''
+        
+        self.log.info('Collecting results.')
+        
+        path = self.paths['analysis']
+        
+        try:
+            with h5py.File(path + '/info.hdf5', 'r') as f:
+                self.hinj = f['inj/h'][n]
+        except:
+            self.log.error('FATAL: did not find injsrch info in: ' + path, exc_info=True)
+        
+        self.ninst = len(self.hinj)
+        self.ninj = len(np.flatnonzero(self.hinj)) # count nonzero elements in hinj
+        
+        self.log.debug('Collecting results.')
+                
+        try:
+            for n in np.arange(0, self.ninst):
+                filename = path + '/results/r' + str(n) + '.p'
+            
+                with open(filename, 'rb') as f:
+                
+                    # load results dictionary
+                    results = pickle.load(f)
+                
+                    # for each method retrieve h and s
+                    for m in search_methods:
+                        self.h[m] += [results[m]['h']]
+                        self.s[m] += [results[m]['s']]
+        except:
+            message = 'Unable to load info from result files.'
+            self.log.error(message, exc_info=True)
+            print message
+        
+        return self.hrec, self.srec
+    
+    def export(self, path=''):
+        '''
+        Exports collected result to hdf5 file. If no origin path is provided, takes cluster
+        public access folder as destination.
+        '''
+
+        self.log.info('Exporting results.')
+        
+        if path=='':        
+            # Determine export destination.
+            cluster = Cluster()
+            path = cluster.public_dir
+        
+        export_path = path + self.paths['export']
+        
+        try:
+            with h5py.File(export_path, 'w') as f:
+                
+                # save injected h
+                f.create_dataset('hinj', data = self.hinj)
+                
+                # save recovered h and s
+                for m in search_methods:
+                    f.create_dataset(m + '/hrec', data = self.hrec[m])
+                    f.create_dataset(m + '/srec', data = self.srec[m])
+        except:
+            message = 'Unable to save collected results to: ' + export_path
+            self.log.error(message, exc_info=True)
+            print message
+            
+    def load(self, path=''):
+        '''
+        Loads collected results from hdf5 file. If no origin path is provided, takes cluster
+        public access folder as destination.
+        '''
+        self.log.info('Exporting results.')
+        
+        if path=='':        
+            # Determine export destination.
+            cluster = Cluster()
+            path = cluster.public_dir
+        
+        export_path = path + self.paths['export']
+        
+        try:
+            with h5py.File(export_path, 'r') as f:
+                
+                # save injected h
+                self.hinj = f['hinj'][:]
+                
+                # save recovered h and s
+                for m in search_methods:
+                    self.hrec[m] = f[m + '/hrec'][:]
+                    self.srec[m] = f[m + '/srec'][:]
+        except:
+            message = 'Unable to load collected results from: ' + export_path
+            self.log.error(message, exc_info=True)
+            print message
+            
+    def get_stats(self, methods=search_methods, types=['h','s']):
+        
+        self.log.info('Getting analysis statistics.')
+        
+        type_names = {'h' : 'hrec', 's' = 'srec'}
+        
+        # Initialize stats container: method/h or s/ stat kind
+        self.stats = {}
+        
+        for m in methods:
+            for type in types:
+                for sk in stat_kinds:
+                    self.stats[m] = {type : {sk: 0}}
+                    # INCOMPLETE!
+            
+        
+        
+class Cluster(object):
+    
+    def __init__(self, name=''):
+        
+        # Set identity
+        if name=='':
+            # get hostname to determine what server we are on
+            self.hostname = socket.gethostname()
+        else:
+            self.hostname = name
+        
+        # Determine scratch and public directories
+        if 'ldas' in self.hostname:
+            self.scratch_dir = '/usr1/max.isi/'
+            self.public_dir  = '/home/max.isi/public_html/'
+            
+        elif 'atlas' in self.hostname:
+            # get result of hostname -s command in bash
+            hs = self.hostname.split('.')[0]
+            self.scratch_dir = '/atlas/user/' + hs + '/max.isi/'
+            self.public_dir  =  '/home/max.isi/WWW/LSC/'
+            
+        else:
+            scratch_dir = 'logs/'
+            public_dir  = ''        
+
+        
 
 ## TEMPLATE INFORMATION
 
@@ -473,6 +641,8 @@ pcat = {
         }
 
 search_methods = ['GR', 'G4v', 'AP', 'Sid']
+
+
 
 ## DETECTOR INFORMATION
 
@@ -610,6 +780,96 @@ def mjd_gps(mjd):
     # Converts MJD time to GPS time (taken from LALBarycenter.c line 749)
     tgps = 86400.*(mjd - 44244.) - 51.184
     return tgps
+
+## STATISTICS
+statkinds = [
+            'slope',    # slope of linear fit to recovered injections (ignoring hinj=0)
+            'noise',    # noise line
+            'inter',    # hinj for which fit intersects noise line
+            'rmse',     # root mean square error of lin. fit
+            'min_det'   # minimum value above noise line
+            ]
+
+def lin_fit(x_in, y_in):
+    '''
+    Performs a linear fit: y = m x. Returns m. (Ignores values of x=0)
+    '''
+    
+    ## Get injections
+    
+    # Mask zero-valued entries so that they are ignored
+    # (See http://docs.scipy.org/doc/numpy/reference/maskedarray.generic.html)
+    x_nozeros = np.ma.masked_equal(x_in,0)
+    
+    # get indices of x=0
+    zero_index = np.flatnonzero(x_in)
+    # get valid values of y
+    y_nozeros = np.delete(y_in, zero_index)
+    
+    # Put vectors in proper shape
+    x = np.reshape(x_nozeros, (len(x_nozeros), 1))
+    y = np.reshape(y_nozeros, (len(y_nozeros), 1))
+    
+    # fit
+    p, _, _, _ = np.linalg.lstsq(x, y)
+    
+    return np.poly1d([p[0][0], 0])
+    
+        
+def noise_line(d):
+    # input can be a dataframe
+    # find elements with index 0 (no injection) and take their max over columns and rows
+    try:
+        max_n = d[0].max()
+    except KeyError:
+        max_n =d.T[0].max().max()
+    # return corresponding constant polynomial
+    return np.poly1d([max_n])
+
+def rmse(d):
+    # computes RMSE between d and its best-fit line
+
+    # get injections
+    d = d.drop([0])
+
+    x = np.reshape(d.index, (len(d), 1)) # take injections
+    y = np.reshape(d, (len(d), 1)) # take recovered values
+
+    # fit and obtain sum of residuals (squared Euclidean 2-norm for each column in b - a*x)
+    _, residuals, _, _ = np.linalg.lstsq(x, y)
+
+    # sum of residuals = Sum[(x-y)^2], so RMSE = sqrt(s.o.r/N)
+    return np.sqrt(residuals[0]/len(d))
+
+def min_det_h(d):
+    # assumes input is a series
+    # get max noise
+    noise = noise_line(d)(1)
+    
+    # find max injection below that
+    d2 = d[d<noise]
+    det_injs = d2[d2.index>0]
+    
+    try:
+        print 'Get min'
+        
+        return det_injs.index[np.argmax(det_injs)]
+    except ValueError:
+	print 'ValueError'
+        return 0
+
+    
+    
+def fit_intersect_noise(d):
+    # assumes input is a series
+    
+    noise = noise_line(d)       # noise line
+    fit = lin_fit(d)            # fit line
+    hdetmin = min_det_h(d)      # min detected h (probably around intersection)
+    
+    h_intersect = fsolve(lambda x: fit(x) - noise(x), hdetmin)
+    
+    return h_intersect[0]
 
 
 ## PATHS
