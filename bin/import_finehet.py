@@ -21,7 +21,7 @@ destination_path = 'globals/data/' + det + '/' + run + '/'
 try:
     os.makedirs(destination_path)
 except OSError:
-    print 'Warning: "%(p)s" already exists' % locals()
+    print 'Warning: "%(destination_path)s" already exists' % locals()
 
 
 # IMPORT DATA
@@ -40,12 +40,17 @@ def imp(det, run, origin_path, destination_path):
     #   1. filename contains 'finehet'
     #   2. filename ends with detector name
     # (thus discarding aux files)
-    fnames = [x for x in os.listdir(destination_path) if ('finehet' in x and x.find(det)==(len(x)-2))]
-    
+    fnames = [x for x in os.listdir(origin_path) if ('finehet' in x and x.find(det)==(len(x)-2))]
+    print fnames
+    print '\n'
     # obtain names of PSRs in directory
     allpsrs = [f.strip(pre).strip(pst) for f in fnames]
+<<<<<<< HEAD
     imported = []
     
+=======
+    print allpsrs
+>>>>>>> FETCH_HEAD
     # open each finehet file and import to hdf5
     for psr in allpsrs:
         
@@ -88,7 +93,7 @@ def imp(det, run, origin_path, destination_path):
 
 
 if run == 'S5':
-
+    print run
     origin_path = '/home/matthew/analyses/S5/V4/fine/' + det + '/total/'
 
     imp(det, run, origin_path, destination_path)
@@ -112,3 +117,6 @@ elif run in ['S6', 'VSR']:
     # J0537-6910 (took full)
     
     for p in o_paths: imp(det, run, p, destination_path)
+
+else:
+    print 'Did not recognize "' + run + '" as a valid run'
