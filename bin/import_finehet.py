@@ -75,7 +75,7 @@ def imp(det, run, origin_path, destination_path):
                     f_hdf5.create_dataset('data', data=d, dtype=np.complex_)
                     
                     imported += [psr] # mark as successfully imported
-                    print psr + ', '
+                    print(psr + ', ')
                     
                 except IOError:
                     print 'Could not write finehet to HDF5:'
@@ -84,7 +84,7 @@ def imp(det, run, origin_path, destination_path):
         except:
             print '\nCould not import: ' + psr
     
-    print '\n' + det + ' ' + run + ' data for' + str(len(imported)) + ' PSRs imported to: ' + destination_path
+    print '\n' + det + ' ' + run + ' data for ' + str(len(imported)) + ' PSRs imported to: ' + destination_path
 
 
 if run == 'S5':
