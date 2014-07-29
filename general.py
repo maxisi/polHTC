@@ -391,8 +391,12 @@ class Pair(object):
 
 class Results(object):
     def __init__(self, det, run, psr, kind, pdif):
-
-        self.log = logging.getlogger('Results')
+        
+        try:
+            self.log = logging.getLogger('Results')
+        except:
+            setuplog('results_%(det)s_%(run)s_%(psr)s_%(kind)s%(pdif)s' % locals())
+            self.log = logging.getLogger('Results')
 
         self.det = det
         self.run = run
@@ -424,17 +428,17 @@ class Results(object):
         
         try:
             with h5py.File(path + '/info.hdf5', 'r') as f:
-                self.hinj = f['inj/h'][n]
+                self.hinj = f['inj/h'][:]
         except:
             self.log.error('FATAL: did not find injsrch info in: ' + path, exc_info=True)
-        
+
         self.ninst = len(self.hinj)
         self.ninj = len(np.flatnonzero(self.hinj)) # count nonzero elements in hinj
         
         self.log.debug('Collecting results.')
                 
-        try:
-            for n in np.arange(0, self.ninst):
+        for n in np.arange(0, self.ninst):
+            try:
                 filename = path + '/results/r' + str(n) + '.p'
             
                 with open(filename, 'rb') as f:
@@ -444,12 +448,13 @@ class Results(object):
                 
                     # for each method retrieve h and s
                     for m in search_methods:
-                        self.h[m] += [results[m]['h']]
-                        self.s[m] += [results[m]['s']]
-        except:
-            message = 'Unable to load info from result files.'
-            self.log.error(message, exc_info=True)
-            print message
+                        self.hrec[m] += [results[m]['h']]
+                        self.srec[m] += [results[m]['s']]
+            except:
+                message = 'Unable to load result info from: ' + filename
+                self.log.error(message, exc_info=True)
+                print message
+                print sys.exc_info()
         
         return self.hrec, self.srec
     
