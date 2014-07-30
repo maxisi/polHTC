@@ -69,8 +69,8 @@ inst = g.het(freq, pair.data, pair.time)
 
 # inject if needed
 if hinj != 0:
-    log.info('Injecting.') # WARNING FACTOR OF 4 SHOLD BE 2
-    inst += (hinj/4.) * pair.signal(injkind, pdif, polinj, hinj) # note factor of 1/2, see MP (2.12)
+    log.info('Injecting.')
+    inst += (hinj/2.) * pair.signal(injkind, pdif, polinj, hinj) # note factor of 1/2, see MP (2.12)
 
 # setup results
 results = {}
