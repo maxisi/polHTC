@@ -385,11 +385,11 @@ class Pair(object):
             wx, wy, wz = self.psr.vectors(psi=pol)
         
             # Build design matrix
-            # NOTE: THERE'S SCALING OF h AT THIS STAGE!
+            # NOTE: THERE'S NO SCALING OF h AT THIS STAGE!
         
             dm = []
             for A, a in templateinfo[kind].iteritems():
-                dm += [a(inc, '0') * (A(dx,dy,wx,wy,wz))/2.]
+                dm += [a(inc, '0') * (A(dx,dy,wx,wy,wz))]
         
         return np.array(dm)
 
