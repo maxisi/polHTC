@@ -105,7 +105,7 @@ for m in g.search_methods:
         
         # strength:
         if injkind in ['GR', 'G4v']:
-            h = 2. * (abs(a).sum()) / len(a)
+            h = (abs(a).sum()) / len(a)
         else:
             h = np.linalg.norm(a)
         

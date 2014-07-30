@@ -251,7 +251,11 @@ class Pair(object):
         self.psr = Pulsar(psrname)
         self.det = Detector(detname)
         
-        self.log = logging.getLogger('Pair')
+        try:
+            self.log = logging.getLogger('Pair')
+        except:
+            setuplog('pair')
+            self.log = logging.getLogger('Pair')
 
     def load_finehet(self, run, p='', check_vectors=False, load_vectors=False):
         
@@ -281,8 +285,8 @@ class Pair(object):
             if load_vectors: self.det.load_vectors(self.time)
 
         except IOError:
-            self.log.error('FATAL: No PSR data found in: ' + p)
-            sys.exit()
+            self.log.error('FATAL: No PSR data found in: ' + p,exc_info=True)
+            print sys.exc_info()
     
     def get_sigma(self):
         '''
@@ -381,11 +385,11 @@ class Pair(object):
             wx, wy, wz = self.psr.vectors(psi=pol)
         
             # Build design matrix
-            # NOTE: THERE'S NO SCALING OF h AT THIS STAGE!
+            # NOTE: THERE'S SCALING OF h AT THIS STAGE!
         
             dm = []
             for A, a in templateinfo[kind].iteritems():
-                dm += [a(inc, '0') * (A(dx,dy,wx,wy,wz))]
+                dm += [a(inc, '0') * (A(dx,dy,wx,wy,wz))/2.]
         
         return np.array(dm)
 
@@ -631,12 +635,12 @@ def lo(dx,dy,wx,wy,wz):
  
 templateinfo = { # (n = norm, p = phase)
         'GR'  : {
-                pl : lambda iota, pdif : (1. + np.cos(iota)**2)/2.,
+                pl : lambda iota, pdif : (1. + np.cos(iota)**2)/2. + 0j,
                 cr : lambda iota, pdif : np.cos(iota) * np.exp(1j*pcat[pdif])
                },
                 
         'G4v' : {
-                xz : lambda iota, pdif : np.sin(iota),
+                xz : lambda iota, pdif : np.sin(iota) + 0j,
                 yz : lambda iota, pdif : np.sin(iota)*math.cos(iota) * np.exp(1j*pcat[pdif])
                 },
         'AP'  : {
