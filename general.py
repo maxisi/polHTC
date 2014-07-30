@@ -389,7 +389,7 @@ class Pair(object):
         
             dm = []
             for A, a in templateinfo[kind].iteritems():
-                dm += [a(inc, '0') * (A(dx,dy,wx,wy,wz))]
+                dm += [(a(inc, '0') + 0j) * (A(dx,dy,wx,wy,wz) + 0j)]
         
         return np.array(dm)
 
@@ -644,11 +644,11 @@ templateinfo = { # (n = norm, p = phase)
                 yz : lambda iota, pdif : np.sin(iota)*math.cos(iota) * np.exp(1j*pcat[pdif])
                 },
         'AP'  : {
-                pl : lambda iota, pdif : 1.,
-                cr : lambda iota, pdif : 1.,
-                xz : lambda iota, pdif : 1.,
-                yz : lambda iota, pdif : 1.,
-                br : lambda iota, pdif : 1.
+                pl : lambda iota, pdif : 1. + 0j,
+                cr : lambda iota, pdif : 1. + 0j,
+                xz : lambda iota, pdif : 1. + 0j,
+                yz : lambda iota, pdif : 1. + 0j,
+                br : lambda iota, pdif : 1. + 0j
                 }
                }
 
