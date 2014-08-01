@@ -154,12 +154,14 @@ class Pulsar(object):
         
         self.log.info('Computing source vectors.')
         
-    def vectors(self, psi=0, save=False):
+    def vectors(self, psi=None, save=False):
         '''
         Returns source vectors. Polarization angle psi can be provided (default psi=0).
         Vectors are not saved in class unless the save=True. Note that there is almost no
         computational advantage in saving these vectors: they are inexpensive to compute.
         '''
+        
+        if psi == None: psi = self.param['POL']
         
         wx, wy, wz = srcarms(self.param['DEC'], self.param['RAS'], psi)
         
@@ -389,7 +391,7 @@ class Pair(object):
         
             dm = []
             for A, a in templateinfo[kind].iteritems():
-                dm += [(a(inc, '0') + 0j) * (A(dx,dy,wx,wy,wz) + 0j)]
+                dm += [a(inc, '0') * (A(dx,dy,wx,wy,wz) + 0j)]
         
         return np.array(dm)
 
@@ -623,7 +625,7 @@ def lo(dx,dy,wx,wy,wz):
     wzdx = np.dot(dx, wz)
     wzdy = np.dot(dy, wz)
     # AJW Note (5) divided by 2 & multiplied by sqrt(2)
-    return np.sqrt(2)*(wzdx**2 - wzdy**2) #/2.
+    return np.sqrt(2)*(wzdx**2 - wzdy**2)/2.
     # Modified:1/2 (based on derivation of dyadic products using tensors shown in 
     # "Gravitational wave polarizations" by Bryant Garcia.
     # The factor of 2 shouldn't be there) # THIS NEEDS CHECKING!
@@ -730,6 +732,21 @@ detparams = { # source for LIGO: LIGO-T980044; else: http://arxiv.org/abs/gr-qc/
         }
 
        
+## POLARIZATIONS
+
+pol_sym = { 'pl' : '+', 'cr' : '\\times', 'xz' : 'x', 'yz' : 'y', 'br' : 'b', 'lo' : 'l'}
+
+pol_names = {
+            'pl' : 'plus',
+            'cr' : 'cross',
+            'xz' : 'vector x',
+            'yz' : 'vector y',
+            'br' : 'breathing',
+            'lo' : 'longitudinal'}
+
+pols = ['pl', 'cr', 'br', 'lo', 'xz', 'yz']
+
+
 ## PULSAR INFORMATION
 
 paramNames = [
