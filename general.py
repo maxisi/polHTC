@@ -320,14 +320,18 @@ class Pair(object):
         i_0 = 0
         self.sigma = []
         for c in count:
-          i_f = i_0 + c  # create final index
-          
-          segment = self.data[i_0:i_f] # pick day-worth of data
-          
-          self.sigma += [np.std(segment)] * c # take std and add to array
-          
-          i_0 = i_f # update initial index
-          
+            if c!=0:
+                i_f = i_0 + c  # create final index
+
+                segment = self.data[i_0:i_f] # pick day-worth of data
+
+                self.sigma += [np.std(segment)] * c # take std and add to array
+
+                i_0 = i_f # update initial index
+        
+        # See: http://www.uni-klu.ac.at/tewi/downloads/masterthesis_TrampitschStefan_Final_Version.pdf
+        # For info about std of complex-valued data.
+        
         return np.array(self.sigma)
           
     def signal(self, kind, pdif, pol, inc):
@@ -690,22 +694,16 @@ def detnames(d):
     
 detparams = { # source for LIGO: LIGO-T980044; else: http://arxiv.org/abs/gr-qc/9607075)
         'LHO': {
-#                 'lat': 0.81079526, # N 46deg 27'18.528''
-#                 'lon': -2.084056769, # W 119deg 24'27.5657''
-#                 'x_east': 2.199, # N 35.9994deg W
-                'lat': 0.8107054375513661,
-                'lon': -2.084097659806429,
-                'x_east': 2.199114857512855,
+                'lat': 0.81079526, # N 46deg 27'18.528''
+                'lon': -2.084056769, # W 119deg 24'27.5657''
+                'x_east': 2.199, # N 35.9994deg W
                 'arm_ang': np.pi/2.
                 },
     
         'LLO': {
-#                 'lat': 0.533423135, # N 30deg 33'46.4196''
-#                 'lon': -1.584309371, # W 90deg 46'27.2654''
-#                 'x_east': 3.4508, # S 72.2835deg W
-                'lat': 0.5333726194094671, 
-                'lon': -1.584235362035253,
-                'x_east': 3.4505159311927893,
+                'lat': 0.533423135, # N 30deg 33'46.4196''
+                'lon': -1.584309371, # W 90deg 46'27.2654''
+                'x_east': 3.4508, # S 72.2835deg W
                 'arm_ang': np.pi/2.
                 },
     
