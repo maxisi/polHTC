@@ -445,9 +445,10 @@ class Results(object):
         self.ninst = len(self.hinj)
         self.ninj = len(np.flatnonzero(self.hinj)) # count nonzero elements in hinj
         
-        self.log.debug('Collecting results.')
+        self.log.debug('Looping over files.')
                 
         for n in np.arange(0, self.ninst):
+            self.log.debug('File ' + n)
             try:
                 filename = path + '/results/r' + str(n) + '.p'
             
