@@ -7,7 +7,9 @@ import sys
 import math
 import socket
 
+##########################################################################################
 ## LOGGING
+
 def setuplog(logname, logpath='logs/'):
     # Set up logging (from Logging Cookbook, Python online resources).
     # Name of log will be: lognamedDATETIME.log (spaces in logname replaced by '_')
@@ -32,7 +34,9 @@ def setuplog(logname, logpath='logs/'):
     logging.getLogger('').addHandler(console)
 
 
-## CONSTANTS
+##########################################################################################
+# CONSTANTS
+
 ss = 86164.0905             # Seconds in a sidereal day
 
 w = 2*np.pi/ss              # Sidereal angular frequency of Earth
@@ -48,7 +52,9 @@ search_methods = ['GR', 'G4v', 'AP', 'Sid']
 
 
 
-## FUNCTIONS
+##########################################################################################
+# FUNCTIONS
+
 def detarms(lat, lon, x_east, arm_ang, t):
     '''
     Computes detector arms for given detector parameters and time vector.
@@ -131,8 +137,8 @@ def phase2(pinj):
         return str(pinj)
         
     
-        
-## OBJECTS
+##########################################################################################
+# OBJECTS
 
 class Pulsar(object):
     def __init__(self, psrname):
@@ -172,6 +178,7 @@ class Pulsar(object):
             self.psi = psi
         
         return wx, wy, wz       
+
 
 class Detector(object):
     def __init__(self, detname):
@@ -243,6 +250,7 @@ class Detector(object):
             self.dz = f['/dz'][:]
             
         self.log.debug('Detector vectors loaded.')
+
 
 class Pair(object):
     '''
@@ -399,6 +407,7 @@ class Pair(object):
         
         return np.array(dm)
 
+
 class Results(object):
     def __init__(self, det, run, psr, kind, pdif):
         
@@ -546,7 +555,6 @@ class Results(object):
                     # INCOMPLETE!
             
         
-        
 class Cluster(object):
     
     def __init__(self, name=''):
@@ -575,8 +583,8 @@ class Cluster(object):
             public_dir  = ''        
 
         
-
-## TEMPLATE INFORMATION
+##########################################################################################
+# TEMPLATE INFORMATION
 
 # Polarization functions:
 
@@ -661,8 +669,8 @@ pcat = {
         }
 
 
-
-## DETECTOR INFORMATION
+##########################################################################################
+# DETECTOR INFORMATION
 
 ligoruns = ('S5', 'S6')
 virgoruns = ('S1', 'S2')
@@ -725,8 +733,9 @@ detparams = { # source for LIGO: LIGO-T980044; else: http://arxiv.org/abs/gr-qc/
                 }
         }
 
-       
-## POLARIZATIONS
+
+##########################################################################################
+# POLARIZATIONS
 
 pol_sym = { 'pl' : '+', 'cr' : '\\times', 'xz' : 'x', 'yz' : 'y', 'br' : 'b', 'lo' : 'l'}
 
@@ -747,7 +756,8 @@ pol_kinds = {
 pols = ['pl', 'cr', 'br', 'lo', 'xz', 'yz']
 
 
-## PULSAR INFORMATION
+##########################################################################################
+# PULSAR INFORMATION
 
 paramNames = [
                 '#',
@@ -775,8 +785,22 @@ paramFormat = {
                 'DEC error' : lambda x: np.radians(dms_deg(0., 0., x))
                 }
 
+# read PSR list
+def read_psrlist():
+    log = logging.getLogger('psrlst')
+    psrs = []
+    try:
+    
+        with open(paths['psrlist'], 'r') as f:
+            for line in f.readlines():
+                psrs += [line.strip()] # (.strip() removes \n character)
+        return psrs
 
-# conversions
+    except:
+        message = 'Could not open psrlist text in: ' + paths['psrlist']
+        log.error(message, exec_info=True)
+
+# CONVERSIONS
 def hmsformat(*args):
     if len(args[0]) == 1:
         # Assume hh:mm:ss format
@@ -820,7 +844,10 @@ def mjd_gps(mjd):
     tgps = 86400.*(mjd - 44244.) - 51.184
     return tgps
 
-## STATISTICS
+
+##########################################################################################
+# STATISTICS
+
 statkinds = [
             'slope',    # slope of linear fit to recovered injections (ignoring hinj=0)
             'noise',    # noise line
@@ -898,7 +925,6 @@ def min_det_h(d):
         return 0
 
     
-    
 def fit_intersect_noise(d):
     # assumes input is a series
     
@@ -911,10 +937,13 @@ def fit_intersect_noise(d):
     return h_intersect[0]
 
 
-## PATHS
+##########################################################################################
+# PATHS
+
 paths = {
             'extrapsrparam' : 'config/psrextra.txt',
             'psrcat' : 'globals/psrcat.p',
+            'psrlist' : 'config/psrlist.txt',
             'originalData' : '/home/matthew/analyses/S6_all/results',
             'vectors' : 'globals/vectors'
             }
