@@ -448,7 +448,7 @@ class Results(object):
         self.log.debug('Looping over files.')
                 
         for n in np.arange(0, self.ninst):
-            self.log.debug('File ' + n)
+            self.log.debug('File ' + str(n))
             try:
                 filename = path + '/results/r' + str(n) + '.p'
             
