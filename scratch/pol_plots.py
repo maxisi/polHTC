@@ -41,36 +41,55 @@ dx = det.dx; dy = det.dy
 tick_locs = np.linspace(t[0], t[-1], 5)
 tick_name = ['00:00', '06:00', '12:00', '18:00', '24:00']
 
-if kind == 'all':
+if 'all' in kind:
     plots_dir += 'pols/'
         
     for p in g.pols:
-        plt.plot(t, getattr(g, p)(dx,dy,wx,wy,wz))
+        plt.plot(t, getattr(g, p)(dx,dy,wx,wy,wz), label='$' + g.pol_sym[p] + '$')
         
-        plt.title(g.detnames(detname) + ' response to ' + g.pol_sym[p] + ' signals from ' + psr)
+        if kind=='all':
+            plt.title(g.detnames(detname) + ' response to ' + g.pol_names[p] + ' signals from ' + psr)
+
+            plt.ylim(-1,1)
+            plt.xlim(t[0], t[-1])
+        
+            plt.grid(b=True, axis='y')
+        
+            plt.ylabel('$A_{' + g.pol_sym[p] + '}$')
+            plt.xlabel('UTC Time (h)')
+        
+            plt.xticks(tick_locs, tick_name)
+        
+            plt.savefig('%(plots_dir)spol_%(p)s_%(detname)s_%(psr)s.pdf' % locals(), bbox_inches='tight')
+            plt.close()
+    
+    if kind != 'all':
+        plt.title(g.detnames(detname) + ' response to signals from ' + psr)
 
         plt.ylim(-1,1)
         plt.xlim(t[0], t[-1])
-        
+    
         plt.grid(b=True, axis='y')
-        
-        plt.ylabel('$A_{' + g.pol_sym[p] + '}$')
+    
+        plt.ylabel('$A_{p}$')
         plt.xlabel('UTC Time (h)')
         
+        plt.legend(numpoints=1, loc='lower right', ncol=3)
+    
         plt.xticks(tick_locs, tick_name)
-        
-        plt.savefig('%(plots_dir)spol_%(p)s_%(detname)s_%(psr)s.pdf' % locals(), bbox_inches='tight')
+    
+        plt.savefig('%(plots_dir)spol_all_%(detname)s_%(psr)s.pdf' % locals(), bbox_inches='tight')
         plt.close()
 
 elif kind in g.pols:
     
     plots_dir += 'pols/'
     
-    p = type
+    p = kind
     
     plt.plot(t, getattr(g, p)(dx,dy,wx,wy,wz))
     
-    plt.title(g.detnames(detname) + ' response to ' + g.pol_sym[p] + ' signals from ' + psr)
+    plt.title(g.detnames(detname) + ' response to ' + g.pol_names[p] + ' signals from ' + psr)
 
     plt.ylim(-1,1)
     plt.xlim(t[0], t[-1])
@@ -83,6 +102,29 @@ elif kind in g.pols:
     plt.xticks(tick_locs, tick_name)
     
     plt.savefig('%(plots_dir)spol_%(p)s_%(detname)s_%(psr)s.pdf' % locals(), bbox_inches='tight')
+    plt.close()
+
+elif kind in ['scalar', 'vector', 'tensor']:
+    plots_dir += 'pols/'
+        
+    for p in g.pol_kinds[kind]:
+        plt.plot(t, getattr(g, p)(dx,dy,wx,wy,wz), label='$'+g.pol_sym[p]+'$')
+        
+    plt.title(g.detnames(detname) + ' response to ' + kind + ' signals from ' + psr)
+
+    plt.ylim(-1,1)
+    plt.xlim(t[0], t[-1])
+    
+    plt.grid(b=True, axis='y')
+    
+    plt.ylabel('$A_{p}$')
+    plt.xlabel('UTC Time (h)')
+    
+    plt.xticks(tick_locs, tick_name)
+    
+    plt.legend(numpoints=1, loc='lower left')
+    
+    plt.savefig('%(plots_dir)spol_%(kind)s_%(detname)s_%(psr)s.pdf' % locals(), bbox_inches='tight')
     plt.close()
 
 elif kind in ['GRp', 'GRm', 'GR0', 'G4vp', 'G4vm', 'G4v0']:

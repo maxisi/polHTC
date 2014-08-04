@@ -586,7 +586,7 @@ def pl(dx,dy,wx,wy,wz):
     wxdy = np.dot(dy, wx)
     wydx = np.dot(dx, wy)
     wydy = np.dot(dy, wy)
-    # AJW Note (1) divided by 2
+    # Cross checked with PRD 85, 043005 (2012), PRD 79, 082002 (2009)
     return (wxdx**2 - wxdy**2 - wydx**2 + wydy**2)/2.
     
 def cr(dx,dy,wx,wy,wz):
@@ -594,7 +594,7 @@ def cr(dx,dy,wx,wy,wz):
     wydx = np.dot(dx, wy)
     wxdy = np.dot(dy, wx)
     wydy = np.dot(dy, wy)
-    # AJW Note (3) divided by 2
+    # Cross checked with PRD 85, 043005 (2012), PRD 79, 082002 (2009)
     return wxdx * wydx - wxdy * wydy
 
 # - vector
@@ -603,7 +603,7 @@ def xz(dx,dy,wx,wy,wz):
     wzdx = np.dot(dx, wz)
     wxdy = np.dot(dy, wx)
     wzdy = np.dot(dy, wz)
-    # AJW Note (6) divided by 2
+    # Cross checked with PRD 85, 043005 (2012), PRD 79, 082002 (2009)
     return wxdx * wzdx - wxdy * wzdy
 
 def yz(dx,dy,wx,wy,wz):
@@ -611,7 +611,7 @@ def yz(dx,dy,wx,wy,wz):
     wzdx = np.dot(dx, wz)
     wydy = np.dot(dy, wy)
     wzdy = np.dot(dy, wz)
-    # AJW Note (7) divided by 2
+    # Cross checked with PRD 85, 043005 (2012), PRD 79, 082002 (2009)
     return wydx * wzdx - wydy * wzdy
 
 # - scalar
@@ -620,19 +620,14 @@ def br(dx,dy,wx,wy,wz):
     wxdy = np.dot(dy, wx)
     wydx = np.dot(dx, wy)
     wydy = np.dot(dy, wy)
-    # AJW Note (4) divided by 2 & multiplied by sqrt(2)
-    return np.sqrt(2)*(wxdx**2 - wxdy**2 + wydx**2 - wydy**2)/2.
-    # Added factor of sqrt(2) to distribute power equally among polarizations.
-    # Same for longitudinal. # THIS NEEDS CHECKING!
+    # Cross checked with PRD 85, 043005 (2012), PRD 79, 082002 (2009)
+    return (wxdx**2 - wxdy**2 + wydx**2 - wydy**2)/2.
 
 def lo(dx,dy,wx,wy,wz):
     wzdx = np.dot(dx, wz)
     wzdy = np.dot(dy, wz)
-    # AJW Note (5) divided by 2 & multiplied by sqrt(2)
+    # Cross checked with PRD 85, 043005 (2012), PRD 79, 082002 (2009)
     return np.sqrt(2)*(wzdx**2 - wzdy**2)/2.
-    # Modified:1/2 (based on derivation of dyadic products using tensors shown in 
-    # "Gravitational wave polarizations" by Bryant Garcia.
-    # The factor of 2 shouldn't be there) # THIS NEEDS CHECKING!
 
 # templateinfo dictionary includes an entry for each template. In turn, each entry contains
 # a dictionary indexed by AP function and containing the weight associated to the polarization.
@@ -741,6 +736,12 @@ pol_names = {
             'yz' : 'vector y',
             'br' : 'breathing',
             'lo' : 'longitudinal'}
+
+pol_kinds = {
+            'vector' : ['xz', 'yz'],
+            'tensor' : ['pl', 'cr'],
+            'scalar' : ['br', 'lo']
+            }
 
 pols = ['pl', 'cr', 'br', 'lo', 'xz', 'yz']
 
@@ -924,6 +925,10 @@ def analysis_path(det, run, psr, kind, pdif):
     
 def submit_path(det, run, psr, kind, pdif):
     p = 'subs/injsrch_%(det)s%(run)s_%(psr)s_%(kind)s%(pdif)s.sub' % locals()
+    return p
+    
+def dag_path(det, run, psr):
+    p = 'subs/single_%(det)s%(run)s_%(psr)s.dag' % locals()
     return p
     
 localpaths = [
