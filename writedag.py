@@ -1,5 +1,6 @@
 #! /usr/bin/env python 
 
+import os
 import sys
 import general as g
 
@@ -22,14 +23,17 @@ else:
 # lines() helps write DAG
 def lines(det, run, psr, injkind, pdif, ninstSTR, ninjSTR):
     # return DAG lines corresponding to one injection kind
-    
+
+    home = os.path.expanduser('~')
+    project_dir = home + '/polHTC/'
+
     jobname = injkind + pdif
     
     l = [
         '# ' + injkind + pdif + '\n',
-        'JOB ' + jobname + ' ' + g.submit_path(det, run, psr, injkind, pdif),
-        'SCRIPT PRE %(jobname)s injsrch_master.py %(psr)s %(det)s %(run)s %(injkind)s %(pdif)s %(ninstSTR)s %(ninjSTR)s' % locals(),
-        'SCRIPT POST %(jobname)s injsrch_collect.py %(det)s %(run)s %(psr)s %(injkind)s %(pdif)s' % locals(),
+        'JOB ' + jobname + ' ' + project_dir + g.submit_path(det, run, psr, injkind, pdif),
+        'SCRIPT PRE %(jobname)s %(project_dir)sinjsrch_master.py %(psr)s %(det)s %(run)s %(injkind)s %(pdif)s %(ninstSTR)s %(ninjSTR)s' % locals(),
+        'SCRIPT POST %(jobname)s %(project_dir)sinjsrch_collect.py %(det)s %(run)s %(psr)s %(injkind)s %(pdif)s' % locals(),
         '\n'
         ]
     
