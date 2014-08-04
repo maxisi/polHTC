@@ -28,5 +28,5 @@ r.collect()
 # Export results
 r.export()
 
-print 'Results for %(det)s %(run)s %(psr)s with %(kind)s %(pdf)s injections expported to:' % locals()
+print 'Results for %(det)s %(run)s %(psr)s with %(kind)s %(pdif)s injections expported to:' % locals()
 print r.paths['export']
