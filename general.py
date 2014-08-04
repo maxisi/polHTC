@@ -798,7 +798,7 @@ def read_psrlist():
 
     except:
         message = 'Could not open psrlist text in: ' + paths['psrlist']
-        log.error(message, exec_info=True)
+        log.error(message, exc_info=True)
 
 # CONVERSIONS
 def hmsformat(*args):

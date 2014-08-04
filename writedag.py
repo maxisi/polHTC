@@ -45,4 +45,4 @@ for psr in psrlist:
                     f.write(l+'\n')
 
 print 'DAG written to: ' + dagname
-print 'Submit using: condor_submit_dag dagname -maxidle 5000'
+print 'Submit using: condor_submit_dag -maxidle 5000 %(dagname)s' % locals()
