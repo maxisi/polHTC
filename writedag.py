@@ -18,7 +18,7 @@ try:
     int(psrIN)
     
     #If it is, assume the requested PSRs are those in the list named psrlist_run_psrIN.txt
-    psrlist = g.read_psrlist(name = run + '_' + psrIN)
+    psrlist = g.read_psrlist(name = det + '_' + run + '_' + psrIN)
 
 except ValueError:
     if psrIN == 'all':
@@ -48,8 +48,8 @@ def lines(det, run, psr, injkind, pdif, ninstSTR, ninjSTR):
     return l
 
 # write dag
-for psr in psrlist:
-    with open(dagname, 'w') as f:
+with open(dagname, 'w') as f:
+    for psr in psrlist:
         for injkind in ['GR', 'G4v']:
             for pdif in ['p', 'm']:
                 txt_lines = lines(det, run, psr, injkind, pdif, ninstSTR, ninjSTR)

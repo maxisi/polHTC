@@ -61,12 +61,12 @@ def imp(det, run, split, origin_path, destination_path):
     with open(path, 'a') as f:
         for psr in allpsrs: f.write(psr + '\n')
 
-    print str(len(psrgroups[i])) + ' PSRs for ' + det + ' ' + run + ' added to: ' + path
+    print str(len(allpsrs)) + ' PSRs for ' + det + ' ' + run + ' added to: ' + path
     
     # save list to file
     if split!=1:
         for i in np.arange(0,len(psrgroups)):
-            path = destination_path + 'psrlist_' + run + '_' + str(i) + '.txt'
+            path = destination_path + 'psrlist_' + det + '_'  + run + '_' + str(i) + '.txt'
         
             if i == 0:
                 o_mode = 'w'
