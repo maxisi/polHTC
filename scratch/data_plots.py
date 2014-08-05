@@ -33,11 +33,12 @@ d = p.data
 
 if type == 'data':
     # PLOT FINEHET DATA (RE)
-
+    
+    plt.figure(figsize=(16,3), dpi=127)
     # Plot
     plt.plot(t, d.real)
 
-    plt.title('%(det)s %(run)s data heterodyned for PSR %(psr)s' % locals() )
+    #plt.title('%(det)s %(run)s data heterodyned for PSR %(psr)s' % locals() )
 
     plt.xlabel('GPS time')
     plt.ylabel('Het. strain (Re)')
