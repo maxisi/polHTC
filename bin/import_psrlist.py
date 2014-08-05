@@ -54,20 +54,29 @@ def imp(det, run, split, origin_path, destination_path):
     while last < len(allpsrs):
         psrgroups.append(allpsrs[int(last):int(last + avg)])
         last += avg
+        
+    # save full list to file (this is good for PSRcat)
+    path = destination_path + 'psrlist.txt'
+    
+    with open(path, 'a') as f:
+        for psr in allpsrs: f.write(psr + '\n')
+
+    print str(len(psrgroups[i])) + ' PSRs for ' + det + ' ' + run + ' added to: ' + path
     
     # save list to file
-    for i in np.arange(0,len(psrgroups)):
-        path = destination_path + 'psrlist_' + run + '_' + str(i) + '.txt'
+    if split!=1:
+        for i in np.arange(0,len(psrgroups)):
+            path = destination_path + 'psrlist_' + run + '_' + str(i) + '.txt'
         
-        if i == 0:
-            o_mode = 'w'
-        else:
-            o_mode = 'a'
+            if i == 0:
+                o_mode = 'w'
+            else:
+                o_mode = 'a'
 
-        with open(path, o_mode) as f:
-            for psr in psrgroups[i]: f.write(psr + '\n')
+            with open(path, o_mode) as f:
+                for psr in psrgroups[i]: f.write(psr + '\n')
     
-        print str(len(psrgroups[i])) + ' PSRs for ' + det + ' ' + run + ' added to: ' + path
+            print str(len(psrgroups[i])) + ' PSRs for ' + det + ' ' + run + ' added to: ' + path
 
 
 if run == 'S5':

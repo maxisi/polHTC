@@ -1,4 +1,3 @@
-config/psrlist.txt
 *.pyc
 analyses/
 globals/vectors/
