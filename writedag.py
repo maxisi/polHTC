@@ -17,7 +17,7 @@ try:
     # Determine whether psrIN is a chunk index (e.g. '2'). 
     int(psrIN)
     
-    #If it is, assume the requested PSRs are those in the list named psrlist_run_psrIN.txt
+    # If it is, assume the requested PSRs are those in the list named psrlist_run_psrIN.txt
     psrlist = g.read_psrlist(name = run + '_' + psrIN)
 
 except ValueError:
@@ -42,6 +42,7 @@ def lines(det, run, psr, injkind, pdif, ninstSTR, ninjSTR):
         'JOB ' + jobname + ' ' + project_dir + g.submit_path(det, run, psr, injkind, pdif),
         'SCRIPT PRE %(jobname)s %(project_dir)sinjsrch_master.py %(psr)s %(det)s %(run)s %(injkind)s %(pdif)s %(ninstSTR)s %(ninjSTR)s' % locals(),
         'SCRIPT POST %(jobname)s %(project_dir)sinjsrch_collect.py %(det)s %(run)s %(psr)s %(injkind)s %(pdif)s' % locals(),
+        'CATEGORY %(jobname)s analysis' % locals(),
         '\n'
         ]
     
@@ -51,10 +52,13 @@ def lines(det, run, psr, injkind, pdif, ninstSTR, ninjSTR):
 for psr in psrlist:
     with open(dagname, 'w') as f:
         for injkind in ['GR', 'G4v']:
-            for pdif in ['p', 'm']:
+            for pdif in ['p']: #,'m']:
                 txt_lines = lines(det, run, psr, injkind, pdif, ninstSTR, ninjSTR)
                 for l in txt_lines:
                     f.write(l+'\n')
+        f.write('MAXJOBS analysis 2')
+        # this prevents more than 2 jobs to be submitted at once, limiting the max numb of
+        # queued processes to 2 * ninst
 
 print 'DAG written to: ' + dagname
-print 'Submit using: condor_submit_dag -maxidle 5000 %(dagname)s' % locals()
+print 'Submit using: condor_submit_dag %(dagname)s' % locals()
