@@ -13,12 +13,20 @@ Writes DAG file for a complete one-PSR analysis; namely, injections of all kinds
 dagname = g.dag_path(det, run, psrIN)
 
 # determine what PSRs to analyze from argument
-if psrIN == 'all':
-    # assuming all pulsars in psrlist should be included
-    psrlist = g.read_psrlist()
-else:
-    # assuming one single psr was requested
-    psrlist = [psrIN]
+try:
+    # Determine whether psrIN is a chunk index (e.g. '2'). 
+    int(psrIN)
+    
+    #If it is, assume the requested PSRs are those in the list named psrlist_run_psrIN.txt
+    psrlist = g.read_psrlist(name = run + '_' + psrIN)
+
+except ValueError:
+    if psrIN == 'all':
+        # assuming all pulsars in psrlist should be included
+        psrlist = g.read_psrlist()
+    else:
+        # assuming one single psr was requested
+        psrlist = [psrIN]
 
 # lines() helps write DAG
 def lines(det, run, psr, injkind, pdif, ninstSTR, ninjSTR):

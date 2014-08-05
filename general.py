@@ -786,18 +786,23 @@ paramFormat = {
                 }
 
 # read PSR list
-def read_psrlist():
+def read_psrlist(name=''):
     log = logging.getLogger('psrlst')
     psrs = []
-    try:
     
-        with open(paths['psrlist'], 'r') as f:
+    if name=='':
+        p = paths['psrlist']
+    else:
+        p = 'config/psrlist_' + name + '.txt'
+    
+    try:
+        with open(p, 'r') as f:
             for line in f.readlines():
                 psrs += [line.strip()] # (.strip() removes \n character)
         return psrs
 
     except:
-        message = 'Could not open psrlist text in: ' + paths['psrlist']
+        message = 'Could not open psrlist text in: ' + p
         log.error(message, exc_info=True)
 
 # CONVERSIONS
