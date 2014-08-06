@@ -71,7 +71,7 @@ with open(dagname, 'w') as f:
                     txt_lines = lines(det, run, psr, injkind, pdif, ninstSTR, ninjSTR)
                     for l in txt_lines:
                         f.write(l+'\n')
-    f.write('MAXJOBS analysis 2\n')
+    f.write('MAXJOBS analysis 1\n')
         # this prevents more than 2 jobs to be submitted at once, limiting the max numb of
         # queued processes to 2 * ninst
 
