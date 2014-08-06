@@ -175,12 +175,12 @@ subfile_lines = [
                 'Universe = Vanilla',
                 'Executable = ' + project_dir + '/injsrch_process.py',
                 'initialdir = ' + project_dir + '/',
-                'arguments = "%(psr)s %(det)s %(run)s %(kind)s %(pdif)s $(Process)"' % locals(),
-                'Output = ' + scratch_dir + 'injsrch-$(Process).out',
-                'Error = ' + scratch_dir + 'injsrch-$(Process).err',
-                'Log = ' + scratch_dir + 'injsrch-$(Process).log',
+                'arguments = "%(psr)s %(det)s %(run)s %(kind)s %(pdif)s $(instID)"' % locals(),
+                'Output = ' + scratch_dir + 'injsrch-$(instID).out',
+                'Error = ' + scratch_dir + 'injsrch-$(instID).err',
+                'Log = ' + scratch_dir + 'injsrch-$(instID).log', # instID is defined in the DAG file to be the process number
                 'getenv = true',
-                'Queue ' + ninstSTR
+                'Queue ' #+ ninstSTR
                 ]
 
 with open(g.submit_path(det, run, psr, kind, pdif), 'w') as f:

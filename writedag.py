@@ -28,10 +28,6 @@ except ValueError:
         # assuming one single psr was requested
         psrlist = [psrIN]
 
-# remove duplicates
-psrlist_set = set(psrlist)
-psrlist = list(psrlist_set)
-        
 # load PSR exclusion list (if it exists):
 try:
     with open(g.paths['badpsrs'], 'r') as f:
@@ -41,22 +37,26 @@ try:
 except:
     print 'WARNING: no PSR exclusion list found'
 
+# form list of good pulsars (i.e. PSRs for which we found information on catalogue, etc.)   
+goodpsrs = list(set(psrlist) - set(badpsrs))
+
 
 # lines() helps write DAG
-def lines(det, run, psr, injkind, pdif, ninstSTR, ninjSTR):
+def lines(det, run, psr, injkind, pdif, ninstSTR, ninjSTR, n):
     # return DAG lines corresponding to one injection kind
 
     home = os.path.expanduser('~')
     project_dir = home + '/polHTC/'
 
-    jobname = injkind + pdif + '_' + psr
+    jobname = injkind + pdif + '_' + psr + '_' + n
     
     l = [
         '# ' + psr + ' ' + injkind + pdif + '\n',
         'JOB ' + jobname + ' ' + project_dir + g.submit_path(det, run, psr, injkind, pdif),
         'SCRIPT PRE %(jobname)s %(project_dir)sinjsrch_master.py %(psr)s %(det)s %(run)s %(injkind)s %(pdif)s %(ninstSTR)s %(ninjSTR)s' % locals(),
         'SCRIPT POST %(jobname)s %(project_dir)sinjsrch_collect.py %(det)s %(run)s %(psr)s %(injkind)s %(pdif)s' % locals(),
-        'CATEGORY %(jobname)s analysis' % locals(),
+        #'CATEGORY %(jobname)s analysis' % locals(),
+        'VARS ' + jobname + ' instID="' + str(n) + '"\n',
         '\n'
         ]
     
@@ -64,16 +64,18 @@ def lines(det, run, psr, injkind, pdif, ninstSTR, ninjSTR):
 
 # write dag
 with open(dagname, 'w') as f:
-    for psr in psrlist:
-        if psr not in badpsrs:
-            for injkind in ['GR', 'G4v']:
-                for pdif in ['p']: #,'m']:
-                    txt_lines = lines(det, run, psr, injkind, pdif, ninstSTR, ninjSTR)
+    # for each PSR good psr
+    for psr in goodpsrs:
+        for injkind in ['GR', 'G4v']:
+            for pdif in ['p']: #,'m']:
+                # ADDING LOOP OVER INST
+                for n in np.arange(0, int(ninstSTR)):
+                    txt_lines = lines(det, run, psr, injkind, pdif, ninstSTR, ninjSTR, n)
                     for l in txt_lines:
                         f.write(l+'\n')
-    f.write('MAXJOBS analysis 2\n')
+#    f.write('MAXJOBS analysis 2\n')
         # this prevents more than 2 jobs to be submitted at once, limiting the max numb of
         # queued processes to 2 * ninst
 
 print 'DAG written to: ' + dagname
-print 'Submit using: condor_submit_dag %(dagname)s' % locals()
+print 'Submit using: condor_submit_dag -maxidle 1000 %(dagname)s' % locals()
