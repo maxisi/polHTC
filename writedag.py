@@ -27,6 +27,10 @@ except ValueError:
     else:
         # assuming one single psr was requested
         psrlist = [psrIN]
+
+# remove duplicates
+psrlist_set = set(psrlist)
+psrlist = list(psrlist_set)
         
 # load PSR exclusion list (if it exists):
 try:
@@ -36,6 +40,7 @@ try:
             badpsrs += [line.strip()] # (.strip() removes \n character)
 except:
     print 'WARNING: no PSR exclusion list found'
+
 
 # lines() helps write DAG
 def lines(det, run, psr, injkind, pdif, ninstSTR, ninjSTR):
@@ -47,7 +52,7 @@ def lines(det, run, psr, injkind, pdif, ninstSTR, ninjSTR):
     jobname = injkind + pdif + '_' + psr
     
     l = [
-        '# ' + injkind + pdif + '\n',
+        '# ' + psr + ' ' + injkind + pdif + '\n',
         'JOB ' + jobname + ' ' + project_dir + g.submit_path(det, run, psr, injkind, pdif),
         'SCRIPT PRE %(jobname)s %(project_dir)sinjsrch_master.py %(psr)s %(det)s %(run)s %(injkind)s %(pdif)s %(ninstSTR)s %(ninjSTR)s' % locals(),
         'SCRIPT POST %(jobname)s %(project_dir)sinjsrch_collect.py %(det)s %(run)s %(psr)s %(injkind)s %(pdif)s' % locals(),
@@ -66,7 +71,7 @@ with open(dagname, 'w') as f:
                     txt_lines = lines(det, run, psr, injkind, pdif, ninstSTR, ninjSTR)
                     for l in txt_lines:
                         f.write(l+'\n')
-    f.write('MAXJOBS analysis 2')
+    f.write('MAXJOBS analysis 2\n')
         # this prevents more than 2 jobs to be submitted at once, limiting the max numb of
         # queued processes to 2 * ninst
 

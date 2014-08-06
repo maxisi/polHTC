@@ -45,7 +45,8 @@ def imp(det, run, split, origin_path, destination_path):
     fnames = [x for x in os.listdir(origin_path) if ('finehet' in x and x.find(det)==(len(x)-2))]
 
     # obtain names of PSRs in directory
-    allpsrs = [f.strip(pre).strip(pst) for f in fnames]
+    allpsrs_set = set([f.strip(pre).strip(pst) for f in fnames]) #set removes duplicates
+    allpsrs = list(allpsrs_set)
     
     # split list into groups if necessary
     avg = len(allpsrs) / float(split)
