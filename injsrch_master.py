@@ -1,6 +1,7 @@
 #! /usr/bin/env python 
 
 import sys
+from datetime import datetime
 import os
 import logging
 import numpy as np
