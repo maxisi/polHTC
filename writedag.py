@@ -44,7 +44,7 @@ def lines(det, run, psr, injkind, pdif, ninstSTR, ninjSTR):
     home = os.path.expanduser('~')
     project_dir = home + '/polHTC/'
 
-    jobname = injkind + pdif
+    jobname = injkind + pdif + '_' + psr
     
     l = [
         '# ' + injkind + pdif + '\n',
