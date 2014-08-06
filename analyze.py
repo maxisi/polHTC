@@ -69,8 +69,8 @@ os.system(dag_call)
 
 ##########################################################################################
 # Submit
-# 
-# print 'Submitting.'
-# 
-# dagname = g.dag_path(det, run, psrIN)
-# os.system('condor_submit_dag %(dagname)s' % locals())
+
+print 'Submitting.'
+
+dagname = g.dag_path(det, run, psrIN)
+os.system('condor_submit_dag %(dagname)s' % locals())
