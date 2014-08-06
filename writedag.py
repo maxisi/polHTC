@@ -3,6 +3,7 @@
 import os
 import sys
 import general as g
+import numpy as np
 
 pname, det, run, psrIN, ninstSTR, ninjSTR = sys.argv
 
@@ -48,7 +49,7 @@ def lines(det, run, psr, injkind, pdif, ninstSTR, ninjSTR, n):
     home = os.path.expanduser('~')
     project_dir = home + '/polHTC/'
 
-    jobname = injkind + pdif + '_' + psr + '_' + n
+    jobname = injkind + pdif + '_' + psr + '_' + str(n)
     
     l = [
         '# ' + psr + ' ' + injkind + pdif + '\n',
