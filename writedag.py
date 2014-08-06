@@ -51,7 +51,7 @@ def lines(det, run, psr, injkind, pdif, ninstSTR, ninjSTR):
     l = [
         '# ' + psr + ' ' + injkind + pdif + '\n',
         'JOB ' + jobname + ' ' + project_dir + g.submit_path(det, run, psr, injkind, pdif),
-        'SCRIPT PRE %(jobname)s %(project_dir)sinjsrch_master.py %(psr)s %(det)s %(run)s %(injkind)s %(pdif)s %(ninstSTR)s %(ninjSTR)s' % locals(),
+        #'SCRIPT PRE %(jobname)s %(project_dir)sinjsrch_master.py %(psr)s %(det)s %(run)s %(injkind)s %(pdif)s %(ninstSTR)s %(ninjSTR)s' % locals(),
         'SCRIPT POST %(jobname)s %(project_dir)sinjsrch_collect.py %(det)s %(run)s %(psr)s %(injkind)s %(pdif)s' % locals(),
         'CATEGORY %(jobname)s analysis' % locals(),
         '\n'
@@ -68,8 +68,8 @@ with open(dagname, 'w') as f:
                     for l in txt_lines:
                         f.write(l+'\n')
     f.write('MAXJOBS analysis 1\n')
-        # this prevents more than 2 jobs to be submitted at once, limiting the max numb of
-        # queued processes to 2 * ninst
+        # this prevents more than 1 jobs to be submitted at once, limiting the max numb of
+        # queued processes to 1 * ninst
 
 print 'DAG written to: ' + dagname
 print 'Submit using: condor_submit_dag %(dagname)s' % locals()
