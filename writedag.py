@@ -51,16 +51,30 @@ def lines(det, run, psr, injkind, pdif, ninstSTR, ninjSTR, n):
 
     jobname = injkind + pdif + '_' + psr + '_' + str(n)
     
-    l = [
-        '# ' + psr + ' ' + injkind + pdif + '\n',
-        'JOB ' + jobname + ' ' + project_dir + g.submit_path(det, run, psr, injkind, pdif),
-        'SCRIPT PRE %(jobname)s %(project_dir)sinjsrch_master.py %(psr)s %(det)s %(run)s %(injkind)s %(pdif)s %(ninstSTR)s %(ninjSTR)s' % locals(),
-        'SCRIPT POST %(jobname)s %(project_dir)sinjsrch_collect.py %(det)s %(run)s %(psr)s %(injkind)s %(pdif)s' % locals(),
-        #'CATEGORY %(jobname)s analysis' % locals(),
-        'VARS ' + jobname + ' instID="' + str(n) + '"\n',
-        '\n'
-        ]
-    
+    if n==0:
+        l = [
+            '# ' + psr + ' ' + injkind + pdif + '\n',
+            'JOB ' + jobname + ' ' + project_dir + g.submit_path(det, run, psr, injkind, pdif),
+            'SCRIPT PRE %(jobname)s %(project_dir)sinjsrch_master.py %(psr)s %(det)s %(run)s %(injkind)s %(pdif)s %(ninstSTR)s %(ninjSTR)s' % locals(),
+            'VARS ' + jobname + ' instID="' + str(n) + '"\n',
+            '\n'
+            ]
+            
+    elif n==(int(ninstSTR)-1):
+        l = [
+            '# ' + psr + ' ' + injkind + pdif + '\n',
+            'JOB ' + jobname + ' ' + project_dir + g.submit_path(det, run, psr, injkind, pdif),
+            'SCRIPT POST %(jobname)s %(project_dir)sinjsrch_collect.py %(det)s %(run)s %(psr)s %(injkind)s %(pdif)s' % locals(),
+            'VARS ' + jobname + ' instID="' + str(n) + '"\n',
+            '\n'
+            ]
+    else:
+        l = [
+            '# ' + psr + ' ' + injkind + pdif + '\n',
+            'JOB ' + jobname + ' ' + project_dir + g.submit_path(det, run, psr, injkind, pdif),
+            'VARS ' + jobname + ' instID="' + str(n) + '"\n',
+            '\n'
+            ]
     return l
 
 # write dag
