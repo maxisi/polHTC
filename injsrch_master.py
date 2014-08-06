@@ -32,8 +32,7 @@ ninst = int(ninstSTR)
 ninj = int(ninjSTR)
 
 # setup log
-date = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-g.setuplog('%(date)s_master_%(det)s%(run)s_%(psr)s_%(kind)s%(pdif)s' % locals()) # argument added to log filename
+g.setuplog('master_%(det)s%(run)s_%(psr)s_%(kind)s%(pdif)s' % locals()) # argument added to log filename
 
 log = logging.getLogger('InjSrch Prep')
 

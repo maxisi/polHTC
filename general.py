@@ -579,8 +579,8 @@ class Cluster(object):
             self.public_dir  =  '/home/max.isi/WWW/LSC/'
             
         else:
-            scratch_dir = 'logs/'
-            public_dir  = ''        
+            self.scratch_dir = 'logs/'
+            self.public_dir  = ''        
 
         
 ##########################################################################################
@@ -974,7 +974,7 @@ def submit_path(det, run, psr, kind, pdif):
     return p
     
 def dag_path(det, run, psr):
-    p = 'subs/single_%(det)s%(run)s_%(psr)s.dag' % locals()
+    p = 'subs/htc_%(det)s%(run)s_%(psr)s.dag' % locals()
     return p
     
 localpaths = [
