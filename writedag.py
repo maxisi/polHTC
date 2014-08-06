@@ -17,13 +17,8 @@ try:
     # Determine whether psrIN is a chunk index (e.g. '2'). 
     int(psrIN)
     
-<<<<<<< HEAD
     # If it is, assume the requested PSRs are those in the list named psrlist_run_psrIN.txt
-    psrlist = g.read_psrlist(name = run + '_' + psrIN)
-=======
-    #If it is, assume the requested PSRs are those in the list named psrlist_run_psrIN.txt
     psrlist = g.read_psrlist(name = det + '_' + run + '_' + psrIN)
->>>>>>> FETCH_HEAD
 
 except ValueError:
     if psrIN == 'all':
@@ -32,6 +27,13 @@ except ValueError:
     else:
         # assuming one single psr was requested
         psrlist = [psrIN]
+        
+# load PSR exclusion list (if it exists):
+try:
+    with open(g.paths['badpsrs'], 'r') as f:
+        badpsrs=[]
+        for line in f.readlines():
+            badpsrs += [line.strip()] # (.strip() removes \n character)
 
 # lines() helps write DAG
 def lines(det, run, psr, injkind, pdif, ninstSTR, ninjSTR):
@@ -56,12 +58,13 @@ def lines(det, run, psr, injkind, pdif, ninstSTR, ninjSTR):
 # write dag
 with open(dagname, 'w') as f:
     for psr in psrlist:
-        for injkind in ['GR', 'G4v']:
-            for pdif in ['p']: #,'m']:
-                txt_lines = lines(det, run, psr, injkind, pdif, ninstSTR, ninjSTR)
-                for l in txt_lines:
-                    f.write(l+'\n')
-        f.write('MAXJOBS analysis 2')
+        if psr not in badpsrs:
+            for injkind in ['GR', 'G4v']:
+                for pdif in ['p']: #,'m']:
+                    txt_lines = lines(det, run, psr, injkind, pdif, ninstSTR, ninjSTR)
+                    for l in txt_lines:
+                        f.write(l+'\n')
+    f.write('MAXJOBS analysis 2')
         # this prevents more than 2 jobs to be submitted at once, limiting the max numb of
         # queued processes to 2 * ninst
 

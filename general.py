@@ -815,7 +815,17 @@ def hmsformat(*args):
             argument = args
             
         hms = argument.split(':')
-        h, m, s = [float(x) for x in hms]
+        if len(hms)==3:
+            h, m, s = [float(x) for x in hms]
+        elif len(hms)==2:
+            m, s = [float(x) for x in hms]
+            h = 0.0
+        elif len(hms)==1:
+            s = [float(x) for x in hms]
+            h = 0.0
+            m = 0.0
+        else:
+            print 'ERROR: hmsformat cannot convert: ' + argument
         
     elif len(args[0]) == 3:
         h, m, s = [float(x) for x in args[0]]
@@ -949,6 +959,7 @@ paths = {
             'extrapsrparam' : 'config/psrextra.txt',
             'psrcat' : 'globals/psrcat.p',
             'psrlist' : 'config/psrlist.txt',
+            'badpsrs' : 'config/badpsrs.txt',
             'originalData' : '/home/matthew/analyses/S6_all/results',
             'vectors' : 'globals/vectors'
             }

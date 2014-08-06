@@ -50,33 +50,60 @@ def atnfurl(psr_list):
     url = "%(pre)s%(names)s%(post)s" % locals()
 
     if len(url)>2000:
-        self.log.warning('WARNING! URL %d characters!' % len(url))
+        log.warning('WARNING! URL %d characters!' % len(url))
 
     return url
 
 # Get data
-url = atnfurl(psrs)
+def getcat(psrs):
+    url = atnfurl(psrs)
 
-log.debug('Parsing webpage.')
-soup = BeautifulSoup(urlopen(url)) # get webpage and parse
-text = str(soup.pre.string)
+    log.debug('Parsing webpage.')
+    soup = BeautifulSoup(urlopen(url)) # get webpage and parse
+    text = str(soup.pre.string)
 
-log.debug('Creating catalogue dictionary.')
-psrcat={}
-for u in text.split('\n'): # take each line
-    if u!='': # if the line is not empty
-        # separate using spaces and remove empty elements
-        a = [x for x in u.split(' ') if x !='']
-        # add PSR entry to dictionary, containing parameter dictionary
-        psrcat[a[1]] = {g.paramNames[n] : a[n] for n in np.arange(2,len(a))}
-        # the array starts from 2 to exclude the list number of the pulsar and its name
-
+    log.debug('Creating catalogue dictionary.')
+    psrcat={}
+    badpsr=[]
+    for u in text.split('\n'): # take each line
+        if u!='': # if the line is not empty
+            # separate using spaces and remove empty elements
+            a = [x for x in u.split(' ') if x !='']
+            # add PSR entry to dictionary, containing parameter dictionary
+            if a[0] == 'WARNING:':
+                # PSR not found, add to excluded list
+                badpsr += [a[2]]
+            else:
+                psrcat[a[1]] = {g.paramNames[n] : a[n] for n in np.arange(2,len(a))}
+            # the array starts from 2 to exclude the list number of the pulsar and its name
+            
+    return psrcat, badpsr
+    
+# loop over pulsars to avoid long URLs
+print('PSRs: ')
+psrcat = {}
+badpsr = []
+for psr in psrs:
+    single_psrcat, single_bad = getcat([psr])
+    
+    badpsr += single_bad
+    
+    for psrname, psrparam in single_psrcat.iteritems():
+        print(psrname + ', ')
+        psrcat[psrname] = psrparam
+print('\n')       
 log.debug('Reformatting RAS and DEC into decimals.')
 
 for psr, paramdict in psrcat.iteritems(): # for each PSR
     for paramName, paramData in paramdict.iteritems(): # for each parameter
         # replace value with result of formatting function for parameter
         psrcat[psr][paramName] = g.paramFormat[paramName](paramData)
+        
+# About parameters (http://www.atnf.csiro.au/research/pulsar/psrcat/psrcat_help.html):
+# Name:        Pulsar name.  The B name if exists, otherwise the J name.
+# JName:       Pulsar name based on J2000 coordinates
+# RAJ:         Right ascension (J2000) (hh:mm:ss.s) 
+# DecJ:        Declination (J2000) (+dd:mm:ss)
         
 log.debug('Adding extra parameters.')
 
@@ -99,10 +126,20 @@ except IOError:
     
 # if there was no extra information, fill missing parameters with standard values
 for psr in [src for src in psrs if src not in psrsExtra]: # for PSR in list for which there's no extra info
-    for param in g.extraParamNames: # for each parameter
-        if param!= None: psrcat[psr][param] = g.extraParamStandard[param]
+    if psr not in badpsr:
+        for param in g.extraParamNames: # for each parameter
+            if param!= None: psrcat[psr][param] = g.extraParamStandard[param]
 
+# Save PSR list
 try:
     pickle.dump(psrcat, open(g.paths['psrcat'], 'wb'))
 except IOError:
-    log.error('Could not save psrcat in: ' + g.paths['psrcat'], exec_info=True)
+    log.error('Could not save psrcat in: ' + g.paths['psrcat'], exc_info=True)
+
+# Save bad PSR list
+try:
+    with open(g.paths['badpsrs'], 'w') as f:
+        for p in badpsr:
+            f.write(p + '\n')
+except:
+    log.error('Could not save bad PSR list in: ' + g.paths['badpsrs'], exc_info=True)
