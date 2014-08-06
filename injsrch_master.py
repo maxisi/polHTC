@@ -162,26 +162,29 @@ except:
 
 log.info('Write submit file.')
 
-home = os.path.expanduser('~')
-project_dir = home + '/polHTC'
+try:
+    home = os.path.expanduser('~')
+    project_dir = home + '/polHTC'
 
-# get hostname to determine what server we are on
-cluster = g.Cluster()
+    # get hostname to determine what server we are on
+    cluster = g.Cluster()
 
-# define scratch space
-scratch_dir = cluster.scratch_dir
+    # define scratch space
+    scratch_dir = cluster.scratch_dir
     
-subfile_lines = [
-                'Universe = Vanilla',
-                'Executable = ' + project_dir + '/injsrch_process.py',
-                'initialdir = ' + project_dir + '/',
-                'arguments = "%(psr)s %(det)s %(run)s %(kind)s %(pdif)s $(Process)"' % locals(),
-                'Output = ' + scratch_dir + 'injsrch-$(Process).out',
-                'Error = ' + scratch_dir + 'injsrch-$(Process).err',
-                'Log = ' + scratch_dir + 'injsrch-$(Process).log',
-                'getenv = true',
-                'Queue ' + ninstSTR
-                ]
+    subfile_lines = [
+                    'Universe = Vanilla',
+                    'Executable = ' + project_dir + '/injsrch_process.py',
+                    'initialdir = ' + project_dir + '/',
+                    'arguments = "%(psr)s %(det)s %(run)s %(kind)s %(pdif)s $(Process)"' % locals(),
+                    'Output = ' + scratch_dir + 'injsrch-$(Process).out',
+                    'Error = ' + scratch_dir + 'injsrch-$(Process).err',
+                    'Log = ' + scratch_dir + 'injsrch-$(Process).log',
+                    'getenv = true',
+                    'Queue ' + ninstSTR
+                    ]
 
-with open(g.submit_path(det, run, psr, kind, pdif), 'w') as f:
-    for l in subfile_lines: f.write(l + '\n')
+    with open(g.submit_path(det, run, psr, kind, pdif), 'w') as f:
+        for l in subfile_lines: f.write(l + '\n')
+except:
+    log.error('Unable to write submit file!', exc_info=True)

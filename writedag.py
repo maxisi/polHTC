@@ -28,10 +28,6 @@ except ValueError:
         # assuming one single psr was requested
         psrlist = [psrIN]
 
-# remove duplicates
-psrlist_set = set(psrlist)
-psrlist = list(psrlist_set)
-        
 # load PSR exclusion list (if it exists):
 try:
     with open(g.paths['badpsrs'], 'r') as f:
@@ -41,6 +37,7 @@ try:
 except:
     print 'WARNING: no PSR exclusion list found'
 
+goodpsrs = list( set(psrlist) - set(badpsrs) )
 
 # lines() helps write DAG
 def lines(det, run, psr, injkind, pdif, ninstSTR, ninjSTR):
@@ -64,8 +61,7 @@ def lines(det, run, psr, injkind, pdif, ninstSTR, ninjSTR):
 
 # write dag
 with open(dagname, 'w') as f:
-    for psr in psrlist:
-        if psr not in badpsrs:
+    for psr in goodpsrs:
             for injkind in ['GR', 'G4v']:
                 for pdif in ['p']: #,'m']:
                     txt_lines = lines(det, run, psr, injkind, pdif, ninstSTR, ninjSTR)
