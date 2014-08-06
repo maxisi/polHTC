@@ -34,6 +34,8 @@ try:
         badpsrs=[]
         for line in f.readlines():
             badpsrs += [line.strip()] # (.strip() removes \n character)
+except:
+    print 'WARNING: no PSR exclusion list found'
 
 # lines() helps write DAG
 def lines(det, run, psr, injkind, pdif, ninstSTR, ninjSTR):
