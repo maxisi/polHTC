@@ -217,7 +217,7 @@ class Detector(object):
             f.close()        
         except IOError:
             print 'Error'
-            self.log.error('Unable to write det vecs to ' + self.vecpath, exc_info=True)
+            self.log.error('Unable to write det vecs to ' + self.vecpath + filename + '.hdf5', exc_info=True)
 
     def check_vectors(self, t, filename=''):
         self.log.info('Checking health of detector vector files.')
@@ -242,7 +242,7 @@ class Detector(object):
     def load_vectors(self, t, filename=''):
         self.log.info('Loading detector vectors.')
         
-        if not self.check_vectors(t): self.create_vectors(t)
+        if not self.check_vectors(t, filename=''): self.create_vectors(t, filename='')
 
         with h5py.File(self.vecpath + filename + '.hdf5', 'r') as f:
             self.dx = f['/dx'][:]

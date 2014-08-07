@@ -13,13 +13,13 @@ import matplotlib.pyplot as plt
 
 ### SETUP
 
-processname, kind = sys.argv
+processname, x, kind = sys.argv
 
 psr = 'J0534+2200'
 det = 'H1'
 run = 'S5'
 
-plots_dir = 'scratch/plots/gaussianity'
+plots_dir = 'scratch/plots/gaussianity/'
 
 # Load data
 p = g.Pair(psr, det)
@@ -65,6 +65,7 @@ elif kind == 'ks':
     stat = lambda x : normedks(x)[1]
     yname = 'p'
     tname = 'Kolmogorov-Smirnov test'
+
 else:
     print 'Error: Unknown stat kind "%(kind)s".' % locals()
     sys.exit()
@@ -101,19 +102,49 @@ for c in count:
         a += [0]
         
     i_0 = i_f # update initial index
+
+if x == 'std':
+    # x-axis will be the standard deviation
+
+    # Split data series based on the count. Define initial and final indices for each
+    # day, i_0 and i_f.
+    i_0 = 0
+    s = []
+    for c in count:
+
+        i_f = i_0 + c  # create final index
+
+        segment = d[i_0:i_f] # pick day-worth of data
+
+        if c != 0:
+            s += [np.std(segment)]
+        else:
+            s += [0]
+        
+        i_0 = i_f # update initial index    plt.plot(s,a, '+', label='Data')
+
+    plt.plot(s, a, '+', label='Data')
     
-plt.plot(a, '+', label='Data')
+    plt.xlabel('$\sigma$')
+    figname = '%(kind)s_%(det)s_%(run)s_%(psr)s_std' % locals()
+    plt.title('%(tname)s vs $\sigma$ for daily %(det)s %(run)s %(psr)s data' % locals())   
 
-plt.plot(a_gauss, 'r+', label='Gaussian')
+else:
+    plt.plot(a, '+', label='Data')
 
-plt.xlabel('Days')
+    plt.plot(a_gauss, 'r+', label='Gaussian')
+
+    plt.xlabel('Days')
+    figname = '%(kind)s_%(det)s_%(run)s_%(psr)s' % locals()
+    plt.title('%(tname)s for daily %(det)s %(run)s %(psr)s data' % locals())
+    
 plt.ylabel(yname)
 
-plt.title('%(tname)s for daily %(det)s %(run)s %(psr)s data' % locals())
+
 
 plt.legend(numpoints=1)
 
-figname = '%(kind)s_%(det)s_%(run)s_%(psr)s' % locals()
+
 plt.savefig(plots_dir + figname + '.pdf', bbox_inches='tight')
 plt.close()
 

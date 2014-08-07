@@ -57,7 +57,7 @@ log.info('Create PSR-det pair and load data and std.')
 pair = g.Pair(psr, det)
 pair.load_finehet(run)
 pair.get_sigma()
-pair.det.load_vectors(pair.time)
+pair.det.load_vectors(pair.time, filename=p.psr.name)
 
 ## RE-HETERODYNE
 
