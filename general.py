@@ -296,7 +296,8 @@ class Pair(object):
             if load_vectors:
                 self.log.debug('Loading vectors.')
                 self.det.load_vectors(self.time, filename=self.psr.name)
-
+            self.log.debug('Done')
+            
         except:
             self.log.error('FATAL: No PSR data found in: ' + p,exc_info=True)
             print sys.exc_info()
