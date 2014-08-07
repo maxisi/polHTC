@@ -236,7 +236,7 @@ class Detector(object):
                         self.log.warning('Error comparing time series.')
                         return False
         except IOError:
-            self.log.warning('Did not find detector vectors.')
+            self.log.warning('Did not find detector vectors in: ' + self.vecpath + filename + '.hdf5', exc_info=True)
             return False
         
     def load_vectors(self, t, filename=''):
