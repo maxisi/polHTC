@@ -289,10 +289,10 @@ class Pair(object):
             # If check_vectors is True, check detector vectors exist for time in finehet.
             # If they do not, they are created.
             if check_vectors:
-                if not self.det.check_vectors(self.time, filename=self.psr): self.det.create_vectors(self.time, filename=self.psr)
+                if not self.det.check_vectors(self.time, filename=self.psr.name): self.det.create_vectors(self.time, filename=self.psr.name)
             
             # If load_vectors is true, load detector vectors
-            if load_vectors: self.det.load_vectors(self.time, filename=self.psr)
+            if load_vectors: self.det.load_vectors(self.time, filename=self.psr.name)
 
         except IOError:
             self.log.error('FATAL: No PSR data found in: ' + p,exc_info=True)
@@ -354,7 +354,7 @@ class Pair(object):
         except AttributeError:
             self.log.warning('No det vectors loaded. Attempting to load.', exc_info=True)
             
-            self.det.load_vectors(self.time, filename=self.psr)
+            self.det.load_vectors(self.time, filename=self.psr.name)
             
             dx = self.det.dx
             dy = self.det.dy
@@ -390,7 +390,7 @@ class Pair(object):
             except AttributeError:
                 self.log.warning('No det vectors loaded. Attempting to load.', exc_info=True)
             
-                self.det.load_vectors(self.time, filename=self.psr)
+                self.det.load_vectors(self.time, filename=self.psr.name)
             
                 dx = self.det.dx
                 dy = self.det.dy
