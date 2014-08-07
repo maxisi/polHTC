@@ -390,7 +390,7 @@ class Pair(object):
             except AttributeError:
                 self.log.warning('No det vectors loaded. Attempting to load.', exc_info=True)
             
-                self.det.load_vectors(self.time, , filename=self.psr)
+                self.det.load_vectors(self.time, filename=self.psr)
             
                 dx = self.det.dx
                 dy = self.det.dy
