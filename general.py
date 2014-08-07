@@ -582,6 +582,11 @@ class Cluster(object):
             self.scratch_dir = '/atlas/user/' + hs + '/max.isi/'
             self.public_dir  =  '/home/max.isi/WWW/LSC/'
             
+        elif self.hostname in ['pccdev1', 'pcdev2', 'hydra','trout']:
+            # assuming Nemo cluster
+            self.scratch_dir = '/home/max.isi/scratch/'
+            self.public_dir = '/home/max.isi/public_html/'
+            
         else:
             self.scratch_dir = 'logs/'
             self.public_dir  = ''        
