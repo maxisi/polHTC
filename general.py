@@ -289,12 +289,12 @@ class Pair(object):
             # If check_vectors is True, check detector vectors exist for time in finehet.
             # If they do not, they are created.
             if check_vectors:
-                self.log.debug('Checking vectors.)
+                self.log.debug('Checking vectors.')
                 if not self.det.check_vectors(self.time, filename=self.psr.name): self.det.create_vectors(self.time, filename=self.psr.name)
             
             # If load_vectors is true, load detector vectors
             if load_vectors:
-                self.log.debug('Loading vectors.)
+                self.log.debug('Loading vectors.')
                 self.det.load_vectors(self.time, filename=self.psr.name)
 
         except:
