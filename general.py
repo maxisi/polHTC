@@ -189,9 +189,9 @@ class Detector(object):
         
         self.param = detparams[self.observatory]
         
-        self.vecpath = paths['vectors'] + '/detvec' + self.name + '.hdf5' # path to vectors
+        self.vecpath = paths['vectors'] + '/detvec' + self.name # path to vectors
         
-    def create_vectors(self, t):
+    def create_vectors(self, t, filename=''):
         '''
         Returns arm vectors in Cartesian sidereal coordinates.
         '''
@@ -209,7 +209,7 @@ class Detector(object):
         self.log.info('Saving detector vectors.')
         
         try:
-            f = h5py.File(self.vecpath, 'w')
+            f = h5py.File(self.vecpath + filename + '.hdf5', 'w')
             f.create_dataset('time', data=t)
             f.create_dataset('dx', data=dx)
             f.create_dataset('dy', data=dy)
@@ -219,10 +219,10 @@ class Detector(object):
             print 'Error'
             self.log.error('Unable to write det vecs to ' + self.vecpath, exc_info=True)
 
-    def check_vectors(self, t):
+    def check_vectors(self, t, filename=''):
         self.log.info('Checking health of detector vector files.')
         try:
-            with h5py.File(self.vecpath, 'r') as f:
+            with h5py.File(self.vecpath + filename + '.hdf5', 'r') as f:
                 # make sure time series are the same            
                 
                 try:
@@ -239,12 +239,12 @@ class Detector(object):
             self.log.warning('Did not find detector vectors.')
             return False
         
-    def load_vectors(self, t):
+    def load_vectors(self, t, filename=''):
         self.log.info('Loading detector vectors.')
         
         if not self.check_vectors(t): self.create_vectors(t)
 
-        with h5py.File(self.vecpath, 'r') as f:
+        with h5py.File(self.vecpath + filename + '.hdf5', 'r') as f:
             self.dx = f['/dx'][:]
             self.dy = f['/dy'][:]
             self.dz = f['/dz'][:]
@@ -289,10 +289,10 @@ class Pair(object):
             # If check_vectors is True, check detector vectors exist for time in finehet.
             # If they do not, they are created.
             if check_vectors:
-                if not self.det.check_vectors(self.time): self.det.create_vectors(self.time)
+                if not self.det.check_vectors(self.time, filename=self.psr): self.det.create_vectors(self.time, filename=self.psr)
             
             # If load_vectors is true, load detector vectors
-            if load_vectors: self.det.load_vectors(self.time)
+            if load_vectors: self.det.load_vectors(self.time, filename=self.psr)
 
         except IOError:
             self.log.error('FATAL: No PSR data found in: ' + p,exc_info=True)
@@ -354,7 +354,7 @@ class Pair(object):
         except AttributeError:
             self.log.warning('No det vectors loaded. Attempting to load.', exc_info=True)
             
-            self.det.load_vectors(self.time)
+            self.det.load_vectors(self.time, filename=self.psr)
             
             dx = self.det.dx
             dy = self.det.dy
@@ -390,7 +390,7 @@ class Pair(object):
             except AttributeError:
                 self.log.warning('No det vectors loaded. Attempting to load.', exc_info=True)
             
-                self.det.load_vectors(self.time)
+                self.det.load_vectors(self.time, , filename=self.psr)
             
                 dx = self.det.dx
                 dy = self.det.dy
