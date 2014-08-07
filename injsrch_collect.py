@@ -11,7 +11,7 @@ Collect results of single PSR analysis and export to public directory.
 processname, det, run, psr, kind, pdif = sys.argv
 
 # setup log
-g.setuplog('results_%(det)s_%(run)s_%(psr)s_%(kind)s%(pdif)s' % locals() )
+g.setuplog('results_%(det)s%(run)s_%(psr)s_%(kind)s%(pdif)s' % locals() )
 log = logging.getLogger('Results')
 
 
