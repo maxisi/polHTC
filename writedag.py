@@ -61,6 +61,7 @@ def lines(det, run, psr, injkind, pdif, ninstSTR, ninjSTR):
 
 # write dag
 with open(dagname, 'w') as f:
+    f.write('CONFIG dagman.config\n')
     for psr in goodpsrs:
             for injkind in ['GR', 'G4v']:
                 for pdif in ['p']: #,'m']:
@@ -70,6 +71,10 @@ with open(dagname, 'w') as f:
     f.write('MAXJOBS analysis 1\n')
         # this prevents more than 1 jobs to be submitted at once, limiting the max numb of
         # queued processes to 1 * ninst
+
+# Configure Dagman to not limit the number of times a node is put on hold
+with open('subs/dagman.config', 'w') as f:
+    f.write('DAGMAN_MAX_JOB_HOLDS = 0')
 
 print 'DAG written to: ' + dagname
 print 'Submit using: condor_submit_dag %(dagname)s' % locals()

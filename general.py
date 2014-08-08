@@ -479,6 +479,8 @@ class Results(object):
                 self.log.error(message, exc_info=True)
                 print message
                 print sys.exc_info()
+                # TEST: seeing if this makes 
+                sys.exit(1)
         
         return self.hrec, self.srec
     
