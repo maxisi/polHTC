@@ -34,38 +34,6 @@ frange = [1.0e-7, 1.0e-5] # frequencies for re-heterodynes
 hinjrange=[1.0E-27, 1.0E-23] # injection strengths IMP! MIGHT NEED TO BE TUNED!
 
 
-## STRUCTURE
-log.info('Creating file structure.')
-
-pathname = g.analysis_path(det, run, psr, injkind, pdif)
-
-for dir in g.localpaths:
-    try:
-        os.makedirs(pathname + '/' + dir)
-        log.debug(dir)
-    except OSError:
-        log.debug('"globals/%(dir)s" already exists' % locals())
-        
-log.info('Writing ID record.')
-
-idtext = [
-            'INJECTION-SEARCH ANALYSIS\n',
-            str(datetime.now()) + '\n',
-            'PSR:\t'     + psr,
-            'Det:\t'     + det,
-            'Run:\t'     + run,
-            'Inj:\t'     + injkind,
-            '\nninst:\t' + str(ninst),
-            'frange:\t'  + str(frange),
-            '\nninj:\t'  + str(ninj),
-            'hinj:\t'    + str(hinjrange)   
-            ]
-
-with open(pathname + '/id.txt', 'w') as f:
-    for line in idtext: f.write(line + '\n')
-    f.write('\n###\nREFERENCE: PSR, pulsar name; det, detector name; run, data run (S5, S6); injkind, kind of injection (GR, G4v); pdif, phase difference between injection components (p, m, 0); ninst, number of background instantiations; ninj, number of injections.')
-    
-
 ## CHECK FINEHET DATA EXISTS AND EXTRACT TIME SERIES
 pair = g.Pair(psr, det)
 pair.load_finehet(run)
