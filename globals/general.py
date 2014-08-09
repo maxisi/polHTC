@@ -216,8 +216,9 @@ class Detector(object):
             f.create_dataset('dz', data=dz)
             f.close()        
         except IOError:
-            print 'Error'
-            self.log.error('Unable to write det vecs to ' + self.vecpath + filename + '.hdf5', exc_info=True)
+            self.log.error('Unable to write det vecs to ' + self.vecpath + filename + '.hdf5')
+        except:
+            self.log.error('Unable to save det vecs to ' + self.vecpath + filename + '.hdf5', exc_info=True)
 
     def check_vectors(self, t, filename=''):
         self.log.info('Checking health of detector vector files.')
