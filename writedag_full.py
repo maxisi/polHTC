@@ -45,7 +45,7 @@ goodpsrs = list( set(psrlist) - set(badpsrs) )
 
 subname = 'subs/generic.sub'
 
-dagname = 'dags/%(det)s%(run)s_%(psrIN)s.dag' % locals()
+dagname = 'dags/full_%(det)s%(run)s_%(psrIN)s.dag' % locals()
 
 
 ##########################################################################################
@@ -98,7 +98,7 @@ def lines(det, run, psr, injkind, pdif, ninstSTR, ninjSTR):
         'VARS %(jobname)s pdif="%(pdif)s"' % locals(),
         'VARS %(jobname)s ninst="%(ninstSTR)s"' % locals(),
         'VARS %(jobname)s ninj="%(ninjSTR)s"' % locals(),
-        'VARS %(jobname)s 3' % locals(), # retry job 3 times
+        'RETRY %(jobname)s 3' % locals(), # retry job 3 times
         '\n'
         ]
     

@@ -7,5 +7,6 @@ rm /usr1/max.isi/*
 rm globals/vectors/*
 rm /atlas/user/atlas3/max.isi/*
 rm /atlas/user/atlas1/max.isi/*
+rm dags/*
 
 echo "Deleted all analysis files."

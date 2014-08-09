@@ -1,5 +1,6 @@
 #! /usr/bin/env python 
 
+import os
 import sys
 import h5py
 import cPickle as pickle
@@ -45,7 +46,9 @@ for dir in g.localpaths:
         log.debug(dir)
     except OSError:
         log.debug('"globals/%(dir)s" already exists' % locals())
-        
+    except:
+        log.debug('Unable to create analysis file structure.' % locals(), exc_info=True) 
+
 log.info('Writing ID record.')
 
 idtext = [

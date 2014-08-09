@@ -4,10 +4,10 @@ DET=$1
 RUN=$2
 PSRIN=$3
 NINST=$4
-NINJ=$4
+NINJ=$5
 
 arg=("$DET" "$RUN" "$PSRIN" "$NINST" "$NINJ")
 
-#./injsrch_master.py "${arg[@]}"
+./writedag_full.py "${arg[@]}"
 
-condor_submit_dag subs/"$DET""$RUN"_"$PSRIN".dag
+condor_submit_dag dags/full_"$DET""$RUN"_"$PSRIN".dag
