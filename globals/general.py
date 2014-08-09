@@ -243,7 +243,7 @@ class Detector(object):
     def load_vectors(self, t, filename=''):
         self.log.info('Loading detector vectors.')
         
-        if not self.check_vectors(t, filename=''): self.create_vectors(t, filename='')
+        if not self.check_vectors(t, filename=filename): self.create_vectors(t, filename=filename)
 
         with h5py.File(self.vecpath + filename + '.hdf5', 'r') as f:
             self.dx = f['/dx'][:]
