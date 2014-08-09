@@ -101,6 +101,11 @@ freq_lst, polsrch_lst, incsrch_lst, hinj_lst, polinj_lst, incinj_lst = params(pa
 
 ## PRELUDE
 
+# setup results
+results = g.Results(det, run, psr, injkind, pdif)
+results.hinj = hinj_lst
+
+
 for n in np.arange(0, ninst):
 
     freq = freq_lst[n]
@@ -123,10 +128,6 @@ for n in np.arange(0, ninst):
     if hinj != 0:
         log.info('Injecting.')
         inst += (hinj/2.) * pair.signal(injkind, pdif, polinj, incinj) # note factor of 1/2, see MP (2.12)
-
-    # setup results
-    results = g.Results(det, run, psr, injkind, pdif)
-    results.hinj = hinj
 
     # search
     for m in g.search_methods:
@@ -158,12 +159,12 @@ for n in np.arange(0, ninst):
         
             # strength:
             if injkind in ['GR', 'G4v']:
-                results.hrec[m] = 2 * (abs(a).sum()) / len(a)
+                results.hrec[m] += [2 * (abs(a).sum()) / len(a)]
             else:
-                results.hrec[m] = 2 * np.linalg.norm(a)
+                results.hrec[m] += [2 * np.linalg.norm(a)]
         
             # significance:
-            results.srec[m] = np.sqrt(abs(np.dot(a.conj(), np.linalg.solve(cov, a))))
+            results.srec[m] += [np.sqrt(abs(np.dot(a.conj(), np.linalg.solve(cov, a))))]
         
 
 log.info('Saving results')
