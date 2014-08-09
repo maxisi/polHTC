@@ -45,7 +45,7 @@ goodpsrs = list( set(psrlist) - set(badpsrs) )
 
 subname = 'subs/generic.sub'
 
-dagname = 'dags/%(det)s%(run)s_%(psrIN)s.dag'
+dagname = 'dags/%(det)s%(run)s_%(psrIN)s.dag' % locals()
 
 
 ##########################################################################################
@@ -106,8 +106,8 @@ def lines(det, run, psr, injkind, pdif, ninstSTR, ninjSTR):
 
 
 with open(dagname, 'w') as f:
-
-    f.write('CONFIG dagman.config\n') # points to configuration file with DAGman variables
+    f.write('# %(det)s %(run)s %(psrIN)s %(ninstSTR)s %(ninjSTR)s\n\n' % locals() )
+    f.write('CONFIG dags/dagman.config\n\n') # points to configuration file with DAGman variables
     
     for psr in goodpsrs:
             for injkind in ['GR', 'G4v']:
@@ -118,7 +118,7 @@ with open(dagname, 'w') as f:
 
 
 # Configure Dagman to not limit the number of times a node is put on hold
-with open('subs/dagman.config', 'w') as f:
+with open('dags/dagman.config', 'w') as f:
     f.write('DAGMAN_MAX_JOB_HOLDS = 0')
 
 print 'DAG written to: ' + dagname
