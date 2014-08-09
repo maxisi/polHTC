@@ -2,7 +2,7 @@
 
 import sys
 import logging
-import general as g
+from globals import general as g
 
 '''
 Collect results of single PSR analysis and export to public directory.

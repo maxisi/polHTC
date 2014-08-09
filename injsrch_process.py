@@ -6,7 +6,7 @@ import cPickle as pickle
 import logging
 import numpy as np
 
-import general as g
+from globals import general as g
 
 '''
 Analyzes ONE instantiation of data: starting with finehet seed, reheterodynes, if

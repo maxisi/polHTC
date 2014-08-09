@@ -1,6 +1,6 @@
 #! /usr/bin/env python 
 
-import general as g
+from globals import general as g
 
 import sys
 import numpy as np

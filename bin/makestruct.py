@@ -12,7 +12,8 @@ globalpaths = (
             'globals/data/',
             'globals/vectors/',
             'config/',
-            'subs/'
+            'subs/',
+            'dags/'
             )
             
 print 'Creating global file structure:'

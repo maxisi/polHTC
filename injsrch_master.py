@@ -8,7 +8,7 @@ import numpy as np
 import random
 import h5py
 
-import general as g
+from globals import general as g
 
 '''
 Sets up analysis given PSR, detector, injection kind, search method, number of

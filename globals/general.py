@@ -980,12 +980,12 @@ def analysis_path(det, run, psr, kind, pdif):
     pathname = 'analyses/' + det + '/' + run + '/' + analysis
     return pathname
     
-def submit_path(det, run, psr, kind, pdif):
-    p = 'subs/injsrch_%(det)s%(run)s_%(psr)s_%(kind)s%(pdif)s.sub' % locals()
+def submit_path(det, run, psr, kind, pdif, name='injsrch'):
+    p = 'subs/%(name)s_%(det)s%(run)s_%(psr)s_%(kind)s%(pdif)s.sub' % locals()
     return p
     
-def dag_path(det, run, psr):
-    p = 'subs/htc_%(det)s%(run)s_%(psr)s.dag' % locals()
+def dag_path(det, run, psr, name='htc'):
+    p = 'subs/%(name)s_%(det)s%(run)s_%(psr)s.dag' % locals()
     return p
     
 localpaths = [

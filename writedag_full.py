@@ -4,13 +4,14 @@ import os
 import sys
 from globals import general as g
 
-pname, det, run, psrIN, ninstSTR, ninjSTR = sys.argv
+processname, det, run, psrIN, ninstSTR, ninjSTR = sys.argv
 
 '''
-Writes DAG file for a complete one-PSR analysis; namely, injections of all kinds.
+Writes DAG file for a complete MANY-PSR analysis; namely, injecting GR, G4v on PSRs from
+the pulsar list.
 '''
 
-dagname = g.dag_path(det, run, psrIN)
+##########################################################################################
 
 # determine what PSRs to analyze from argument
 try:
@@ -39,6 +40,38 @@ except:
 
 goodpsrs = list( set(psrlist) - set(badpsrs) )
 
+
+##########################################################################################
+# WRITE SUBMIT
+
+home = os.path.expanduser('~')
+project_dir = home + '/polHTC'
+
+# get hostname to determine what server we are on
+cluster = g.Cluster()
+
+# define scratch space
+scratch_dir = cluster.scratch_dir + 'full_$(psr)_$(det)$(run)_$(injkind)$(pdif)s'
+
+subfile_lines = [
+                'Universe = Vanilla',
+                'Executable = ' + project_dir + '/injsrch_full.py',
+                'initialdir = ' + project_dir + '/',
+                'arguments = "$(psr) $(det) $(run) $(injkind) $(pdif) $(ninst) $(ninj)"' % locals(),
+                'Output = ' + scratch_dir + '.out',
+                'Error = ' + scratch_dir + '.err',
+                'Log = ' + scratch_dir + '.log',
+                'getenv = true',
+                'Queue'
+                ]
+
+with open(subname, 'w') as f:
+    for l in subfile_lines: f.write(l + '\n')
+
+
+##########################################################################################
+# WRITE DAG
+
 # lines() helps write DAG
 def lines(det, run, psr, injkind, pdif, ninstSTR, ninjSTR):
     # return DAG lines corresponding to one injection kind
@@ -47,30 +80,37 @@ def lines(det, run, psr, injkind, pdif, ninstSTR, ninjSTR):
     project_dir = home + '/polHTC/'
 
     jobname = injkind + pdif + '_' + psr
-    
+
     l = [
         '# ' + psr + ' ' + injkind + pdif + '\n',
         'JOB ' + jobname + ' ' + project_dir + g.submit_path(det, run, psr, injkind, pdif),
-        #'SCRIPT PRE %(jobname)s %(project_dir)sinjsrch_master.py %(psr)s %(det)s %(run)s %(injkind)s %(pdif)s %(ninstSTR)s %(ninjSTR)s' % locals(),
-        'SCRIPT POST %(jobname)s %(project_dir)sinjsrch_collect.py %(det)s %(run)s %(psr)s %(injkind)s %(pdif)s' % locals(),
-        'CATEGORY %(jobname)s analysis' % locals(),
+        'VARS %(jobname)s psr="%(psr)s"' % locals(),
+        'VARS %(jobname)s det="%(det)s"' % locals(),
+        'VARS %(jobname)s run="%(run)s"' % locals(),
+        'VARS %(jobname)s injkind="%(injkind)s"' % locals(),
+        'VARS %(jobname)s pdif="%(pdif)s"' % locals(),
+        'VARS %(jobname)s ninst="%(ninstSTR)s"' % locals(),
+        'VARS %(jobname)s ninj="%(ninjSTR)s"' % locals(),
+        'VARS %(jobname)s 3' % locals(), # retry job 3 times
         '\n'
         ]
     
     return l
 
-# write dag
+
+dagname = 'dags/%(det)s%(run)s_%(psrIN)s.dag'
+
 with open(dagname, 'w') as f:
-    f.write('CONFIG dagman.config\n')
+
+    f.write('CONFIG dagman.config\n') # points to configuration file with DAGman variables
+    
     for psr in goodpsrs:
             for injkind in ['GR', 'G4v']:
                 for pdif in ['p']: #,'m']:
                     txt_lines = lines(det, run, psr, injkind, pdif, ninstSTR, ninjSTR)
                     for l in txt_lines:
                         f.write(l+'\n')
-    f.write('MAXJOBS analysis 1\n')
-        # this prevents more than 1 jobs to be submitted at once, limiting the max numb of
-        # queued processes to 1 * ninst
+
 
 # Configure Dagman to not limit the number of times a node is put on hold
 with open('subs/dagman.config', 'w') as f:
