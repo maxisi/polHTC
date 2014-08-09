@@ -40,6 +40,13 @@ except:
 
 goodpsrs = list( set(psrlist) - set(badpsrs) )
 
+##########################################################################################
+# PATHS
+
+subname = 'subs/generic.sub'
+
+dagname = 'dags/%(det)s%(run)s_%(psrIN)s.dag'
+
 
 ##########################################################################################
 # WRITE SUBMIT
@@ -83,7 +90,7 @@ def lines(det, run, psr, injkind, pdif, ninstSTR, ninjSTR):
 
     l = [
         '# ' + psr + ' ' + injkind + pdif + '\n',
-        'JOB ' + jobname + ' ' + project_dir + g.submit_path(det, run, psr, injkind, pdif),
+        'JOB ' + jobname + ' ' + project_dir + subname,
         'VARS %(jobname)s psr="%(psr)s"' % locals(),
         'VARS %(jobname)s det="%(det)s"' % locals(),
         'VARS %(jobname)s run="%(run)s"' % locals(),
@@ -97,8 +104,6 @@ def lines(det, run, psr, injkind, pdif, ninstSTR, ninjSTR):
     
     return l
 
-
-dagname = 'dags/%(det)s%(run)s_%(psrIN)s.dag'
 
 with open(dagname, 'w') as f:
 
