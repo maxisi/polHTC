@@ -1,5 +1,6 @@
 #! /usr/bin/env python 
 
+import random
 import os
 import sys
 import h5py
@@ -93,7 +94,7 @@ def params(src, frange, hinjrange, ninj, ninst, log):
     
     return freq, polsrch, incsrch, hinj, polinj, incinj
 
-freq, polsrch, incsrch, hinj, polinj, incinj = params(pair.psr, frange, hinjrange, ninj, ninst, log)
+freq_lst, polsrch_lst, incsrch_lst, hinj_lst, polinj_lst, incinj_lst = params(pair.psr, frange, hinjrange, ninj, ninst, log)
 
 
 ##########################################################################################
@@ -102,6 +103,14 @@ freq, polsrch, incsrch, hinj, polinj, incinj = params(pair.psr, frange, hinjrang
 
 for n in np.arange(0, ninst):
 
+    freq = freq_lst[n]
+    polsrch = polsrch_lst[n]
+    incsrch = incsrch_lst[n]
+
+    hinj = hinj_lst[n]
+    polinj = polinj_lst[n]
+    incinj = incinj_lst[n]
+    
     ## RE-HETERODYNE
 
     log.info('Reheterodyne.')
@@ -157,5 +166,5 @@ for n in np.arange(0, ninst):
             results.srec[m] = np.sqrt(abs(np.dot(a.conj(), np.linalg.solve(cov, a))))
         
 
-    log.info('Saving results')
-    results.export()
+log.info('Saving results')
+results.export()
