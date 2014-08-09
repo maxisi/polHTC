@@ -498,9 +498,24 @@ class Results(object):
             cluster = Cluster()
             path = cluster.public_dir
         
-        export_path = path + self.paths['export']
         
         try:
+            export_path = '/home/max.isi/public_html/' + self.paths['export']
+
+            with h5py.File(export_path, 'w') as f:
+
+                # save injected h
+                f.create_dataset('hinj', data = self.hinj)
+
+                # save recovered h and s
+                for m in search_methods:
+                    grp = f.create_group(m)
+                    grp.create_dataset('hrec', data = self.hrec[m])
+                    grp.create_dataset('srec', data = self.srec[m])
+
+        except IOError:
+            export_path = path + self.paths['export']
+
             with h5py.File(export_path, 'w') as f:
                 
                 # save injected h
@@ -514,8 +529,6 @@ class Results(object):
         except:
             message = 'Unable to save collected results to: ' + export_path
             self.log.error(message, exc_info=True)
-            print message
-            print sys.exc_info()
             
     def load(self, path=''):
         '''
