@@ -922,15 +922,15 @@ def lin_fit(x_in, y_in):
     return np.poly1d([p[0][0], 0])
     
         
-def noise_line(d):
-    # input can be a dataframe
-    # find elements with index 0 (no injection) and take their max over columns and rows
-    try:
-        max_n = d[0].max()
-    except KeyError:
-        max_n =d.T[0].max().max()
-    # return corresponding constant polynomial
-    return np.poly1d([max_n])
+def noise_line(hinj, hrec, threshold=.9):
+    # returns the value of hrec which is above 90% of the false positives.
+    # this percentage can be adapted by providing a different 'threshold' value.
+    
+    # index of non-zero hinjs
+    noinj_index = np.where(hinj==0)[0]
+    
+    
+
 
 def rmse(d):
     # computes RMSE between d and its best-fit line
