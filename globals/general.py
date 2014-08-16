@@ -414,7 +414,7 @@ class Pair(object):
 
 
 class Results(object):
-    def __init__(self, det, run, psr, kind, pdif):
+    def __init__(self, det, run, psr, kind, pdif, methods=search_methods):
         
         try:
             self.log = logging.getLogger('Results')
@@ -427,6 +427,17 @@ class Results(object):
         self.psr = psr
         self.injkind = kind
         self.pdif = pdif
+
+        # Defining local srchmethods to avoid relying on the global 'search_methods'
+        # This also allows one to load only results of a specific method.
+        if isinstance(methods, basestring):
+            # assuming only one method was requested, e.g. 'GR'
+            self.search_methods = [methods]
+        elif isinstance(methods, list):
+            # assuming a list of methods was requested, e.g. ['GR', 'G4v']
+            self.search_methods = methods
+        else:
+            self.log.warning('Search method: "' + str(methods) + '" is not a string or a list')
         
         self.paths = {
                     'analysis' : analysis_path(det, run, psr, kind, pdif),
@@ -436,14 +447,17 @@ class Results(object):
         # Initialize result containers (DELIBERATELY NOT CONCISE TO SUPPORT NUMPY 2.6.6)
         self.hrec = {} # recovered strength
         self.srec = {} # recovery significance
-        for m in search_methods:
+        for m in self.search_methods:
             self.hrec[m] = []
             self.srec[m] = []
+    
+    #-----------------------------------------------------------------------------
+    # IO operations
 
     def collect(self):
         '''
         Collects results from multiple files in analysis_path/results as produced by
-        submitting several injsrch_process jobs to Condor.
+        submitting several injsrch_process jobs to Condor. NOT USED BY NEWEST VERSION.
         '''
         
         self.log.info('Collecting results.')
@@ -472,7 +486,7 @@ class Results(object):
                     results = pickle.load(f)
                 
                     # for each method retrieve h and s
-                    for m in search_methods:
+                    for m in self.search_methods:
                         self.hrec[m] += [results[m]['h']]
                         self.srec[m] += [results[m]['s']]
             except:
@@ -480,15 +494,13 @@ class Results(object):
                 self.log.error(message, exc_info=True)
                 print message
                 print sys.exc_info()
-                # TEST: seeing if this makes 
-                sys.exit(1)
         
         return self.hrec, self.srec
     
     def export(self, path=''):
         '''
-        Exports collected result to hdf5 file. If no origin path is provided, takes cluster
-        public access folder as destination.
+        Exports results to hdf5 file. If no destination path is provided, takes cluster
+        public access folder as destination. This defaults to pwd when cluster is not identified.
         '''
 
         self.log.info('Exporting results.')
@@ -497,7 +509,6 @@ class Results(object):
             # Determine export destination.
             cluster = Cluster()
             path = cluster.public_dir
-        
         
         try:
             export_path = '/home/max.isi/public_html/' + self.paths['export']
@@ -508,7 +519,7 @@ class Results(object):
                 f.create_dataset('hinj', data = self.hinj)
 
                 # save recovered h and s
-                for m in search_methods:
+                for m in self.search_methods:
                     grp = f.create_group(m)
                     grp.create_dataset('hrec', data = self.hrec[m])
                     grp.create_dataset('srec', data = self.srec[m])
@@ -522,7 +533,7 @@ class Results(object):
                 f.create_dataset('hinj', data = self.hinj)
                 
                 # save recovered h and s
-                for m in search_methods:
+                for m in self.search_methods:
                     grp = f.create_group(m)
                     grp.create_dataset('hrec', data = self.hrec[m])
                     grp.create_dataset('srec', data = self.srec[m])
@@ -532,13 +543,13 @@ class Results(object):
             
     def load(self, path=''):
         '''
-        Loads collected results from hdf5 file. If no origin path is provided, takes cluster
-        public access folder as destination.
+        Loads results from hdf5 file. If no origin path is provided, takes cluster
+        public access folder as destination. This defaults to pwd when cluster is not identified.
         '''
         self.log.info('Exporting results.')
         
         if path=='':        
-            # Determine export destination.
+            # Determine origin destination.
             cluster = Cluster()
             path = cluster.public_dir
         
@@ -547,19 +558,22 @@ class Results(object):
         try:
             with h5py.File(export_path, 'r') as f:
                 
-                # save injected h
+                # load injected h
                 self.hinj = f['hinj'][:]
                 
-                # save recovered h and s
-                for m in search_methods:
+                # load recovered h and s
+                for m in self.search_methods:
                     self.hrec[m] = f[m + '/hrec'][:]
                     self.srec[m] = f[m + '/srec'][:]
         except:
             message = 'Unable to load collected results from: ' + export_path
             self.log.error(message, exc_info=True)
             print message
-            
-    def get_stats(self, methods=search_methods, types=['h','s']):
+    
+    #-----------------------------------------------------------------------------
+    # Statistics
+
+    def get_stats(self, methods=self.search_methods, types=['h','s']):
         
         self.log.info('Getting analysis statistics.')
         
@@ -573,8 +587,154 @@ class Results(object):
                 for sk in stat_kinds:
                     self.stats[m] = {type : {sk: 0}}
                     # INCOMPLETE!
-            
+                    
+    def get_noise_threshold(self, kind, methods=self.search_methods, threshold=.9):
+        '''
+        Returns the value of hrec/srec which is above a threshold (def 90%) of the false
+        positives. This percentage can be adapted by providing a different 'threshold' value.
+        Takes one argument that indicates whether the hrec or srec stat is computed.
+        '''
+
+        if kind in ['s', 'srec', 'sig']:
+            d = self.srec
+        elif kind in ['h', 'hrec', 'h0']:
+            d = self.hrec
+        else:
+            self.log.error('Did not recognize value "' + str(kind) + '" for threshold computation.', exc_info=True)
         
+        noise_threshold = {}
+        for m in methods:
+            # array of false positives
+            false_pos = d[m][self.hinj[m]==0]
+            n_false_pos = len(false_pos)
+
+            # sort by loudness
+            false_pos_sorted = np.sort(false_pos)
+
+            # get threshold location
+            t_loc = int(threshold * n_false_pos)
+
+            # issue warning if threshold is above all false-positives
+            if t_loc>=(n_false_pos - 1):
+                self.log.warning('Threshold placed at loudest false positive.')
+                t_loc = n_false_pos - 1
+
+            # get threshold value
+            noise_threshold[m] = false_pos_sorted[t_loc]
+
+        # return dictionary of thresholds
+        return noise_threshold
+
+    def get_lin_fit(self, kind, methods=self.search_methods, noise_theshold=.9, band_confidence=.9):
+        '''
+        Performs a linear fit, i.e. returns m s.t. y = m x.
+        Ignores values of x=0 and those under noise threshold.
+        '''
+
+        self.log.info('Performing linear fit of ' + str(kind) + ' data.')
+        
+        # check whether to fit hrec or srec
+        if kind in ['s', 'srec', 'sig']:
+            d = self.srec
+        elif kind in ['h', 'hrec', 'h0']:
+            d = self.hrec
+        else:
+            self.log.error('Did not recognize value "' + str(kind) + '".', exc_info=True)
+        
+        # obtain noise levels
+        noise = self.get_noise_threshold(kind, methods=methods, theshold=noise_threshold)
+
+        # get linear fit
+        slope = {}
+        rmse  = {}
+        for m in methods:
+            
+            self.log.debug('Selecting fit data.')
+
+            # pick false postives above noise threshold
+            x = self.hinj[m][(self.hinj[m]!=0) & (d[m]>noise[m])]
+            y = d[m][final_index]
+
+            # put vectors in proper shape for lstsq function
+            x_vertical = np.reshape(x, (len(x_nozeros), 1))
+            y_vertical = np.reshape(y, (len(y_nozeros), 1))
+
+            self.log.debug('Performing fit.') 
+
+            # fit using lstsq routine
+            # http://docs.scipy.org/doc/numpy/reference/generated/numpy.linalg.lstsq.html
+            p, residualSum, _, _ = np.linalg.lstsq(x_vertical, y_vertical)
+            
+            slope[m] = p[0][0]
+
+            # the sum of residuals is the squared Euclidean 2-norm for each column in b - a*x
+            # sum of residuals = Sum[(x-y)^2], so RMSE = sqrt(s.o.r/N)
+            rmse[m] = np.sqrt(residualSum[0]/len(d))
+
+            self.log.debug('Computing bands at ' + str(band_confidence) + ' confidence.')
+            # compute lines parallel to fit line that enclose band_confidence (def 90%) of points
+            
+            # 1. subtract fit from data and sort
+            deviations = np.sort(y - slope[m]*x)
+            
+            # 2a. find value that is above (band_confidence %) of all datapoints
+            dev_pos   = deviations[deviations>0]
+            h_max_loc = int(band_confidence * len(dev_pos))
+            h_max[m]  = dev_pos[h_max_loc]
+
+            # 2b. find value that is below (band_confidence %) of all datapoints
+            h_min[m] = i
+
+        # return dictionary of thresholds and rmse's
+        return slope, rmse
+
+    def get_band_lines(self, kind
+            
+##########################################################################################
+# STATISTICS
+
+statkinds = [
+            'slope',    # slope of linear fit to recovered injections (ignoring hinj=0)
+            'noise',    # noise line
+            'inter',    # hinj for which fit intersects noise line
+            'rmse',     # root mean square error of lin. fit
+            'min_det'   # minimum value above noise line
+            ]
+
+    
+        
+
+def min_det_h(d):
+    # assumes input is a series
+    # get max noise
+    noise = noise_line(d)(1)
+    
+    # find max injection below that
+    d2 = d[d<noise]
+    det_injs = d2[d2.index>0]
+    
+    try:
+        print 'Get min'
+        
+        return det_injs.index[np.argmax(det_injs)]
+    except ValueError:
+	print 'ValueError'
+        return 0
+
+    
+def fit_intersect_noise(d):
+    # assumes input is a series
+    
+    noise = noise_line(d)       # noise line
+    fit = lin_fit(d)            # fit line
+    hdetmin = min_det_h(d)      # min detected h (probably around intersection)
+    
+    h_intersect = fsolve(lambda x: fit(x) - noise(x), hdetmin)
+    
+    return h_intersect[0]            
+
+            
+###########################
 class Cluster(object):
     
     def __init__(self, name=''):
@@ -885,96 +1045,7 @@ def mjd_gps(mjd):
     return tgps
 
 
-##########################################################################################
-# STATISTICS
 
-statkinds = [
-            'slope',    # slope of linear fit to recovered injections (ignoring hinj=0)
-            'noise',    # noise line
-            'inter',    # hinj for which fit intersects noise line
-            'rmse',     # root mean square error of lin. fit
-            'min_det'   # minimum value above noise line
-            ]
-
-def lin_fit(x_in, y_in):
-    '''
-    Performs a linear fit: y = m x. Returns m. (Ignores values of x=0)
-    '''
-    
-    ## Get injections
-    
-    # Mask zero-valued entries so that they are ignored
-    # (See http://docs.scipy.org/doc/numpy/reference/maskedarray.generic.html)
-    x_nozeros = np.ma.masked_equal(x_in,0)
-    
-    # get indices of x=0
-    zero_index = np.flatnonzero(x_in)
-    # get valid values of y
-    y_nozeros = np.delete(y_in, zero_index)
-    
-    # Put vectors in proper shape
-    x = np.reshape(x_nozeros, (len(x_nozeros), 1))
-    y = np.reshape(y_nozeros, (len(y_nozeros), 1))
-    
-    # fit
-    p, _, _, _ = np.linalg.lstsq(x, y)
-    
-    return np.poly1d([p[0][0], 0])
-    
-        
-def noise_line(hinj, hrec, threshold=.9):
-    # returns the value of hrec which is above 90% of the false positives.
-    # this percentage can be adapted by providing a different 'threshold' value.
-    
-    # index of non-zero hinjs
-    noinj_index = np.where(hinj==0)[0]
-    
-    
-
-
-def rmse(d):
-    # computes RMSE between d and its best-fit line
-
-    # get injections
-    d = d.drop([0])
-
-    x = np.reshape(d.index, (len(d), 1)) # take injections
-    y = np.reshape(d, (len(d), 1)) # take recovered values
-
-    # fit and obtain sum of residuals (squared Euclidean 2-norm for each column in b - a*x)
-    _, residuals, _, _ = np.linalg.lstsq(x, y)
-
-    # sum of residuals = Sum[(x-y)^2], so RMSE = sqrt(s.o.r/N)
-    return np.sqrt(residuals[0]/len(d))
-
-def min_det_h(d):
-    # assumes input is a series
-    # get max noise
-    noise = noise_line(d)(1)
-    
-    # find max injection below that
-    d2 = d[d<noise]
-    det_injs = d2[d2.index>0]
-    
-    try:
-        print 'Get min'
-        
-        return det_injs.index[np.argmax(det_injs)]
-    except ValueError:
-	print 'ValueError'
-        return 0
-
-    
-def fit_intersect_noise(d):
-    # assumes input is a series
-    
-    noise = noise_line(d)       # noise line
-    fit = lin_fit(d)            # fit line
-    hdetmin = min_det_h(d)      # min detected h (probably around intersection)
-    
-    h_intersect = fsolve(lambda x: fit(x) - noise(x), hdetmin)
-    
-    return h_intersect[0]
 
 
 ##########################################################################################
