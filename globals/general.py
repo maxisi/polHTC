@@ -6,6 +6,10 @@ import h5py
 import sys
 import math
 import socket
+# set up plotting backend
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
 ##########################################################################################
 ## LOGGING
@@ -569,25 +573,35 @@ class Results(object):
             message = 'Unable to load collected results from: ' + export_path
             self.log.error(message, exc_info=True)
             print message
+
+    def pickseries(kind):
+        '''
+        Returns already loaded recovered data of 'kind'  and makes sure it exists.
+        (Small snippet of code use multiple times below.)
+        '''
+
+        try:
+            if kind in ['s', 'srec', 'sig']:
+                y = self.srec
+                name = 'Significance'
+
+            elif kind in ['h', 'hrec', 'h0']:
+                y = self.hrec
+                name = '$h_{\rm rec}$'
+                
+            else:
+                self.log.error('Did not recognize value "' + str(kind) + '".', exc_info=True)
+                sys.exit(1)
+            
+            return y, name
+
+        except:
+            self.log.error('No data. Try loading results with .load()', exc_info=True)
+            sys.exit(1)
     
     #-----------------------------------------------------------------------------
     # Statistics
 
-    def get_stats(self, methods=self.search_methods, types=['h','s']):
-        
-        self.log.info('Getting analysis statistics.')
-        
-        type_names = {'h' : 'hrec', 's' : 'srec'}
-        
-        # Initialize stats container: method/h or s/ stat kind
-        self.stats = {}
-        
-        for m in methods:
-            for type in types:
-                for sk in stat_kinds:
-                    self.stats[m] = {type : {sk: 0}}
-                    # INCOMPLETE!
-                    
     def get_noise_threshold(self, kind, methods=self.search_methods, threshold=.9):
         '''
         Returns the value of hrec/srec which is above a threshold (def 90%) of the false
@@ -595,13 +609,8 @@ class Results(object):
         Takes one argument that indicates whether the hrec or srec stat is computed.
         '''
 
-        if kind in ['s', 'srec', 'sig']:
-            d = self.srec
-        elif kind in ['h', 'hrec', 'h0']:
-            d = self.hrec
-        else:
-            self.log.error('Did not recognize value "' + str(kind) + '" for threshold computation.', exc_info=True)
-        
+        d, _ = self.pickseries(kind)
+
         noise_threshold = {}
         for m in methods:
             # array of false positives
@@ -625,28 +634,30 @@ class Results(object):
         # return dictionary of thresholds
         return noise_threshold
 
-    def get_lin_fit(self, kind, methods=self.search_methods, noise_theshold=.9, band_confidence=.9):
+    def quantify(self, kind, methods=self.search_methods, noise_threshold=.9, band_conf=.9):
         '''
-        Performs a linear fit, i.e. returns m s.t. y = m x.
-        Ignores values of x=0 and those under noise threshold.
+        Performs a linear fit ignoring values of hinj=0 and those under noise threshold.
+        Returns:
+        m       such that y = m*x from lstsq fit (float)
+        rmse    sum of residuals = Sum[(x-y)^2], so RMSE = sqrt(s.o.r/N) (float)
+        ymax    point defining line parallel to fit that encloses b_c% of pts OVER fit (inj, rec)
+        ymin    point defining line parallel to fit that encloses b_c% of pts UNDER fit (inj,rec)
+        noise   result of get_noise_threshold()
         '''
 
         self.log.info('Performing linear fit of ' + str(kind) + ' data.')
         
-        # check whether to fit hrec or srec
-        if kind in ['s', 'srec', 'sig']:
-            d = self.srec
-        elif kind in ['h', 'hrec', 'h0']:
-            d = self.hrec
-        else:
-            self.log.error('Did not recognize value "' + str(kind) + '".', exc_info=True)
-        
+        # obtain data
+        d, _  = self.pickseries(kind)
+
         # obtain noise levels
-        noise = self.get_noise_threshold(kind, methods=methods, theshold=noise_threshold)
+        noise = self.get_noise_threshold(kind, methods=methods, threshold=noise_threshold)
 
         # get linear fit
         slope = {}
         rmse  = {}
+        ymax  = {}
+        ymin  = {}
         for m in methods:
             
             self.log.debug('Selecting fit data.')
@@ -668,73 +679,134 @@ class Results(object):
             slope[m] = p[0][0]
 
             # the sum of residuals is the squared Euclidean 2-norm for each column in b - a*x
-            # sum of residuals = Sum[(x-y)^2], so RMSE = sqrt(s.o.r/N)
+            # sum of residuals = Sum[(x-y)^2], so RMSE = sqrt(s.o.r./N)
             rmse[m] = np.sqrt(residualSum[0]/len(d))
 
-            self.log.debug('Computing bands at ' + str(band_confidence) + ' confidence.')
-            # compute lines parallel to fit line that enclose band_confidence (def 90%) of points
+            self.log.debug('Computing bands at ' + str(band_conf) + ' confidence.')
+
+            # compute lines parallel to fit line that enclose band_conf (def 90%) of points
             
             # 1. subtract fit from data and sort
             deviations = np.sort(y - slope[m]*x)
             
-            # 2a. find value that is above (band_confidence %) of all datapoints
-            dev_pos   = deviations[deviations>0]
-            h_max_loc = int(band_confidence * len(dev_pos))
-            h_max[m]  = dev_pos[h_max_loc]
+            # 2a. find hrec/srec (y)  value that is above (band_conf %) of all datapoints
+            dev_pos   = np.sort(deviations[deviations>0]) # sorted + deviations (yrec > yfit)
+            ymax_rec_loc = int(band_conf * len(dev_pos)) # pick b_c% highest dev. index
 
-            # 2b. find value that is below (band_confidence %) of all datapoints
-            h_min[m] = i
+            if ymax_rec_loc>=(len(dev_pos) - 1):
+                self.log.warning('Threshold placed at loudest deviation.')
+                ymax_rec_loc = len(dev_pos) - 1
+
+            ymax_rec  = dev_pos[ymax_rec_loc] # pick b_c% highest value
+
+            # 2b. find corresponding hinj value
+            ymax_inj_loc = np.where(self.hinj==ymax_rec)[0]
+            if len(ymax_inj_loc)!=1:
+                # error caused if the value is found multiple times (len>1) or not at all (len=0)
+                self.log.error('Cannot find ' + kind + ' max inj.', exc_info=True)
+            ymax_inj = self.hinj[ymax_inj_loc[0]]
+
+            ymax[m] = (ymax_inj, ymax_rec)
+
+            # 3a. find value that is below (band_conf %) of all datapoints
+            dev_neg   = np.sort(deviations[deviations<0])[::-1] # ([::-1] reverses list order)
+            ymin_rec_loc = int(band_conf * len(dev_neg))
+ 
+            if ymin_rec_loc>=(len(dev_neg) - 1):
+                self.log.warning('Threshold placed at loudest deviation.')
+                ymin_rec_loc = len(dev_neg) - 1
+
+            ymin_rec  = dev_pos[ymin_rec_loc]
+ 
+            # 3b. find corresponding hinj value
+            ymin_inj_loc = np.where(self.hinj==ymin_rec)[0]
+            if len(ymin_inj_loc)!=1:
+                # error caused if the value is found multiple times (len>1) or not at all (len=0)
+                self.log.error('Cannot find ' + kind + ' min inj.', exc_info=True)
+            ymin_inj = self.hinj[ymin_inj_loc]
+
+            ymin[m] = (ymin_inj, ymin_rec)
 
         # return dictionary of thresholds and rmse's
-        return slope, rmse
+        return slope, rmse, ymax, ymin, noise
 
-    def get_band_lines(self, kind
+    def min_h_det(self, confidence=.9):
+        '''
+        Returns strength of smallest detected injection, computed using the significance curve
+        and the corresponding noise threshold. The significance threshold is translated into a
+        strenght by means of the fit.
+        '''
+
+        self.log.info('Obtaining min h det.')
+
+        # obtain significance noise threshold and best--fit line slope
+        slope, _, _, _, noise = self.quantify('s', noise_threshold=confidence)
+
+        return noise / slope
+    
+    #-----------------------------------------------------------------------------
+    # Plots
+    
+    def plot(self, kind, aux='max', noise_threshold=.95, band_conf=.95, methods=self.search_methods, dir='scratch/plots/', title=True):
+        
+        self.log.info('Plotting.')
+ 
+        # obtain data
+        y, kindname = self.pickseries(kind)
+
+        # obtain fit & noise threshold
+        slope, _, ymax, ymin, noise = self.quantify(kind, noise_threshold=noise_threshold,  band_conf= band_conf, methods=self.search_methods)
+ 
+        # find "best" method
+        maxslope = max([slope[m] for m in methods])
+        
+        # process
+        for m in methods:
+            # construct noise line, best fit line and confidence band around it
+            noise_line = [noise[m]] * len(y)
+            bestfit_line = slope[m] * self.hinj
+            topband_line = slope[m] * self.hinj + (ymax[m][1]- slope[m] * ymax[m][0])
+            botband_line = slope[m] * self.hinj + (ymin[m][1]- slope[m] * ymin[m][0])
             
+            # plot
+            plt.plot(self.hinj, y[m], plotcolor[m]+'+', label=m)
+
+            if aux in ['all', 'full', 'simple']:
+                plt.plot(self.hinj, bestfit_line, plotcolor[m])
+                
+                if aux in ['all', 'full']:
+                    plt.plot(self.hinj, noise_line, plotcolor[m]+'.')
+                    plt.plot(self.hinh, topband_line,  plotcolor[m], alpha=.5)
+                    plt.plot(self.hinh, botband_line,  plotcolor[m], alpha=.5)
+                    
+                elif aux == 'simple':
+                    # just plot the loudest noise threshold
+                    if slope[m]==maxslope:
+                        plt.plot(self.hinj, noise_line, plotcolor[m]+'.')
+                        
+        # style
+        plt.xlim(0, max(self.hinj)
+        plt.ylim(0, max(y))
+
+        plt.xlabel('$h_{\rm inj}$')
+        plt.ylabel(kindname)
+
+        plt.legend(numpoints=1)
+
+        if title: plt.title('%(self.injkind)s%(self.pdif)s injections on %(self.det)s %(self.run)s data for %(self.psr)s' % locals() )
+
+        # check destination directory exists
+        try:
+            os.makedirs(dir)
+            self.log.debug('Plot directory created.')
+        except:
+            self.log.debug('Plot directory already exists.')
+
+        # save
+        filename = 'injsrch_%(self.det)s%(self.run)s_%(self.injkind)s%(self.pdif)s_%(self.psr)s_%(kind)s' % locals()
+        plt.savefig(dir + filename + '.pdf', , bbox_inches='tight')
+        
 ##########################################################################################
-# STATISTICS
-
-statkinds = [
-            'slope',    # slope of linear fit to recovered injections (ignoring hinj=0)
-            'noise',    # noise line
-            'inter',    # hinj for which fit intersects noise line
-            'rmse',     # root mean square error of lin. fit
-            'min_det'   # minimum value above noise line
-            ]
-
-    
-        
-
-def min_det_h(d):
-    # assumes input is a series
-    # get max noise
-    noise = noise_line(d)(1)
-    
-    # find max injection below that
-    d2 = d[d<noise]
-    det_injs = d2[d2.index>0]
-    
-    try:
-        print 'Get min'
-        
-        return det_injs.index[np.argmax(det_injs)]
-    except ValueError:
-	print 'ValueError'
-        return 0
-
-    
-def fit_intersect_noise(d):
-    # assumes input is a series
-    
-    noise = noise_line(d)       # noise line
-    fit = lin_fit(d)            # fit line
-    hdetmin = min_det_h(d)      # min detected h (probably around intersection)
-    
-    h_intersect = fsolve(lambda x: fit(x) - noise(x), hdetmin)
-    
-    return h_intersect[0]            
-
-            
-###########################
 class Cluster(object):
     
     def __init__(self, name=''):
@@ -853,7 +925,12 @@ pcat = {
         '0' : 0
         }
 
-
+plotcolor = {
+            'GR'  : 'g',
+            'G4v' : 'r',
+            'AP'  : 'b',
+            'Sid' : 'm'
+            }
 ##########################################################################################
 # DETECTOR INFORMATION
 
