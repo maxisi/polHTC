@@ -1,9 +1,11 @@
 import logging
 from datetime import datetime
 import numpy as np
+import scipy.stats
 import cPickle as pickle
 import h5py
 import sys
+import os
 import math
 import socket
 # set up plotting backend
@@ -693,17 +695,21 @@ class Results(object):
             # compute lines parallel to fit line that enclose band_conf (def 90%) of points
             
             # 1. subtract fit from data and sort
-            deviations = np.sort(y - slope[m]*x)
+            deviations = y - slope[m]*x
             
             # 2a. find hrec/srec (y)  value that is above (band_conf %) of all datapoints
-            dev_pos   = np.sort(deviations[deviations>0]) # sorted + deviations (yrec > yfit)
-            ymax_rec_loc = int(band_conf * len(dev_pos)) # pick b_c% highest dev. index
+            dev_pos = deviations[deviations>0]
+            
+            max_ind = int(np.ceil(band_conf * len(dev_pos)))
 
-            if ymax_rec_loc>=(len(dev_pos) - 1):
-                self.log.warning('Threshold placed at loudest deviation.')
-                ymax_rec_loc = len(dev_pos) - 1
-
-            ymax_rec  = dev_pos[ymax_rec_loc] # pick b_c% highest value
+            if max_ind>(len(dev_pos)-1):
+                max_ind = -1
+            
+            dev_max = np.sort(dev_pos)[max_ind]
+            
+            ymax_rec = y[np.where(deviations==dev_max)[0][0]] # pick b_c% highest value
+            # (note that many points might lay on the top/bottom lines, so where might return
+            # multiple values; we just need one, so we take the first.)
 
             # 2b. find corresponding hinj value
             ymax_inj_loc = np.where(y==ymax_rec)[0]
@@ -711,21 +717,24 @@ class Results(object):
             if len(ymax_inj_loc)!=1:
                 # error caused if the value is found multiple times (len>1) or not at all (len=0)
                 self.log.error('Cannot find ' + kind + ' max inj.', exc_info=True)
-            print ymax_inj_loc, ymax_rec, y, len(x)
+          
             ymax_inj = x[ymax_inj_loc[0]]
 
             ymax[m] = (ymax_inj, ymax_rec)
 
             # 3a. find value that is below (band_conf %) of all datapoints
-            dev_neg   = np.sort(deviations[deviations<0])[::-1] # ([::-1] reverses list order)
-            ymin_rec_loc = int(band_conf * len(dev_neg))
- 
-            if ymin_rec_loc>=(len(dev_neg) - 1):
-                self.log.warning('Threshold placed at loudest deviation.')
-                ymin_rec_loc = len(dev_neg) - 1
+            dev_neg = deviations[deviations<0]
+            
+            min_ind = int(np.floor((1-band_conf) * len(dev_pos)))
+            # (note (1-band_conf) because of negative values.)
+            
+            if min_ind>(len(dev_pos)-1):
+                min_ind = -1
 
-            ymin_rec  = dev_pos[ymin_rec_loc]
- 
+            dev_min = np.sort(dev_neg)[min_ind]
+            
+            ymin_rec = y[np.where(deviations==dev_min)[0][0]]
+
             # 3b. find corresponding hinj value
             ymin_inj_loc = np.where(y==ymin_rec)[0]
 
@@ -757,7 +766,7 @@ class Results(object):
     #-----------------------------------------------------------------------------
     # Plots
     
-    def plot(self, kind, aux='max', noise_threshold=.95, band_conf=.95, methods=[], dir='scratch/plots/', title=True):
+    def plot(self, kind, aux='max', noise_threshold=.95, band_conf=.95, methods=[], dir='scratch/plots/', title=True, filetype='png'):
          
         if methods==[]:
             methods = self.search_methods
@@ -798,15 +807,15 @@ class Results(object):
                         plt.plot(self.hinj, noise_line, plotcolor[m]+'.')
                         
         # style
-        plt.xlim(0, max(self.hinj))
-        plt.ylim(0, max(y))
+#        plt.xlim(0, max(self.hinj))
+#        plt.ylim(0, max(y))
 
-        plt.xlabel('$h_{\rm inj}$')
+        plt.xlabel('$h_{inj}$')
         plt.ylabel(kindname)
 
         plt.legend(numpoints=1)
 
-        if title: plt.title('%(self.injkind)s%(self.pdif)s injections on %(self.det)s %(self.run)s data for %(self.psr)s' % locals() )
+        if title: plt.title(self.injkind+self.pdif+' injections on '+ self.det+self.run+' data for '+self.psr)
 
         # check destination directory exists
         try:
@@ -816,9 +825,10 @@ class Results(object):
             self.log.debug('Plot directory already exists.')
 
         # save
-        filename = 'injsrch_%(self.det)s%(self.run)s_%(self.injkind)s%(self.pdif)s_%(self.psr)s_%(kind)s' % locals()
-        plt.savefig(dir + filename + '.pdf', bbox_inches='tight')
-        
+        filename = 'injsrch_'+self.det+self.run+'_'+self.injkind+self.pdif+'_'+self.psr+'_'+kind
+        plt.savefig(dir + filename + '.' + filetype, bbox_inches='tight')
+        plt.close()
+
 ##########################################################################################
 class Cluster(object):
     
