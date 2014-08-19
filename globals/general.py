@@ -574,7 +574,7 @@ class Results(object):
             self.log.error(message, exc_info=True)
             print message
 
-    def pickseries(kind):
+    def pickseries(self, kind):
         '''
         Returns already loaded recovered data of 'kind'  and makes sure it exists.
         (Small snippet of code use multiple times below.)
@@ -602,19 +602,22 @@ class Results(object):
     #-----------------------------------------------------------------------------
     # Statistics
 
-    def get_noise_threshold(self, kind, methods=self.search_methods, threshold=.9):
+    def get_noise_threshold(self, kind, methods=[], threshold=.9):
         '''
         Returns the value of hrec/srec which is above a threshold (def 90%) of the false
         positives. This percentage can be adapted by providing a different 'threshold' value.
         Takes one argument that indicates whether the hrec or srec stat is computed.
         '''
 
+        if methods==[]:
+            methods = self.search_methods
+        
         d, _ = self.pickseries(kind)
 
         noise_threshold = {}
         for m in methods:
             # array of false positives
-            false_pos = d[m][self.hinj[m]==0]
+            false_pos = d[m][self.hinj==0]
             n_false_pos = len(false_pos)
 
             # sort by loudness
@@ -634,7 +637,7 @@ class Results(object):
         # return dictionary of thresholds
         return noise_threshold
 
-    def quantify(self, kind, methods=self.search_methods, noise_threshold=.9, band_conf=.9):
+    def quantify(self, kind, methods=[], noise_threshold=.9, band_conf=.9):
         '''
         Performs a linear fit ignoring values of hinj=0 and those under noise threshold.
         Returns:
@@ -647,6 +650,9 @@ class Results(object):
 
         self.log.info('Performing linear fit of ' + str(kind) + ' data.')
         
+        if methods==[]:
+            methods = self.search_methods
+
         # obtain data
         d, _  = self.pickseries(kind)
 
@@ -663,12 +669,12 @@ class Results(object):
             self.log.debug('Selecting fit data.')
 
             # pick false postives above noise threshold
-            x = self.hinj[m][(self.hinj[m]!=0) & (d[m]>noise[m])]
-            y = d[m][final_index]
+            x = self.hinj[(self.hinj!=0) & (d[m]>noise[m])]
+            y = d[m][(self.hinj!=0) & (d[m]>noise[m])]
 
             # put vectors in proper shape for lstsq function
-            x_vertical = np.reshape(x, (len(x_nozeros), 1))
-            y_vertical = np.reshape(y, (len(y_nozeros), 1))
+            x_vertical = np.reshape(x, (len(x), 1))
+            y_vertical = np.reshape(y, (len(y), 1))
 
             self.log.debug('Performing fit.') 
 
@@ -700,11 +706,13 @@ class Results(object):
             ymax_rec  = dev_pos[ymax_rec_loc] # pick b_c% highest value
 
             # 2b. find corresponding hinj value
-            ymax_inj_loc = np.where(self.hinj==ymax_rec)[0]
+            ymax_inj_loc = np.where(y==ymax_rec)[0]
+
             if len(ymax_inj_loc)!=1:
                 # error caused if the value is found multiple times (len>1) or not at all (len=0)
                 self.log.error('Cannot find ' + kind + ' max inj.', exc_info=True)
-            ymax_inj = self.hinj[ymax_inj_loc[0]]
+            print ymax_inj_loc, ymax_rec, y, len(x)
+            ymax_inj = x[ymax_inj_loc[0]]
 
             ymax[m] = (ymax_inj, ymax_rec)
 
@@ -719,11 +727,13 @@ class Results(object):
             ymin_rec  = dev_pos[ymin_rec_loc]
  
             # 3b. find corresponding hinj value
-            ymin_inj_loc = np.where(self.hinj==ymin_rec)[0]
+            ymin_inj_loc = np.where(y==ymin_rec)[0]
+
             if len(ymin_inj_loc)!=1:
                 # error caused if the value is found multiple times (len>1) or not at all (len=0)
                 self.log.error('Cannot find ' + kind + ' min inj.', exc_info=True)
-            ymin_inj = self.hinj[ymin_inj_loc]
+            
+            ymin_inj = x[ymin_inj_loc]
 
             ymin[m] = (ymin_inj, ymin_rec)
 
@@ -747,8 +757,11 @@ class Results(object):
     #-----------------------------------------------------------------------------
     # Plots
     
-    def plot(self, kind, aux='max', noise_threshold=.95, band_conf=.95, methods=self.search_methods, dir='scratch/plots/', title=True):
-        
+    def plot(self, kind, aux='max', noise_threshold=.95, band_conf=.95, methods=[], dir='scratch/plots/', title=True):
+         
+        if methods==[]:
+            methods = self.search_methods
+
         self.log.info('Plotting.')
  
         # obtain data
@@ -785,7 +798,7 @@ class Results(object):
                         plt.plot(self.hinj, noise_line, plotcolor[m]+'.')
                         
         # style
-        plt.xlim(0, max(self.hinj)
+        plt.xlim(0, max(self.hinj))
         plt.ylim(0, max(y))
 
         plt.xlabel('$h_{\rm inj}$')
@@ -804,7 +817,7 @@ class Results(object):
 
         # save
         filename = 'injsrch_%(self.det)s%(self.run)s_%(self.injkind)s%(self.pdif)s_%(self.psr)s_%(kind)s' % locals()
-        plt.savefig(dir + filename + '.pdf', , bbox_inches='tight')
+        plt.savefig(dir + filename + '.pdf', bbox_inches='tight')
         
 ##########################################################################################
 class Cluster(object):
