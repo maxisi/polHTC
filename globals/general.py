@@ -766,7 +766,7 @@ class Results(object):
     #-----------------------------------------------------------------------------
     # Plots
     
-    def plot(self, kind, aux='max', noise_threshold=.95, band_conf=.95, methods=[], dir='scratch/plots/', title=True, filetype='png', alpha=.3):
+    def plot(self, kind, aux='max', noise_threshold=.95, band_conf=.95, methods=[], dir='scratch/plots/', title=True, filetype='png', alpha=.3, scale=1., extra_name=''):
          
         if methods==[]:
             methods = self.search_methods
@@ -811,8 +811,8 @@ class Results(object):
 			    plt.plot(self.hinj, botband_line,  plotcolor[m], alpha=alpha)
 
             if slope[m]==maxslope:
-                plt.xlim(0, max(self.hinj))
-                plt.ylim(0, np.max(y[m]))
+                plt.xlim(0, scale * np.max(self.hinj))
+                plt.ylim(0, scale * np.max(y[m]))
                         
         # style
         plt.xlabel('$h_{inj}$')
@@ -831,7 +831,7 @@ class Results(object):
 
         # save
         filename = 'injsrch_'+self.det+self.run+'_'+self.injkind+self.pdif+'_'+self.psr+'_'+kind
-        plt.savefig(dir + filename + '.' + filetype, bbox_inches='tight')
+        plt.savefig(dir + filename + extra_name + '.' + filetype, bbox_inches='tight')
         plt.close()
 
 ##########################################################################################
