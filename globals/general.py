@@ -766,7 +766,7 @@ class Results(object):
     #-----------------------------------------------------------------------------
     # Plots
     
-    def plot(self, kind, aux='max', noise_threshold=.95, band_conf=.95, methods=[], dir='scratch/plots/', title=True, filetype='png', alpha=.8):
+    def plot(self, kind, aux='max', noise_threshold=.95, band_conf=.95, methods=[], dir='scratch/plots/', title=True, filetype='png', alpha=.3):
          
         if methods==[]:
             methods = self.search_methods
@@ -777,7 +777,7 @@ class Results(object):
         y, kindname = self.pickseries(kind)
 
         # obtain fit & noise threshold
-        slope, _, ymax, ymin, noise = self.quantify(kind, noise_threshold=noise_threshold,  band_conf= band_conf, methods=self.search_methods)
+        slope, _, ymax, ymin, noise = self.quantify(kind, noise_threshold=noise_threshold,  band_conf= band_conf, methods=methods)
  
         # find "best" method
         maxslope = max([slope[m] for m in methods])
