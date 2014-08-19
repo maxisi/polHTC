@@ -707,7 +707,7 @@ class Results(object):
             
             dev_max = np.sort(dev_pos)[max_ind]
             
-            ymax_rec = y[np.where(deviations==dev_max)[0][0]] # pick b_c% highest value
+            ymax_rec = y[np.where(deviations==dev_max)[0][0]]
             # (note that many points might lay on the top/bottom lines, so where might return
             # multiple values; we just need one, so we take the first.)
 
@@ -766,7 +766,7 @@ class Results(object):
     #-----------------------------------------------------------------------------
     # Plots
     
-    def plot(self, kind, aux='max', noise_threshold=.95, band_conf=.95, methods=[], dir='scratch/plots/', title=True, filetype='png'):
+    def plot(self, kind, aux='max', noise_threshold=.95, band_conf=.95, methods=[], dir='scratch/plots/', title=True, filetype='png', alpha=.8):
          
         if methods==[]:
             methods = self.search_methods
@@ -783,9 +783,10 @@ class Results(object):
         maxslope = max([slope[m] for m in methods])
         
         # process
+        plt.figure()
         for m in methods:
             # construct noise line, best fit line and confidence band around it
-            noise_line = [noise[m]] * len(y)
+            noise_line = [noise[m]] * len(self.hinj)
             bestfit_line = slope[m] * self.hinj
             topband_line = slope[m] * self.hinj + (ymax[m][1]- slope[m] * ymax[m][0])
             botband_line = slope[m] * self.hinj + (ymin[m][1]- slope[m] * ymin[m][0])
@@ -793,27 +794,31 @@ class Results(object):
             # plot
             plt.plot(self.hinj, y[m], plotcolor[m]+'+', label=m)
 
-            if aux in ['all', 'full', 'simple']:
+            if aux in ['all', 'full', 'simple', 'medium']:
                 plt.plot(self.hinj, bestfit_line, plotcolor[m])
                 
                 if aux in ['all', 'full']:
-                    plt.plot(self.hinj, noise_line, plotcolor[m]+'.')
-                    plt.plot(self.hinh, topband_line,  plotcolor[m], alpha=.5)
-                    plt.plot(self.hinh, botband_line,  plotcolor[m], alpha=.5)
+                    plt.plot(self.hinj, noise_line, plotcolor[m], alpha=alpha)
+                    plt.plot(self.hinj, topband_line,  plotcolor[m], alpha=alpha)
+                    plt.plot(self.hinj, botband_line,  plotcolor[m], alpha=alpha)
                     
-                elif aux == 'simple':
+                elif aux in ['simple', 'medium']:
                     # just plot the loudest noise threshold
                     if slope[m]==maxslope:
-                        plt.plot(self.hinj, noise_line, plotcolor[m]+'.')
+                        plt.plot(self.hinj, noise_line, plotcolor[m], alpha=alpha)
+                        if aux == 'medium': 
+			    plt.plot(self.hinj, topband_line,  plotcolor[m], alpha=alpha)
+			    plt.plot(self.hinj, botband_line,  plotcolor[m], alpha=alpha)
+
+            if slope[m]==maxslope:
+                plt.xlim(0, max(self.hinj))
+                plt.ylim(0, np.max(y[m]))
                         
         # style
-#        plt.xlim(0, max(self.hinj))
-#        plt.ylim(0, max(y))
-
         plt.xlabel('$h_{inj}$')
         plt.ylabel(kindname)
 
-        plt.legend(numpoints=1)
+        plt.legend(numpoints=1, loc=2)
 
         if title: plt.title(self.injkind+self.pdif+' injections on '+ self.det+self.run+' data for '+self.psr)
 
