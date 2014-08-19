@@ -833,7 +833,26 @@ class Results(object):
         filename = 'injsrch_'+self.det+self.run+'_'+self.injkind+self.pdif+'_'+self.psr+'_'+kind
         plt.savefig(dir + filename + extra_name + '.' + filetype, bbox_inches='tight')
         plt.close()
-
+        
+    def pvalue(self, kind):
+        
+class ResultsMP(object):
+    def __init__(self, det, run, injkind, pdif):
+        self.det = det
+        self.run = run
+        self.injkind = inkind
+        self.pdif = pdif
+        
+    def load_stats(self, dir='', listID=None):
+        '''
+        Load PSR results for all pulsars in list and take basic efficiency statistics.
+        '''
+        
+    def freqplot(self, kind, extra_name='', scale=1):
+        '''
+        Produces plot of efficiency indicator (noise, min-hrec) vs PSR frequency.
+        '''
+        
 ##########################################################################################
 class Cluster(object):
     
