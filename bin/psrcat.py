@@ -7,7 +7,7 @@ from urllib2 import urlopen
 import cPickle as pickle
 import numpy as np
 
-import general as g
+from globals import general as g
 
 '''
 Gets location parameters for pulsars in input list from ATNF online catalogue.
@@ -37,7 +37,7 @@ except IOError:
 log.info('Building PSR catalogue.')
 
 def atnfurl(psr_list):
-    pre = 'http://www.atnf.csiro.au/research/pulsar/psrcat/proc_form.php?version=1.47&JName=JName&RaJ=RaJ&DecJ=DecJ&startUserDefined=true&c1_val=&c2_val=&c3_val=&c4_val=&sort_attr=jname&sort_order=asc&condition=&'
+    pre = 'http://www.atnf.csiro.au/research/pulsar/psrcat/proc_form.php?version=1.47&JName=JName&RaJ=RaJ&DecJ=DecJ&F0=F0&startUserDefined=true&c1_val=&c2_val=&c3_val=&c4_val=&sort_attr=jname&sort_order=asc&condition=&'
     post = '&ephemeris=short&coords_unit=raj%2Fdecj&radius=&coords_1=&coords_2=&style=Long+with+errors&no_value=*&nohead=nohead&fsize=3&x_axis=&x_scale=linear&y_axis=&y_scale=linear&state=query&table_bottom.x=36&table_bottom.y=16'
     names= 'pulsar_names='
 

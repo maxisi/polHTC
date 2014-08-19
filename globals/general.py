@@ -1056,6 +1056,8 @@ paramNames = [
                 'RAS error',
                 'DEC',
                 'DEC error',
+                'FR0', # rotational frequency in Hz
+                'FR0 error'
             ]                
 
 extraParamNames = [None, 'POL', 'POL error', 'INC', 'INC error']
@@ -1073,6 +1075,8 @@ paramFormat = {
                 'RAS error': lambda x: hms_rad(0., 0., x),
                 'DEC' : lambda x: np.radians(dms_deg(x)),
                 'DEC error' : lambda x: np.radians(dms_deg(0., 0., x))
+                'FR0' : lambda x: x,
+                'FR0 error' : lambda x: x
                 }
 
 # read PSR list
