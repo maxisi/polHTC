@@ -766,7 +766,7 @@ class Results(object):
     #-----------------------------------------------------------------------------
     # Plots
     
-    def plot(self, kind, aux='max', noise_threshold=.95, band_conf=.95, methods=[], dir='scratch/plots/', title=True, filetype='png', alpha=.3, scale=1., extra_name=''):
+    def plot(self, kind, aux='max', noise_threshold=.99, band_conf=.95, methods=[], dir='scratch/plots/', title=True, filetype='png', alpha=.3, scale=1., extra_name=''):
          
         if methods==[]:
             methods = self.search_methods
