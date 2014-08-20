@@ -585,7 +585,7 @@ class Results(object):
         try:
             if kind in ['s', 'srec', 'sig']:
                 y = self.srec
-                name = 'Significance'
+                name = 'Detection significance'
 
             elif kind in ['h', 'hrec', 'h0']:
                 y = self.hrec
@@ -766,8 +766,23 @@ class Results(object):
     #-----------------------------------------------------------------------------
     # Plots
     
-    def plot(self, kind, aux='max', noise_threshold=.99, band_conf=.95, methods=[], dir='scratch/plots/', title=True, filetype='png', alpha=.3, scale=1., extra_name=''):
-         
+    def plot(self, kind, aux='max', noise_threshold=.99, band_conf=.95, methods=[], dir='scratch/plots/', title=True, filetype='png', alpha=.3, shade=True, scale=1., extra_name='', hide_data=False):
+        '''
+        Plots 'kind' (hrec/srec) vs hinj for methods listed in 'methods'.
+        The argument 'aux' determines what extra features to include:
+        -- 'full'/'all'
+            For all methods adds: noise line above 'noise_threshold' (0-1) of the false positives
+            best fit line, confidence band at 'band_conf' (0-1) confidence, shading if 'shade'.
+        -- 'medium'
+            For the "best" method: noise line above 'noise_threshold' (0-1) of false positives
+            best fit line, confidence band at 'band_conf' (0-1) confidence, shading if 'shade'.
+        -- 'simple'
+            For the "best" method: noise line above 'noise_threshold' (0-1) of false positives
+            best fit line.
+        -- other
+            Just the data points.
+        '''
+        
         if methods==[]:
             methods = self.search_methods
 
@@ -777,13 +792,13 @@ class Results(object):
         y, kindname = self.pickseries(kind)
 
         # obtain fit & noise threshold
-        slope, _, ymax, ymin, noise = self.quantify(kind, noise_threshold=noise_threshold,  band_conf= band_conf, methods=methods)
+        slope, _, ymax, ymin, noise = self.quantify(kind, noise_threshold=noise_threshold,  band_conf=band_conf, methods=methods)
  
         # find "best" method
         maxslope = max([slope[m] for m in methods])
         
         # process
-        plt.figure()
+        fig, ax = plt.subplots(1)
         for m in methods:
             # construct noise line, best fit line and confidence band around it
             noise_line = [noise[m]] * len(self.hinj)
@@ -792,35 +807,51 @@ class Results(object):
             botband_line = slope[m] * self.hinj + (ymin[m][1]- slope[m] * ymin[m][0])
             
             # plot
-            plt.plot(self.hinj, y[m], plotcolor[m]+'+', label=m)
+            if not hide_data:
+                ax.plot(self.hinj, y[m], plotcolor[m]+'+', label=m)
 
             if aux in ['all', 'full', 'simple', 'medium']:
-                plt.plot(self.hinj, bestfit_line, plotcolor[m])
+                # plot noise line
+                ax.plot(self.hinj, bestfit_line, color=plotcolor[m])
                 
                 if aux in ['all', 'full']:
-                    plt.plot(self.hinj, noise_line, plotcolor[m], alpha=alpha)
-                    plt.plot(self.hinj, topband_line,  plotcolor[m], alpha=alpha)
-                    plt.plot(self.hinj, botband_line,  plotcolor[m], alpha=alpha)
-                    
+                    # plot band lines
+                    ax.plot(self.hinj, noise_line, color=plotcolor[m], alpha=alpha)
+                    ax.plot(self.hinj, topband_line,  color=plotcolor[m], alpha=alpha)
+                    ax.plot(self.hinj, botband_line,  color=plotcolor[m], alpha=alpha)
+
+                    if shade:
+                        # shade confidence band
+                        ax.fill_between(self.hinj, botband_line, topband_line, color=plotcolor[m], alpha=alpha/10, where=self.hinj>0) # note the where argument is necessary to close polygon
+
                 elif aux in ['simple', 'medium']:
+
                     # just plot the loudest noise threshold
                     if slope[m]==maxslope:
-                        plt.plot(self.hinj, noise_line, plotcolor[m], alpha=alpha)
-                        if aux == 'medium': 
-			    plt.plot(self.hinj, topband_line,  plotcolor[m], alpha=alpha)
-			    plt.plot(self.hinj, botband_line,  plotcolor[m], alpha=alpha)
+                        # plot noise line
+                        ax.plot(self.hinj, noise_line, plotcolor[m], alpha=alpha)
+
+                        if aux == 'medium':
+                            # plot band lines
+                            ax.plot(self.hinj, topband_line,  plotcolor[m], alpha=alpha)
+                            ax.plot(self.hinj, botband_line,  plotcolor[m], alpha=alpha) 
+
+                            if shade:
+                                # shade confidence band
+                                ax.fill_between(self.hinj, botband_line, topband_line, color=plotcolor[m], alpha=alpha/10, where=self.hinj>0)
 
             if slope[m]==maxslope:
-                plt.xlim(0, scale * np.max(self.hinj))
-                plt.ylim(0, scale * np.max(y[m]))
+                # set axes limits
+                ax.set_xlim(0, scale * np.max(self.hinj))
+                ax.set_ylim(0, scale * np.max(y[m]))
                         
         # style
-        plt.xlabel('$h_{inj}$')
-        plt.ylabel(kindname)
+        ax.set_xlabel('$h_{inj}$')
+        ax.set_ylabel(kindname)
 
-        plt.legend(numpoints=1, loc=2)
+        ax.legend(numpoints=1, loc=2)
 
-        if title: plt.title(self.injkind+self.pdif+' injections on '+ self.det+self.run+' data for '+self.psr)
+        if title: ax.set_title(self.injkind+self.pdif+' injections on '+ self.det+self.run+' data for '+self.psr)
 
         # check destination directory exists
         try:
@@ -831,10 +862,10 @@ class Results(object):
 
         # save
         filename = 'injsrch_'+self.det+self.run+'_'+self.injkind+self.pdif+'_'+self.psr+'_'+kind
-        plt.savefig(dir + filename + extra_name + '.' + filetype, bbox_inches='tight')
+        fig.savefig(dir + filename + extra_name + '.' + filetype, bbox_inches='tight')
         plt.close()
         
-    def pvalue(self, kind):
+#    def pvalue(self, kind):
         
 class ResultsMP(object):
     def __init__(self, det, run, injkind, pdif):
@@ -843,12 +874,12 @@ class ResultsMP(object):
         self.injkind = inkind
         self.pdif = pdif
         
-    def load_stats(self, dir='', listID=None):
+#    def load_stats(self, dir='', listID=None):
         '''
         Load PSR results for all pulsars in list and take basic efficiency statistics.
         '''
         
-    def freqplot(self, kind, extra_name='', scale=1):
+#    def freqplot(self, kind, extra_name='', scale=1):
         '''
         Produces plot of efficiency indicator (noise, min-hrec) vs PSR frequency.
         '''
