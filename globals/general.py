@@ -931,20 +931,113 @@ class Results(object):
         
 class ResultsMP(object):
     def __init__(self, det, run, injkind, pdif):
+        
+        try:
+            self.log = logging.getLogger('Results')
+        except:
+            setuplog('resultsMP_' + det + '_' + run + '_' + injkind + pdif)
+            self.log = logging.getLogger('ResultsMP')
+
         self.det = det
         self.run = run
         self.injkind = inkind
         self.pdif = pdif
+            
+
         
-#    def load_stats(self, dir='', listID=None):
+    def load_stats(self, path='', listID='all', noise_threshold=.99, band_conf=.95):
         '''
         Load PSR results for all pulsars in list and take basic efficiency statistics.
         '''
         
+        self.log.info('Loading PSR results.')
+        
+        # determine what PSRs to analyze from argument
+        try:
+            # Determine whether psrIN is a chunk index (e.g. '2'). 
+            int(listID)
+            
+            self.log.debug('Taking list #' + str(listID))
+            
+            # If it is, assume the requested PSRs are those in the list named psrlist_run_listID.txt
+            psrlist = read_psrlist(name = det + '_' + run + '_' + listID)
+
+        except ValueError:
+            if listID == 'all':
+                self.log.debug('Taking all PSRs in list.')
+                psrlist = read_psrlist()
+                
+            else:
+                self.log.error('Invalid value for listID: ' + str(listID))
+                sys.exit(1)
+
+        # load PSR exclusion list (if it exists):
+        try:
+            with open(paths['badpsrs'], 'r') as f:
+                badpsrs=[]
+                for line in f.readlines():
+                    badpsrs += [line.strip()] # (.strip() removes \n character)
+                goodpsrs = list( set(psrlist) - set(badpsrs) )
+        except:
+            self.log.warning('No PSR exclusion list found')
+            goodpsrs = list( set(psrlist) )
+            
+        self.log.debug('Opening result files.')
+        
+        self.hrec = {
+                    'slope' : [],
+                    'rmse'  : [],
+                    'ymax'  : [],
+                    'ymin'  : [],
+                    'noise' : [],
+                    'psrs'  : [],
+                    }
+                    
+        self.srec = {
+                    'slope' : [],
+                    'rmse'  : [],
+                    'ymax'  : [],
+                    'ymin'  : [],
+                    'noise' : [],
+                    'psrs'  : [],
+                    }
+
+        for psr in goodpsrs:
+            try:
+                # create results object
+                r = Results(self.det, self.run, psr, self.injkind, self.pdif)
+                r.load(path=path)
+                
+                # get srec noise and slope
+                slope, rmse, ymax, ymin, noise = r.quantify('h', noise_threshold=noise_threshold, band_conf=band_conf)
+                
+                self.hrec['slope'] += [slope]
+                self.hrec['rmse'] += [rmse]
+                self.hrec['ymin'] += [ymax]
+                self.hrec['psrs'] += [Pulsar(psr)]
+                
+                # get srec noise and slope
+                slope, rmse, ymax, ymin, noise = r.quantify('s', noise_threshold=noise_threshold, band_conf=band_conf)
+                
+                self.srec['slope'] += [slope]
+                self.srec['rmse'] += [rmse]
+                self.srec['ymin'] += [ymax]
+                self.srec['psrs'] += [Pulsar(psr)]
+                
+            except:
+                self.log.warning('Unable to load ' + psr + 'results.', exc_info=True)
+            
 #    def freqplot(self, kind, extra_name='', scale=1):
         '''
         Produces plot of efficiency indicator (noise, min-hrec) vs PSR frequency.
         '''
+
+class ResultSeriesMP(object):
+    '''
+    Container class for MP result data.
+    '''
+    def __init__(self, kind):
+
         
 ##########################################################################################
 class Cluster(object):
