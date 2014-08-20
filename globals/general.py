@@ -589,7 +589,7 @@ class Results(object):
 
             elif kind in ['h', 'hrec', 'h0']:
                 y = self.hrec
-                name = '$h_{\rm rec}$'
+                name = '$h_{rec}$'
                 
             else:
                 self.log.error('Did not recognize value "' + str(kind) + '".', exc_info=True)
@@ -766,7 +766,7 @@ class Results(object):
     #-----------------------------------------------------------------------------
     # Plots
     
-    def plot(self, kind, aux='max', noise_threshold=.99, band_conf=.95, methods=[], dir='scratch/plots/', title=True, filetype='png', alpha=.3, shade=True, scale=1., extra_name='', hide_data=False):
+    def plot(self, kind, aux='max', noise_threshold=.99, band_conf=.95, methods=[], path='scratch/plots/', title=True, filetype='png', alpha=.3, shade=True, scale=1., extra_name='', hide_data=False):
         '''
         Plots 'kind' (hrec/srec) vs hinj for methods listed in 'methods'.
         The argument 'aux' determines what extra features to include:
@@ -813,7 +813,7 @@ class Results(object):
             if aux in ['all', 'full', 'simple', 'medium']:
                 # plot noise line
                 ax.plot(self.hinj, bestfit_line, color=plotcolor[m])
-                
+                         
                 if aux in ['all', 'full']:
                     # plot band lines
                     ax.plot(self.hinj, noise_line, color=plotcolor[m], alpha=alpha)
@@ -839,11 +839,19 @@ class Results(object):
                             if shade:
                                 # shade confidence band
                                 ax.fill_between(self.hinj, botband_line, topband_line, color=plotcolor[m], alpha=alpha/10, where=self.hinj>0)
-
+            
+                
             if slope[m]==maxslope:
                 # set axes limits
                 ax.set_xlim(0, scale * np.max(self.hinj))
                 ax.set_ylim(0, scale * np.max(y[m]))
+        
+        # add labels indicating noise threshold and band confidence
+        if aux in ['all', 'full', 'simple', 'medium']:
+            ax.text(.02, .7, 'Noise threshold: ' + str(noise_threshold), fontsize=10, transform=ax.transAxes)
+
+            if aux != 'simple':
+                ax.text(.02, .65, 'Band confidence: ' + str(band_conf), fontsize=10, transform=ax.transAxes)
                         
         # style
         ax.set_xlabel('$h_{inj}$')
@@ -855,17 +863,71 @@ class Results(object):
 
         # check destination directory exists
         try:
-            os.makedirs(dir)
+            os.makedirs(path)
             self.log.debug('Plot directory created.')
         except:
             self.log.debug('Plot directory already exists.')
 
         # save
         filename = 'injsrch_'+self.det+self.run+'_'+self.injkind+self.pdif+'_'+self.psr+'_'+kind
-        fig.savefig(dir + filename + extra_name + '.' + filetype, bbox_inches='tight')
+        fig.savefig(path + filename + extra_name + '.' + filetype, bbox_inches='tight')
         plt.close()
         
-#    def pvalue(self, kind):
+    def pvalue(self, kind, methods=[], normed=True, nbins=100, gauss=False, extra_name='', title=True, filetype='png', path='scratch/plots/'):
+    
+        if methods==[]:
+            methods = self.search_methods
+
+        self.log.info('Plotting 1-CDF')
+ 
+        # obtain data
+        y, kindname = self.pickseries(kind)
+        
+        # process
+        fig, ax = plt.subplots(1)
+        for m in methods:
+            # CDF of falsepositives
+            cdf, firstbin, binsize, extrapts = scipy.stats.cumfreq(y[m][self.hinj==0], nbins)
+
+            # normalized CDF
+            if normed: cdf /= np.max(cdf)
+            # p-value
+            p = 1 - cdf
+            
+            # x-axis
+            x = np.arange(firstbin, firstbin + binsize*nbins, binsize)
+            
+            # plot
+            plt.plot(x, p, plotcolor[m]+'+', label=m)
+            
+            if gauss:
+                normal = np.random.normal(0., np.std(y[m]), len(y[m][self.hinj==0]))
+                cdf_normal, firstbin, binsize, extrapts = scipy.stats.cumfreq(normal[normal>0], nbins)
+                if normed: cdf_normal /= np.max(cdf_normal)
+                plt.plot(x, 1-cdf_normal, 'b+')
+
+        ax.set_yscale('log')
+        
+        # style
+        ax.set_xlabel(kindname)
+        ax.set_ylabel('1-CDF')
+
+        ax.legend(numpoints=1, loc=3)
+
+        if title: ax.set_title(self.injkind+self.pdif+' injections on '+ self.det+self.run+' data for '+self.psr)
+
+        # check destination directory exists
+        try:
+            os.makedirs(path)
+            self.log.debug('Plot directory created.')
+        except:
+            self.log.debug('Plot directory already exists.')
+
+        
+        # save
+        filename = 'pvalue_'+self.det+self.run+'_'+self.injkind+self.pdif+'_'+self.psr+'_'+kind
+        plt.savefig(path + filename + extra_name + '.' + filetype, bbox_inches='tight')
+        plt.close()
         
 class ResultsMP(object):
     def __init__(self, det, run, injkind, pdif):
