@@ -943,8 +943,6 @@ class ResultsMP(object):
         self.injkind = inkind
         self.pdif = pdif
             
-
-        
     def load_stats(self, path='', listID='all', noise_threshold=.99, band_conf=.95):
         '''
         Load PSR results for all pulsars in list and take basic efficiency statistics.
