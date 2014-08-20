@@ -688,7 +688,7 @@ class Results(object):
 
             # the sum of residuals is the squared Euclidean 2-norm for each column in b - a*x
             # sum of residuals = Sum[(x-y)^2], so RMSE = sqrt(s.o.r./N)
-            rmse[m] = np.sqrt(residualSum[0]/len(d))
+            rmse[m] = np.sqrt(residualSum[0]/len(y))
 
             self.log.debug('Computing bands at ' + str(band_conf) + ' confidence.')
 
@@ -760,8 +760,12 @@ class Results(object):
 
         # obtain significance noise threshold and best--fit line slope
         slope, _, _, _, noise = self.quantify('s', noise_threshold=confidence)
+        
+        minh = {}
+        for m, n in noise.iteritems():
+            minh[m] = n / slope[m]
 
-        return noise / slope
+        return minh
     
     #-----------------------------------------------------------------------------
     # Plots
@@ -929,6 +933,7 @@ class Results(object):
         plt.savefig(path + filename + extra_name + '.' + filetype, bbox_inches='tight')
         plt.close()
         
+        
 class ResultsMP(object):
     def __init__(self, det, run, injkind, pdif):
         
@@ -940,7 +945,7 @@ class ResultsMP(object):
 
         self.det = det
         self.run = run
-        self.injkind = inkind
+        self.injkind = injkind
         self.pdif = pdif
             
     def load_stats(self, path='', listID='all', noise_threshold=.99, band_conf=.95):
@@ -949,6 +954,8 @@ class ResultsMP(object):
         '''
         
         self.log.info('Loading PSR results.')
+        
+        self.noise_threshold = noise_threshold
         
         # determine what PSRs to analyze from argument
         try:
@@ -980,63 +987,132 @@ class ResultsMP(object):
             self.log.warning('No PSR exclusion list found')
             goodpsrs = list( set(psrlist) )
             
+        self.psrlist = goodpsrs
+        self.failed  = []
+            
         self.log.debug('Opening result files.')
         
-        self.hrec = {
-                    'slope' : [],
-                    'rmse'  : [],
-                    'ymax'  : [],
-                    'ymin'  : [],
-                    'noise' : [],
-                    'psrs'  : [],
-                    }
-                    
-        self.srec = {
-                    'slope' : [],
-                    'rmse'  : [],
-                    'ymax'  : [],
-                    'ymin'  : [],
-                    'noise' : [],
-                    'psrs'  : [],
-                    }
+        # create stat containers
+        
+        for kind in ['h', 's']:
+            for stat in ['slope', 'rmse', 'noise']:
+                setattr(self, kind + '_' + stat, {})
 
+        self.minh = {}
+
+        for m in search_methods:
+            self.minh[m]    = []
+            
+            self.h_slope[m] = []
+            self.h_rmse[m]  = []
+            self.h_noise[m] = []
+
+            self.s_slope[m] = []
+            self.s_rmse[m]  = []
+            self.s_noise[m] = []
+                    
+        self.psrs = []
+
+        # load
+        
         for psr in goodpsrs:
             try:
                 # create results object
                 r = Results(self.det, self.run, psr, self.injkind, self.pdif)
                 r.load(path=path)
                 
-                # get srec noise and slope
-                slope, rmse, ymax, ymin, noise = r.quantify('h', noise_threshold=noise_threshold, band_conf=band_conf)
-                
-                self.hrec['slope'] += [slope]
-                self.hrec['rmse'] += [rmse]
-                self.hrec['ymin'] += [ymax]
-                self.hrec['psrs'] += [Pulsar(psr)]
+                # get hrec noise and slope
+                hslope, hrmse, _, _, hnoise = r.quantify('h', noise_threshold=noise_threshold, band_conf=band_conf)
                 
                 # get srec noise and slope
-                slope, rmse, ymax, ymin, noise = r.quantify('s', noise_threshold=noise_threshold, band_conf=band_conf)
+                sslope, srmse, _, _, snoise = r.quantify('s', noise_threshold=noise_threshold, band_conf=band_conf)
                 
-                self.srec['slope'] += [slope]
-                self.srec['rmse'] += [rmse]
-                self.srec['ymin'] += [ymax]
-                self.srec['psrs'] += [Pulsar(psr)]
+                # get min h detected
+                minh = r.min_h_det(confidence=noise_threshold)
+                
+                # save                
+                for m in r.search_methods:
+                    self.h_slope[m] += [hslope[m]]
+                    self.h_rmse[m]  += [hrmse[m]]
+                    self.h_noise[m] += [hnoise[m]]
+
+                    self.s_slope[m] += [sslope[m]]
+                    self.s_rmse[m]  += [srmse[m]]
+                    self.s_noise[m] += [snoise[m]]
+                    
+                    self.minh[m] += [minh[m]]
+
+                # get PSR data
+                self.psrs += [Pulsar(psr)]
                 
             except:
                 self.log.warning('Unable to load ' + psr + 'results.', exc_info=True)
-            
-#    def freqplot(self, kind, extra_name='', scale=1):
+                self.failed += [psr]
+                
+    def plot(self, kind, psrparam='FR0', extra_name='', scale=1., methods=search_methods, path='scratch/plots/', filetype='pdf', log=False, title=True, legend_loc='lower right', xlim=0):
         '''
-        Produces plot of efficiency indicator (noise, min-hrec) vs PSR frequency.
+        Produces plot of efficiency indicator (noise, min-hrec) vs a PSR parameter (e.g. FR0, DEC, 'RAS').
         '''
-
-class ResultSeriesMP(object):
-    '''
-    Container class for MP result data.
-    '''
-    def __init__(self, kind):
-
         
+        plt.rcParams['mathtext.fontset'] = "stix"
+        
+        self.log.info('Plotting ' + kind + ' vs. PSR ' + psrparam)
+        
+        # obtain x-axis values
+        x = np.array([psr.param[psrparam] for psr in self.psrs]).astype('float')
+        if 'FR' in psrparam: x *= 2. # plot GW frequency, not rotational frequency
+        
+        # obtain y-axis values
+        y = getattr(self, kind)
+       
+        # Plot
+        fig, ax = plt.subplots(1)
+        
+        for m in methods:
+            plt.plot(x, y[m], plotcolor[m]+'+', label=m)
+        
+        plt.legend(loc=legend_loc, numpoints=1)
+        
+        # Style
+        if log: ax.set_yscale('log')     
+        
+        ax.set_xlabel('GW Frequency [Hz]')
+        
+        # parse kind
+        if kind.startswith('h'):
+            t = 'Strength'
+            yl = '$h_{rec}$'
+        elif kind.startswith('s'):
+            t = 'Significance'
+            yl = '$s$'
+            
+        if kind[2:] == 'slope':
+            t += ' best fit slope at ' + str(self.noise_threshold) + ' detection confidence'
+            ylabel = 'Slope (' + yl + ' vs. $h_{inj}$)'
+            
+        elif kind[2:] == 'rmse':
+            t += ' vs. $h_{inj}$  best fit RMSE at ' + str(self.noise_threshold) + ' detection confidence'
+            ylabel = 'RMSE (' + yl + ' vs. $h_{inj}$)'
+            
+        elif kind[2:] == 'noise':
+            t += ' of noise threshold at ' + str(self.noise_threshold) + ' detection confidence'
+            ylabel = yl
+            
+        else:
+            t = 'Lowest injection strength detected at ' + str(self.noise_threshold) + ' confidence'
+            ylabel = '$h_{inj}$'
+            
+        ax.set_ylabel(ylabel)
+        
+        if title: ax.set_title(t + '\n' + self.injkind + self.pdif + ' injections on ' + self.det + ' ' + self.run + ' data')
+        
+        if xlim!=0: ax.set_xlim(xlim[0], xlim[1])
+        
+        # save
+        filename = 'mp_' + self.det + self.run + '_' + self.injkind + self.pdif + '_' + kind
+        plt.savefig(path + filename + '.' + filetype, bbox_inches='tight')
+        
+
 ##########################################################################################
 class Cluster(object):
     
