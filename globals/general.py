@@ -481,7 +481,7 @@ class Pair(object):
 
 
 class Results(object):
-    def __init__(self, det, run, psr, kind, pdif, methods=search_methods):
+    def __init__(self, det, run, psr, kind, pdif, methods=search_methods, extra_name=''):
         
         try:
             self.log = logging.getLogger('Results')
@@ -508,7 +508,7 @@ class Results(object):
         
         self.paths = {
                     'analysis' : analysis_path(det, run, psr, kind, pdif),
-                    'export'   : 'results_' + det + run + '_' + psr + '_' + kind + pdif + '.hdf5'
+                    'export'   : extra_name + 'results_' + det + run + '_' + psr + '_' + kind + pdif + '.hdf5'
                     }
                     
         # Initialize result containers (DELIBERATELY NOT CONCISE TO SUPPORT NUMPY 2.6.6)
@@ -1057,10 +1057,7 @@ class Results(object):
             ax.plot(x2,meanfull - devstdfull, 'y')
             ax.fill_between(x2, meanfull + devstdfull, meanfull - devstdfull, alpha=alpha, color='m')
 
-        
-
-
-
+        # INCOMPLETE!!!!!!!!!!!
 
         # save
         filename = 'hs_'+self.det+self.run+'_'+self.injkind+self.pdif+'_'+self.psr

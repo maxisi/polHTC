@@ -158,7 +158,7 @@ for n in np.arange(0, ninst):
             a = np.dot(VtW, Utb.T)
         
             # strength:
-            if injkind in ['GR', 'G4v']:
+            if m in ['GR', 'G4v']:
                 results.hrec[m] += [2 * (abs(a).sum()) / len(a)]
             else:
                 results.hrec[m] += [2 * np.linalg.norm(a)]
