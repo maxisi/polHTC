@@ -44,6 +44,8 @@ log.info('Performing ' + str(ninj) + ' injections on ' + str(ninst) + ' instanti
 frange = [1.0e-7, 1.0e-5] # frequencies for re-heterodynes
 hinjrange=[1.0E-27, 1.0E-23] # injection strengths IMP! MIGHT NEED TO BE TUNED!
 
+if 'J0534+2200' in psr:
+    hinjrange=[1.0E-27, 1.0E-24]
 
 ## STRUCTURE
 log.info('Creating file structure.')
