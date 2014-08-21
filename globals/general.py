@@ -585,11 +585,11 @@ class Results(object):
         try:
             if kind in ['s', 'srec', 'sig']:
                 y = self.srec
-                name = 'Significance'
+                name = 'Detection significance'
 
             elif kind in ['h', 'hrec', 'h0']:
                 y = self.hrec
-                name = '$h_{\rm rec}$'
+                name = '$h_{rec}$'
                 
             else:
                 self.log.error('Did not recognize value "' + str(kind) + '".', exc_info=True)
@@ -688,7 +688,7 @@ class Results(object):
 
             # the sum of residuals is the squared Euclidean 2-norm for each column in b - a*x
             # sum of residuals = Sum[(x-y)^2], so RMSE = sqrt(s.o.r./N)
-            rmse[m] = np.sqrt(residualSum[0]/len(d))
+            rmse[m] = np.sqrt(residualSum[0]/len(y))
 
             self.log.debug('Computing bands at ' + str(band_conf) + ' confidence.')
 
@@ -760,14 +760,33 @@ class Results(object):
 
         # obtain significance noise threshold and best--fit line slope
         slope, _, _, _, noise = self.quantify('s', noise_threshold=confidence)
+        
+        minh = {}
+        for m, n in noise.iteritems():
+            minh[m] = n / slope[m]
 
-        return noise / slope
+        return minh
     
     #-----------------------------------------------------------------------------
     # Plots
     
-    def plot(self, kind, aux='max', noise_threshold=.95, band_conf=.95, methods=[], dir='scratch/plots/', title=True, filetype='png', alpha=.3):
-         
+    def plot(self, kind, aux='max', noise_threshold=.99, band_conf=.95, methods=[], path='scratch/plots/', title=True, filetype='png', alpha=.3, shade=True, scale=1., extra_name='', hide_data=False):
+        '''
+        Plots 'kind' (hrec/srec) vs hinj for methods listed in 'methods'.
+        The argument 'aux' determines what extra features to include:
+        -- 'full'/'all'
+            For all methods adds: noise line above 'noise_threshold' (0-1) of the false positives
+            best fit line, confidence band at 'band_conf' (0-1) confidence, shading if 'shade'.
+        -- 'medium'
+            For the "best" method: noise line above 'noise_threshold' (0-1) of false positives
+            best fit line, confidence band at 'band_conf' (0-1) confidence, shading if 'shade'.
+        -- 'simple'
+            For the "best" method: noise line above 'noise_threshold' (0-1) of false positives
+            best fit line.
+        -- other
+            Just the data points.
+        '''
+        
         if methods==[]:
             methods = self.search_methods
 
@@ -777,13 +796,13 @@ class Results(object):
         y, kindname = self.pickseries(kind)
 
         # obtain fit & noise threshold
-        slope, _, ymax, ymin, noise = self.quantify(kind, noise_threshold=noise_threshold,  band_conf= band_conf, methods=methods)
+        slope, _, ymax, ymin, noise = self.quantify(kind, noise_threshold=noise_threshold,  band_conf=band_conf, methods=methods)
  
         # find "best" method
         maxslope = max([slope[m] for m in methods])
         
         # process
-        plt.figure()
+        fig, ax = plt.subplots(1)
         for m in methods:
             # construct noise line, best fit line and confidence band around it
             noise_line = [noise[m]] * len(self.hinj)
@@ -792,47 +811,307 @@ class Results(object):
             botband_line = slope[m] * self.hinj + (ymin[m][1]- slope[m] * ymin[m][0])
             
             # plot
-            plt.plot(self.hinj, y[m], plotcolor[m]+'+', label=m)
+            if not hide_data:
+                ax.plot(self.hinj, y[m], plotcolor[m]+'+', label=m)
 
             if aux in ['all', 'full', 'simple', 'medium']:
-                plt.plot(self.hinj, bestfit_line, plotcolor[m])
-                
+                # plot noise line
+                ax.plot(self.hinj, bestfit_line, color=plotcolor[m])
+                         
                 if aux in ['all', 'full']:
-                    plt.plot(self.hinj, noise_line, plotcolor[m], alpha=alpha)
-                    plt.plot(self.hinj, topband_line,  plotcolor[m], alpha=alpha)
-                    plt.plot(self.hinj, botband_line,  plotcolor[m], alpha=alpha)
-                    
+                    # plot band lines
+                    ax.plot(self.hinj, noise_line, color=plotcolor[m], alpha=alpha)
+                    ax.plot(self.hinj, topband_line,  color=plotcolor[m], alpha=alpha)
+                    ax.plot(self.hinj, botband_line,  color=plotcolor[m], alpha=alpha)
+
+                    if shade:
+                        # shade confidence band
+                        ax.fill_between(self.hinj, botband_line, topband_line, color=plotcolor[m], alpha=alpha/10, where=self.hinj>0) # note the where argument is necessary to close polygon
+
                 elif aux in ['simple', 'medium']:
+
                     # just plot the loudest noise threshold
                     if slope[m]==maxslope:
-                        plt.plot(self.hinj, noise_line, plotcolor[m], alpha=alpha)
-                        if aux == 'medium': 
-			    plt.plot(self.hinj, topband_line,  plotcolor[m], alpha=alpha)
-			    plt.plot(self.hinj, botband_line,  plotcolor[m], alpha=alpha)
+                        # plot noise line
+                        ax.plot(self.hinj, noise_line, plotcolor[m], alpha=alpha)
 
+                        if aux == 'medium':
+                            # plot band lines
+                            ax.plot(self.hinj, topband_line,  plotcolor[m], alpha=alpha)
+                            ax.plot(self.hinj, botband_line,  plotcolor[m], alpha=alpha) 
+
+                            if shade:
+                                # shade confidence band
+                                ax.fill_between(self.hinj, botband_line, topband_line, color=plotcolor[m], alpha=alpha/10, where=self.hinj>0)
+            
+                
             if slope[m]==maxslope:
-                plt.xlim(0, max(self.hinj))
-                plt.ylim(0, np.max(y[m]))
+                # set axes limits
+                ax.set_xlim(0, scale * np.max(self.hinj))
+                ax.set_ylim(0, scale * np.max(y[m]))
+        
+        # add labels indicating noise threshold and band confidence
+        if aux in ['all', 'full', 'simple', 'medium']:
+            ax.text(.02, .7, 'Noise threshold: ' + str(noise_threshold), fontsize=10, transform=ax.transAxes)
+
+            if aux != 'simple':
+                ax.text(.02, .65, 'Band confidence: ' + str(band_conf), fontsize=10, transform=ax.transAxes)
                         
         # style
-        plt.xlabel('$h_{inj}$')
-        plt.ylabel(kindname)
+        ax.set_xlabel('$h_{inj}$')
+        ax.set_ylabel(kindname)
 
-        plt.legend(numpoints=1, loc=2)
+        ax.legend(numpoints=1, loc=2)
 
-        if title: plt.title(self.injkind+self.pdif+' injections on '+ self.det+self.run+' data for '+self.psr)
+        if title: ax.set_title(self.injkind+self.pdif+' injections on '+ self.det+self.run+' data for '+self.psr)
 
         # check destination directory exists
         try:
-            os.makedirs(dir)
+            os.makedirs(path)
             self.log.debug('Plot directory created.')
         except:
             self.log.debug('Plot directory already exists.')
 
         # save
         filename = 'injsrch_'+self.det+self.run+'_'+self.injkind+self.pdif+'_'+self.psr+'_'+kind
-        plt.savefig(dir + filename + '.' + filetype, bbox_inches='tight')
+        fig.savefig(path + filename + extra_name + '.' + filetype, bbox_inches='tight')
         plt.close()
+        
+    def pvalue(self, kind, methods=[], normed=True, nbins=100, gauss=False, extra_name='', title=True, filetype='png', path='scratch/plots/'):
+    
+        if methods==[]:
+            methods = self.search_methods
+
+        self.log.info('Plotting 1-CDF')
+ 
+        # obtain data
+        y, kindname = self.pickseries(kind)
+        
+        # process
+        fig, ax = plt.subplots(1)
+        for m in methods:
+            # CDF of falsepositives
+            cdf, firstbin, binsize, extrapts = scipy.stats.cumfreq(y[m][self.hinj==0], nbins)
+
+            # normalized CDF
+            if normed: cdf /= np.max(cdf)
+            # p-value
+            p = 1 - cdf
+            
+            # x-axis
+            x = np.arange(firstbin, firstbin + binsize*nbins, binsize)
+            
+            # plot
+            plt.plot(x, p, plotcolor[m]+'+', label=m)
+            
+            if gauss:
+                normal = np.random.normal(0., np.std(y[m]), len(y[m][self.hinj==0]))
+                cdf_normal, firstbin, binsize, extrapts = scipy.stats.cumfreq(normal[normal>0], nbins)
+                if normed: cdf_normal /= np.max(cdf_normal)
+                plt.plot(x, 1-cdf_normal, 'b+')
+
+        ax.set_yscale('log')
+        
+        # style
+        ax.set_xlabel(kindname)
+        ax.set_ylabel('1-CDF')
+
+        ax.legend(numpoints=1, loc=3)
+
+        if title: ax.set_title(self.injkind+self.pdif+' injections on '+ self.det+self.run+' data for '+self.psr)
+
+        # check destination directory exists
+        try:
+            os.makedirs(path)
+            self.log.debug('Plot directory created.')
+        except:
+            self.log.debug('Plot directory already exists.')
+
+        
+        # save
+        filename = 'pvalue_'+self.det+self.run+'_'+self.injkind+self.pdif+'_'+self.psr+'_'+kind
+        plt.savefig(path + filename + extra_name + '.' + filetype, bbox_inches='tight')
+        plt.close()
+        
+        
+class ResultsMP(object):
+    def __init__(self, det, run, injkind, pdif):
+        
+        try:
+            self.log = logging.getLogger('Results')
+        except:
+            setuplog('resultsMP_' + det + '_' + run + '_' + injkind + pdif)
+            self.log = logging.getLogger('ResultsMP')
+
+        self.det = det
+        self.run = run
+        self.injkind = injkind
+        self.pdif = pdif
+            
+    def load_stats(self, path='', listID='all', noise_threshold=.99, band_conf=.95):
+        '''
+        Load PSR results for all pulsars in list and take basic efficiency statistics.
+        '''
+        
+        self.log.info('Loading PSR results.')
+        
+        self.noise_threshold = noise_threshold
+        
+        # determine what PSRs to analyze from argument
+        try:
+            # Determine whether psrIN is a chunk index (e.g. '2'). 
+            int(listID)
+            
+            self.log.debug('Taking list #' + str(listID))
+            
+            # If it is, assume the requested PSRs are those in the list named psrlist_run_listID.txt
+            psrlist = read_psrlist(name = det + '_' + run + '_' + listID)
+
+        except ValueError:
+            if listID == 'all':
+                self.log.debug('Taking all PSRs in list.')
+                psrlist = read_psrlist()
+                
+            else:
+                self.log.error('Invalid value for listID: ' + str(listID))
+                sys.exit(1)
+
+        # load PSR exclusion list (if it exists):
+        try:
+            with open(paths['badpsrs'], 'r') as f:
+                badpsrs=[]
+                for line in f.readlines():
+                    badpsrs += [line.strip()] # (.strip() removes \n character)
+                goodpsrs = list( set(psrlist) - set(badpsrs) )
+        except:
+            self.log.warning('No PSR exclusion list found')
+            goodpsrs = list( set(psrlist) )
+            
+        self.psrlist = goodpsrs
+        self.failed  = []
+            
+        self.log.debug('Opening result files.')
+        
+        # create stat containers
+        
+        for kind in ['h', 's']:
+            for stat in ['slope', 'rmse', 'noise']:
+                setattr(self, kind + '_' + stat, {})
+
+        self.minh = {}
+
+        for m in search_methods:
+            self.minh[m]    = []
+            
+            self.h_slope[m] = []
+            self.h_rmse[m]  = []
+            self.h_noise[m] = []
+
+            self.s_slope[m] = []
+            self.s_rmse[m]  = []
+            self.s_noise[m] = []
+                    
+        self.psrs = []
+
+        # load
+        
+        for psr in goodpsrs:
+            try:
+                # create results object
+                r = Results(self.det, self.run, psr, self.injkind, self.pdif)
+                r.load(path=path)
+                
+                # get hrec noise and slope
+                hslope, hrmse, _, _, hnoise = r.quantify('h', noise_threshold=noise_threshold, band_conf=band_conf)
+                
+                # get srec noise and slope
+                sslope, srmse, _, _, snoise = r.quantify('s', noise_threshold=noise_threshold, band_conf=band_conf)
+                
+                # get min h detected
+                minh = r.min_h_det(confidence=noise_threshold)
+                
+                # save                
+                for m in r.search_methods:
+                    self.h_slope[m] += [hslope[m]]
+                    self.h_rmse[m]  += [hrmse[m]]
+                    self.h_noise[m] += [hnoise[m]]
+
+                    self.s_slope[m] += [sslope[m]]
+                    self.s_rmse[m]  += [srmse[m]]
+                    self.s_noise[m] += [snoise[m]]
+                    
+                    self.minh[m] += [minh[m]]
+
+                # get PSR data
+                self.psrs += [Pulsar(psr)]
+                
+            except:
+                self.log.warning('Unable to load ' + psr + 'results.', exc_info=True)
+                self.failed += [psr]
+                
+    def plot(self, kind, psrparam='FR0', extra_name='', scale=1., methods=search_methods, path='scratch/plots/', filetype='pdf', log=False, title=True, legend_loc='lower right', xlim=0):
+        '''
+        Produces plot of efficiency indicator (noise, min-hrec) vs a PSR parameter (e.g. FR0, DEC, 'RAS').
+        '''
+        
+        plt.rcParams['mathtext.fontset'] = "stix"
+        
+        self.log.info('Plotting ' + kind + ' vs. PSR ' + psrparam)
+        
+        # obtain x-axis values
+        x = np.array([psr.param[psrparam] for psr in self.psrs]).astype('float')
+        if 'FR' in psrparam: x *= 2. # plot GW frequency, not rotational frequency
+        
+        # obtain y-axis values
+        y = getattr(self, kind)
+       
+        # Plot
+        fig, ax = plt.subplots(1)
+        
+        for m in methods:
+            plt.plot(x, y[m], plotcolor[m]+'+', label=m)
+        
+        plt.legend(loc=legend_loc, numpoints=1)
+        
+        # Style
+        if log: ax.set_yscale('log')     
+        
+        ax.set_xlabel('GW Frequency [Hz]')
+        
+        # parse kind
+        if kind.startswith('h'):
+            t = 'Strength'
+            yl = '$h_{rec}$'
+        elif kind.startswith('s'):
+            t = 'Significance'
+            yl = '$s$'
+            
+        if kind[2:] == 'slope':
+            t += ' best fit slope at ' + str(self.noise_threshold) + ' detection confidence'
+            ylabel = 'Slope (' + yl + ' vs. $h_{inj}$)'
+            
+        elif kind[2:] == 'rmse':
+            t += ' vs. $h_{inj}$  best fit RMSE at ' + str(self.noise_threshold) + ' detection confidence'
+            ylabel = 'RMSE (' + yl + ' vs. $h_{inj}$)'
+            
+        elif kind[2:] == 'noise':
+            t += ' of noise threshold at ' + str(self.noise_threshold) + ' detection confidence'
+            ylabel = yl
+            
+        else:
+            t = 'Lowest injection strength detected at ' + str(self.noise_threshold) + ' confidence'
+            ylabel = '$h_{inj}$'
+            
+        ax.set_ylabel(ylabel)
+        
+        if title: ax.set_title(t + '\n' + self.injkind + self.pdif + ' injections on ' + self.det + ' ' + self.run + ' data')
+        
+        if xlim!=0: ax.set_xlim(xlim[0], xlim[1])
+        
+        # save
+        filename = 'mp_' + self.det + self.run + '_' + self.injkind + self.pdif + '_' + kind
+        plt.savefig(path + filename + '.' + filetype, bbox_inches='tight')
+        
 
 ##########################################################################################
 class Cluster(object):
@@ -1056,6 +1335,8 @@ paramNames = [
                 'RAS error',
                 'DEC',
                 'DEC error',
+                'FR0', # rotational frequency in Hz
+                'FR0 error'
             ]                
 
 extraParamNames = [None, 'POL', 'POL error', 'INC', 'INC error']
@@ -1072,7 +1353,9 @@ paramFormat = {
                 'RAS' : lambda x: hms_rad(x),
                 'RAS error': lambda x: hms_rad(0., 0., x),
                 'DEC' : lambda x: np.radians(dms_deg(x)),
-                'DEC error' : lambda x: np.radians(dms_deg(0., 0., x))
+                'DEC error' : lambda x: np.radians(dms_deg(0., 0., x)),
+                'FR0' : lambda x: x,
+                'FR0 error' : lambda x: x
                 }
 
 # read PSR list
