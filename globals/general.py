@@ -418,6 +418,67 @@ class Pair(object):
         
         return np.array(dm)
 
+    def openbox(self, methods=search_methods):
+        
+        log = self.log
+        log.info('Opening box for ' + self.psr.name + ' ' + self.det.name + ' ' + self.run)
+        
+        # check vectors
+        if not self.det.check_vectors(self.time, filename=self.psr.name):
+            self.det.create_vectors(self.time, filename=self.psr.name)
+        
+        # get sigma
+        try:
+            std = self.sigma
+        except AttributeError:
+            std = self.get_sigma()
+        
+        results = {}
+
+        # search
+        for m in methods:
+                log.info('Searching: ' + m)
+                
+                # obtain design matrix and divide by standard deviation
+                A = self.design_matrix(m, self.psr.param['POL'], self.psr.param['INC']) / std
+                # note that dm will be complex-valued, but the imaginary part is 0.
+                # this is useful later when dotting with b
+                
+                # define data vector
+                b = self.data / std
+                
+                # perform SVD decomposition (http://web.mit.edu/be.400/www/SVD/Singular_Value_Decomposition.htm)
+                U, s, V = np.linalg.svd(A.T, full_matrices=False)
+                W = np.diag(1./s)
+                # Note that np.linalg.svd returns Vt, not V. in NR notation
+                # (http://docs.scipy.org/doc/numpy/reference/generated/numpy.linalg.svd.html)
+
+                
+                # define covariance matrix
+                cov = np.dot(np.dot(V.T, W**2), V) # See 'Covariance' page in Polarizations tab of LIGO 2013 Notebook
+                
+                VtW = np.dot(V.T, W)
+                Utb = np.dot(U.T, b)
+                
+                # results:
+                a = np.dot(VtW, Utb.T)
+                
+                # strength:
+                if m in ['GR', 'G4v']:
+                    h = 2 * (abs(a).sum()) / len(a)
+                else:
+                    h = 2 * np.linalg.norm(a)
+                
+                # significance:
+                s = np.sqrt(abs(np.dot(a.conj(), np.linalg.solve(cov, a))))
+                
+                results[m] = {
+                                'a' : a,
+                                'h' : h,
+                                's' : s
+                                }
+        return results
+
 
 class Results(object):
     def __init__(self, det, run, psr, kind, pdif, methods=search_methods):
@@ -770,7 +831,7 @@ class Results(object):
     #-----------------------------------------------------------------------------
     # Plots
     
-    def plot(self, kind, aux='max', noise_threshold=.99, band_conf=.95, methods=[], path='scratch/plots/', title=True, filetype='png', alpha=.3, shade=True, scale=1., extra_name='', hide_data=False):
+    def plot(self, kind, aux='simple', noise_threshold=.99, band_conf=.95, methods=[], path='scratch/plots/', title=True, filetype='png', alpha=.3, shade=True, scale=1., extra_name='', hide_data=False):
         '''
         Plots 'kind' (hrec/srec) vs hinj for methods listed in 'methods'.
         The argument 'aux' determines what extra features to include:
@@ -933,6 +994,79 @@ class Results(object):
         plt.savefig(path + filename + extra_name + '.' + filetype, bbox_inches='tight')
         plt.close()
         
+    def plot_hs(self, aux='simple', methods=[], path='scratch/plots/', title=True, filetype='png', alpha=.3, shade=True, scale=1., window=25, extra_name='', hide_data=False):
+        '''
+        Plots 'kind' (hrec/srec) vs hinj for methods listed in 'methods'.
+        '''
+        
+        if methods==[]:
+            methods = self.search_methods
+
+        self.log.info('Plotting clean s vs h.')
+        
+        fig, ax = plt.subplots(1)
+ 
+        for m in methods:
+            # obtain clean background data
+            x = self.hrec[m][self.hinj==0]
+            y = self.srec[m][self.hinj==0]
+
+            if not hide_data: ax.plot(x, y, plotcolor[m]+'+', label=m)
+            
+            # get linear fit
+            
+            self.log.debug('Selecting fit data.')
+
+            # put vectors in proper shape for lstsq function
+            x_vertical = np.reshape(x, (len(x), 1))
+            y_vertical = np.reshape(y, (len(y), 1))
+
+            self.log.debug('Performing fit.') 
+
+            # fit using lstsq routine
+            # http://docs.scipy.org/doc/numpy/reference/generated/numpy.linalg.lstsq.html
+            p, _, _, _ = np.linalg.lstsq(x_vertical, y_vertical)
+            
+            slope = p[0][0]
+
+            # compute lines parallel to fit line that enclose band_conf (def 90%) of points
+            
+            # 1. subtract fit from data and sort
+            deviations = y #- slope*x
+            
+            # sort
+            devsorted = np.array([Y for (X,Y) in sorted(zip(x,y))])
+
+            # 2a. reshape deviations before taking rolling std
+            deviations2 = devsorted.reshape([len(deviations)/window, window])
+            # 2b. take rolling std
+            devstd = deviations2.std(axis=1)
+            # 2c. create vector of equal length as original
+            devstdfull = np.array([window*[n] for n in devstd]).flatten()
+            x2=np.sort(x)
+            
+            mean = deviations2.mean(axis=1)
+            # 2c. create vector of equal length as original
+            meanfull = np.array([window*[n] for n in mean]).flatten()
+            x2=np.sort(x)
+            
+            # plot
+            ax.plot(x2, slope*x2, 'c')
+            ax.plot(x2, meanfull, 'yellow')
+            ax.plot(x2,meanfull + devstdfull, 'y')
+            ax.plot(x2,meanfull - devstdfull, 'y')
+            ax.fill_between(x2, meanfull + devstdfull, meanfull - devstdfull, alpha=alpha, color='m')
+
+        
+
+
+
+
+        # save
+        filename = 'hs_'+self.det+self.run+'_'+self.injkind+self.pdif+'_'+self.psr
+        fig.savefig(path + filename + extra_name + '.' + filetype, bbox_inches='tight')
+        plt.close()
+        
         
 class ResultsMP(object):
     def __init__(self, det, run, injkind, pdif):
@@ -1091,7 +1225,7 @@ class ResultsMP(object):
             ylabel = 'Slope (' + yl + ' vs. $h_{inj}$)'
             
         elif kind[2:] == 'rmse':
-            t += ' vs. $h_{inj}$  best fit RMSE at ' + str(self.noise_threshold) + ' detection confidence'
+            t += ' best fit RMSE at ' + str(self.noise_threshold) + ' detection confidence'
             ylabel = 'RMSE (' + yl + ' vs. $h_{inj}$)'
             
         elif kind[2:] == 'noise':
@@ -1104,7 +1238,7 @@ class ResultsMP(object):
             
         ax.set_ylabel(ylabel)
         
-        if title: ax.set_title(t + '\n' + self.injkind + self.pdif + ' injections on ' + self.det + ' ' + self.run + ' data')
+        if title: ax.set_title(self.injkind + self.pdif + ' injections on ' + self.det + ' ' + self.run + ' data' + '\n' + t)
         
         if xlim!=0: ax.set_xlim(xlim[0], xlim[1])
         

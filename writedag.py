@@ -7,7 +7,8 @@ from globals import general as g
 pname, det, run, psrIN, ninstSTR, ninjSTR = sys.argv
 
 '''
-Writes DAG file for a complete one-PSR analysis; namely, injections of all kinds.
+Writes DAG file for a complete MANY-PSR analysis; namely, injections of all kinds.
+Dag submits one job per PSR, each submit includes ninst jobs. (DEPRECATED)
 '''
 
 dagname = g.dag_path(det, run, psrIN)
@@ -69,7 +70,7 @@ with open(dagname, 'w') as f:
                     for l in txt_lines:
                         f.write(l+'\n')
     f.write('MAXJOBS analysis 1\n')
-        # this prevents more than 1 jobs to be submitted at once, limiting the max numb of
+        # this prevents more than 1 job be submitted at once, limiting the max numb of
         # queued processes to 1 * ninst
 
 # Configure Dagman to not limit the number of times a node is put on hold
