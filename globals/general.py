@@ -938,61 +938,100 @@ class Results(object):
         fig.savefig(path + filename + extra_name + '.' + filetype, bbox_inches='tight')
         plt.close()
         
-    def pvalue(self, kind, methods=[], normed=True, nbins=100, gauss=False, extra_name='', title=True, filetype='png', path='scratch/plots/'):
+    def pvalue(self, kind, methods=[], star=None, starsize=6, normed=True, nbins=100, gauss=False, extra_name='', title=True, filetype='png', path='scratch/plots/', manyfiles=False, starcolor='y', legend=True, legendloc=3, xlim=False):
     
         if methods==[]:
             methods = self.search_methods
 
         self.log.info('Plotting 1-CDF')
- 
+        
         # obtain data
         y, kindname = self.pickseries(kind)
         
+        if not manyfiles:
+            fig, ax = plt.subplots(1)
+            namelist = ''
+        
         # process
-        fig, ax = plt.subplots(1)
         for m in methods:
+
             # CDF of falsepositives
             cdf, firstbin, binsize, extrapts = scipy.stats.cumfreq(y[m][self.hinj==0], nbins)
 
             # normalized CDF
             if normed: cdf /= np.max(cdf)
-            # p-value
-            p = 1 - cdf
-            
+
             # x-axis
             x = np.arange(firstbin, firstbin + binsize*nbins, binsize)
             
             # plot
-            plt.plot(x, p, plotcolor[m]+'+', label=m)
+            if manyfiles:
+                fig, ax = plt.subplots(1)
+                namelist = m
             
+            ax.plot(x, 1 - cdf, plotcolor[m]+'+', label=m)
+            
+            # overlay Gaussian if requested
             if gauss:
                 normal = np.random.normal(0., np.std(y[m]), len(y[m][self.hinj==0]))
-                cdf_normal, firstbin, binsize, extrapts = scipy.stats.cumfreq(normal[normal>0], nbins)
-                if normed: cdf_normal /= np.max(cdf_normal)
-                plt.plot(x, 1-cdf_normal, 'b+')
+                
+                cdf, _, _, _ = scipy.stats.cumfreq(normal[normal>0], nbins)
+                
+                if normed: cdf /= np.max(cdf)
+                
+                ax.plot(x, 1-cdf, plotcolor[m])
+                
+            # format plots only if writing to many files or if all the plots were already added to the figure
+            if manyfiles or (not manyfiles and m==methods[-1]):
 
-        ax.set_yscale('log')
-        
-        # style
-        ax.set_xlabel(kindname)
-        ax.set_ylabel('1-CDF')
+                # plot any extra points if they were provided
+                if isinstance(star, dict):
+                    # assuming a dictionary indexed by method was provided
+                    # elements of dictionary should be a list/array significances/hrecs
+                    for m in methods:
+                        ax.plot(star[m][0], 0.1, starcolor + '*', markersize=starsize)
+                        
+                elif isinstance(star, list) or isinstance(star, np.ndarray):
+                    # assuming a list of significances was provided
+                    for s in star:
+                        ax.plot(s, 0.1, starcolor + '*', markersize=starsize)
+                        
+                elif isinstance(star, float) or isinstance(star, int):
+                    ax.plot(star, 0.1, starcolor + '*', markersize=starsize)
+                
+                # style
+                
+                ax.set_yscale('log')
+                
+                ax.set_xlabel(kindname)
+                ax.set_ylabel('1-CDF')
+                
+                if xlim: ax.set_xlim(xlim)
 
-        ax.legend(numpoints=1, loc=3)
+                if legend: ax.legend(numpoints=1, loc=legendloc)
 
-        if title: ax.set_title(self.injkind+self.pdif+' injections on '+ self.det+self.run+' data for '+self.psr)
+                if title:
+                    ax.set_title(self.injkind+self.pdif+' injections on '+ self.det+self.run+' data for '+self.psr)
 
-        # check destination directory exists
-        try:
-            os.makedirs(path)
-            self.log.debug('Plot directory created.')
-        except:
-            self.log.debug('Plot directory already exists.')
+                # check destination directory exists
+                try:
+                    os.makedirs(path)
+                    self.log.debug('Plot directory created.')
+                except:
+                    self.log.debug('Plot directory already exists.')
 
-        
-        # save
-        filename = 'pvalue_'+self.det+self.run+'_'+self.injkind+self.pdif+'_'+self.psr+'_'+kind
-        plt.savefig(path + filename + extra_name + '.' + filetype, bbox_inches='tight')
-        plt.close()
+                # save
+                filename = 'pvalue_'+self.det+self.run+'_'+self.injkind+self.pdif+'_'+self.psr+'_'+kind
+                saveto = path + filename + extra_name + namelist +'.' + filetype
+                
+                fig.savefig(saveto, bbox_inches='tight')
+                
+                plt.close(fig)
+                
+                self.log.info('Plot saved in ' + saveto)
+            
+            # close all plots in case there was 
+            plt.close('all')
         
     def plot_hs(self, aux='simple', methods=[], path='scratch/plots/', title=True, filetype='png', alpha=.3, shade=True, scale=1., window=25, extra_name='', hide_data=False):
         '''
