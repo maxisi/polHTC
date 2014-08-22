@@ -81,7 +81,7 @@ ndays = int( np.ceil( (t[-1]-t[0])/g.ss) )
 # this will also be the number of bins over which the data will be split
 count = np.histogram(t, bins=ndays)[0]
 
-# Note from histogram manual: All but the last (righthand-most) bin are half-open.
+# Note from histogram manual: All but the last (righthand-most) bins are half-open.
 
 # Split data series based on the count. Define initial and final indices for each
 # day, i_0 and i_f.
