@@ -11,7 +11,7 @@ import numpy as np
 from globals import general as g
 
 '''
-Performs a FULL analysis for a given PSR, detector and injection kind and phase.
+Performs a FULL analysis for a given PSR, detector and injection kind and phase. USES GAUSSIAN NOISE.
 Loops over instantiations and saves results.
 '''
 
@@ -23,7 +23,7 @@ ninst = int(ninstSTR)
 ninj = int(ninjSTR)
 
 # setup log
-g.setuplog('single_%(det)s%(run)s_%(psr)s_%(injkind)s%(pdif)s' % locals()) # argument added to log filename
+g.setuplog('singleGauss_%(det)s%(run)s_%(psr)s_%(injkind)s%(pdif)s' % locals()) # argument added to log filename
 
 log = logging.getLogger('InjSrch Prep')
 
@@ -32,23 +32,21 @@ log.info('Performing ' + str(ninj) + ' injections on ' + str(ninst) + ' instanti
 
 
 ## ANALYSIS PARAMETERS
-frange = [1.0e-7, 1.0e-5] # frequencies for re-heterodynes
 hinjrange=[1.0E-27, 1.0E-23] # injection strengths IMP! MIGHT NEED TO BE TUNED!
+
+if 'J0534+2200' in psr:
+    hinjrange=[1.0E-27, 1.0E-24]
 
 ## CHECK FINEHET DATA EXISTS AND EXTRACT TIME SERIES
 pair = g.Pair(psr, det)
 pair.load_finehet(run)
-pair.get_sigma()
 pair.det.load_vectors(pair.time, filename=psr)
 
+# obtain overall standard deviation of data (will be used to create Gaussian noise)
+datastd   = np.std(pair.data)
 
 ## GET SEARCH AND INJECTION RANDOM PARAMETERS
-def params(src, frange, hinjrange, ninj, ninst, log):
-    ## RE-HETERODYNES
-    log.info('Producing frequency list for re-heterodyne')
-
-    freq = np.linspace(frange[0], frange[1], ninst)
-
+def params(src, hinjrange, ninj, ninst, log):
 
     ## SEARCH PARAMETERS
     log.info('Preparing search parameters.')
@@ -92,9 +90,9 @@ def params(src, frange, hinjrange, ninj, ninst, log):
     incinj = np.zeros(ninst) # empty vector (most instantiations won't have injections)
     incinj[injLocations] = incs # injection strength index (indicates hinj for each inst)
     
-    return freq, polsrch, incsrch, hinj, polinj, incinj
+    return polsrch, incsrch, hinj, polinj, incinj
 
-freq_lst, polsrch_lst, incsrch_lst, hinj_lst, polinj_lst, incinj_lst = params(pair.psr, frange, hinjrange, ninj, ninst, log)
+polsrch_lst, incsrch_lst, hinj_lst, polinj_lst, incinj_lst = params(pair.psr, hinjrange, ninj, ninst, log)
 
 
 ##########################################################################################
@@ -102,25 +100,28 @@ freq_lst, polsrch_lst, incsrch_lst, hinj_lst, polinj_lst, incinj_lst = params(pa
 ## PRELUDE
 
 # setup results
-results = g.Results(det, run, psr, injkind, pdif)
+results = g.Results(det, run, psr, injkind, pdif, extra_name='gauss')
 results.hinj = hinj_lst
 
+# setup random seed
+random.seed(3)
 
 for n in np.arange(0, ninst):
-
-    freq = freq_lst[n]
+    
+    # get search parameters
     polsrch = polsrch_lst[n]
     incsrch = incsrch_lst[n]
-
+    
+    # get injection parameters
     hinj = hinj_lst[n]
     polinj = polinj_lst[n]
     incinj = incinj_lst[n]
     
-    ## RE-HETERODYNE
+    ## Create Gaussian noise
 
-    log.info('Reheterodyne.')
+    log.info('Create white noise')
 
-    inst = g.het(freq, pair.data, pair.time)
+    inst = np.array([random.gauss(0., datastd) for n in range(len(pair.data))])
 
     ## SEARCH
 
@@ -134,12 +135,12 @@ for n in np.arange(0, ninst):
             log.info('Searching: ' + m)
         
             # obtain design matrix and divide by standard deviation
-            A = pair.design_matrix(m, polsrch, incsrch) / pair.sigma
+            A = pair.design_matrix(m, polsrch, incsrch) / datastd
             # note that dm will be complex-valued, but the imaginary part is 0.
             # this is useful later when dotting with b
         
             # define data vector
-            b = inst / pair.sigma
+            b = inst / datastd
         
             # perform SVD decomposition (http://web.mit.edu/be.400/www/SVD/Singular_Value_Decomposition.htm)
             U, s, V = np.linalg.svd(A.T, full_matrices=False)
