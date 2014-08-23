@@ -9,5 +9,4 @@ plots/
 *.swp
 .DS_Store
 *.py~
-
-bfg-1.11.7.jar
+*.py.swp
