@@ -9,8 +9,8 @@ import os
 # Create global directory structure
 globalpaths = (
             'logs/',
-            'globals/data/',
-            'globals/vectors/',
+            'globs/data/',
+            'globs/vectors/',
             'config/',
             'subs/',
             'dags/'
