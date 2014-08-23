@@ -2,7 +2,7 @@
 
 import os
 import sys
-from globals import general as g
+from globs import general as g
 
 processname, det, run, psrIN, ninstSTR, ninjSTR = sys.argv
 

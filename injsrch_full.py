@@ -8,7 +8,8 @@ import cPickle as pickle
 import logging
 import numpy as np
 
-from globals import general as g
+from globs import general as g
+from globs import results as res
 
 '''
 Performs a FULL analysis for a given PSR, detector and injection kind and phase.
@@ -102,7 +103,7 @@ freq_lst, polsrch_lst, incsrch_lst, hinj_lst, polinj_lst, incinj_lst = params(pa
 ## PRELUDE
 
 # setup results
-results = g.Results(det, run, psr, injkind, pdif)
+results = res.Results(det, run, psr, injkind, pdif)
 results.hinj = hinj_lst
 
 

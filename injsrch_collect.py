@@ -1,8 +1,7 @@
 #! /usr/bin/env python 
 
 import sys
-import logging
-from globals import general as g
+from globs import results as res
 
 '''
 Collect results of single PSR analysis and export to public directory.
@@ -11,14 +10,14 @@ Collect results of single PSR analysis and export to public directory.
 processname, det, run, psr, kind, pdif = sys.argv
 
 # setup log
-g.setuplog('results_%(det)s%(run)s_%(psr)s_%(kind)s%(pdif)s' % locals() )
-log = logging.getLogger('Results')
+#g.setuplog('results_%(det)s%(run)s_%(psr)s_%(kind)s%(pdif)s' % locals() )
+#log = logging.getLogger('Results')
 
 
 ## SETUP
 
 # Create results object
-r = g.Results(det, run, psr, kind, pdif)
+r = res.Results(det, run, psr, kind, pdif)
 
 # Collect results
 r.collect()
