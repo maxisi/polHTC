@@ -8,7 +8,8 @@ import cPickle as pickle
 import logging
 import numpy as np
 
-from globals import general as g
+from globs import general as g
+from globs import results as res
 
 '''
 Performs a FULL analysis for a given PSR, detector and injection kind and phase. USES GAUSSIAN NOISE.
@@ -100,7 +101,7 @@ polsrch_lst, incsrch_lst, hinj_lst, polinj_lst, incinj_lst = params(pair.psr, hi
 ## PRELUDE
 
 # setup results
-results = g.Results(det, run, psr, injkind, pdif, extra_name='gauss')
+results = res.Results(det, run, psr, injkind, pdif, extra_name='gauss')
 results.hinj = hinj_lst
 
 # setup random seed
