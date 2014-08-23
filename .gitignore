@@ -6,3 +6,17 @@ logs/
 subs/
 trash/
 plots/
+*.swp
+.DS_Store
+
+*.py~
+
+data_plots.py
+
+globs/data/H1/S5/finehet_J0534+2200_H1.hdf5
+
+globs/data/H1/S6/finehet_J0534+2200_H1.hdf5
+
+globs/vectors/detvecH1J0534+2200.hdf5
+
+globs/data/H1/S6/.DS_Store
