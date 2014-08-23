@@ -9,6 +9,3 @@ plots/
 *.swp
 .DS_Store
 *.py~
-globals/data/H1/S5/finehet_J0534+2200_H1.hdf5
-
-globals/data/H1/S6/finehet_J0534+2200_H1.hdf5
