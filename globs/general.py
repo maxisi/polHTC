@@ -333,7 +333,7 @@ class Pair(object):
         self.log.info('Checking finehet data is available.')
         
         if p=='':
-            datapath = 'globals/data/' + self.det.name + '/' + run
+            datapath = 'globs/data/' + self.det.name + '/' + run
             dataname = 'finehet_' + self.psr.name + '_' + self.det.name + '.hdf5'
             p = datapath + '/' + dataname
 
@@ -1670,11 +1670,11 @@ def mjd_gps(mjd):
 
 paths = {
             'extrapsrparam' : 'config/psrextra.txt',
-            'psrcat' : 'globals/psrcat.p',
+            'psrcat' : 'globs/psrcat.p',
             'psrlist' : 'config/psrlist.txt',
             'badpsrs' : 'config/badpsrs.txt',
             'originalData' : '/home/matthew/analyses/S6_all/results',
-            'vectors' : 'globals/vectors'
+            'vectors' : 'globs/vectors'
             }
             
 def analysis_path(det, run, psr, kind, pdif):

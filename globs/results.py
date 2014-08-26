@@ -17,7 +17,7 @@ from globs import general as g
 
 
 class Results(object):
-    def __init__(self, det, run, psr, kind, pdif, methods=g.search_methods, extra_name='', verbose=False, logprint='ERROR'):
+    def __init__(self, det, run, psr, kind, pdif='p', methods=g.search_methods, extra_name='', verbose=False, logprint='ERROR'):
         
         try:
             self.log = logging.getLogger(psr)
@@ -184,7 +184,7 @@ class Results(object):
         try:
             if kind in ['s', 'srec', 'sig']:
                 y = self.srec
-                name = 'Detection significance'
+                name = '$s$'
 
             elif kind in ['h', 'hrec', 'h0']:
                 y = self.hrec
@@ -369,7 +369,7 @@ class Results(object):
     #-----------------------------------------------------------------------------
     # Plots
     
-    def plot(self, kind, aux='simple', noise_threshold=.99, band_conf=.95, methods=[], path='scratch/plots/', title=True, filetype='png', alpha=.3, shade=True, scale=1., extra_name='', hide_data=False):
+    def plot(self, kind, aux='simple', noise_threshold=.99, band_conf=.95, methods=[], path='scratch/plots/', title=True, filetype='png', alpha=.3, shade=True, scale=1., extra_name='', hide_data=False, legend=True, setylim=True):
         '''
         Plots 'kind' (hrec/srec) vs hinj for methods listed in 'methods'.
         The argument 'aux' determines what extra features to include:
@@ -398,7 +398,7 @@ class Results(object):
         slope, _, ymax, ymin, noise = self.quantify(kind, noise_threshold=noise_threshold,  band_conf=band_conf, methods=methods)
  
         # find "best" method
-        maxslope = max([slope[m] for m in methods])
+        maxslope = np.max([slope[m] for m in methods])
         
         # process
         fig, ax = plt.subplots(1)
@@ -443,11 +443,10 @@ class Results(object):
                                 # shade confidence band
                                 ax.fill_between(self.hinj, botband_line, topband_line, color=g.plotcolor[m], alpha=alpha/10, where=self.hinj>0)
             
-                
-            if slope[m]==maxslope:
+            if slope[m]==maxslope:     
                 # set axes limits
-                ax.set_xlim(0, scale * np.max(self.hinj))
-                ax.set_ylim(0, scale * np.max(y[m]))
+                ax.set_xlim(0., scale * max(self.hinj))
+                if setylim: ax.set_ylim(0., scale * np.around(y[m].max(), 1)) # without the around the axes disapear when Sid
         
         # add labels indicating noise threshold and band confidence
         if aux in ['all', 'full', 'simple', 'medium']:
@@ -460,7 +459,7 @@ class Results(object):
         ax.set_xlabel('$h_{inj}$')
         ax.set_ylabel(kindname)
 
-        ax.legend(numpoints=1, loc=2)
+        if legend: ax.legend(numpoints=1, loc=2)
 
         if title: ax.set_title(self.injkind+self.pdif+' injections on '+ self.det+self.run+' data for '+self.psr)
 
@@ -474,7 +473,7 @@ class Results(object):
         # save
         filename = 'injsrch_'+self.det+self.run+'_'+self.injkind+self.pdif+'_'+self.psr+'_'+kind
         fig.savefig(path + filename + extra_name + '.' + filetype, bbox_inches='tight')
-        plt.close()
+        plt.close(fig)
     
         
     def plot_p(self, kind, methods=[], nbins=100, star=None, starsize=6, starcolor='y', fit=True, title=True, legend=True, legendloc=3, xlim=False, ylim=(1e-4,1), path='scratch/plots/', extra_name='', filetype='png', manyfiles=False):
@@ -662,6 +661,7 @@ class ResultsMP(object):
         
         g.setuplog('resultsMP_' + det + '_' + run + '_' + injkind + pdif, logprint=logprint)
         self.log = g.logging.getLogger('ResultsMP')
+        
         self.verbose = verbose
 
         self.det = det
@@ -669,14 +669,14 @@ class ResultsMP(object):
         self.injkind = injkind
         self.pdif = pdif
             
-    def load_stats(self, path='', listID='all', noise_threshold=.99, band_conf=.95):
+    def load(self, path='', extra_name='', listID='all'):
         '''
-        Load PSR results for all pulsars in list and take basic efficiency statistics.
+        Load PSR results for all pulsars in list.
         '''
-        
+    
         self.log.info('Loading PSR results.')
         
-        self.noise_threshold = noise_threshold
+        self.extra_name = extra_name
         
         # determine what PSRs to analyze from argument
         try:
@@ -699,7 +699,7 @@ class ResultsMP(object):
 
         # load PSR exclusion list (if it exists):
         try:
-            with open(paths['badpsrs'], 'r') as f:
+            with open(g.paths['badpsrs'], 'r') as f:
                 badpsrs=[]
                 for line in f.readlines():
                     badpsrs += [line.strip()] # (.strip() removes \n character)
@@ -708,9 +708,30 @@ class ResultsMP(object):
             self.log.warning('No PSR exclusion list found')
             goodpsrs = list( set(psrlist) )
             
-        self.psrlist = goodpsrs
         self.failed  = []
-            
+        
+        self.results = {}
+        for psr in goodpsrs:
+            try:
+                # create results object
+                self.results[psr] = Results(self.det, self.run, psr, self.injkind, self.pdif, extra_name=extra_name, logprint='ERROR')
+                # load results
+                self.results[psr].load(path=path)
+                
+            except:
+                self.log.warning('Unable to load ' + psr + ' results.', exc_info=self.verbose)
+
+                self.failed += [psr]
+                
+        self.psrlist = list( set(goodpsrs) - set(self.failed) )
+    
+    def get_stats(self, noise_threshold=.99, band_conf=.95):
+        '''
+        Load PSR results for all pulsars in list and take basic efficiency statistics.
+        '''
+        
+        self.noise_threshold = noise_threshold
+        
         self.log.debug('Opening result files.')
         
         # create stat containers
@@ -736,11 +757,10 @@ class ResultsMP(object):
 
         # load
         
-        for psr in goodpsrs:
+        for psr in self.psrlist:
             try:
                 # create results object
-                r = Results(self.det, self.run, psr, self.injkind, self.pdif, logprint='ERROR')
-                r.load(path=path)
+                r = self.results[psr]
                 
                 # get hrec noise and slope
                 hslope, hrmse, _, _, hnoise = r.quantify('h', noise_threshold=noise_threshold, band_conf=band_conf)
@@ -765,16 +785,20 @@ class ResultsMP(object):
 
                 # get PSR data
                 self.psrs += [g.Pulsar(psr)]
-                
             except:
-                self.log.warning('Unable to load ' + psr + ' results.', exc_info=self.verbose)
-
+                self.log.warning('Unable to get stats from ' + psr + ' results.', exc_info=self.verbose)
                 self.failed += [psr]
+
                 
-    def plot(self, kind, psrparam='FR0', extra_name='', scale=1., methods=g.search_methods, path='scratch/plots/', filetype='pdf', log=False, title=True, legend_loc='lower right', xlim=0):
+    def plot(self, kind, psrparam='FR0', extra_name='', scale=1., methods=g.search_methods, path='scratch/plots/', filetype='pdf', log=False, title=True, legend_loc='lower right', xlim=(0,1500)):
         '''
         Produces plot of efficiency indicator (noise, min-hrec) vs a PSR parameter (e.g. FR0, DEC, 'RAS').
         '''
+        
+        try:
+            self.minhdet[0]
+        except:
+            self.get_stats()
         
         plt.rcParams['mathtext.fontset'] = "stix"
         
@@ -783,7 +807,7 @@ class ResultsMP(object):
         # obtain x-axis values
         x = np.array([psr.param[psrparam] for psr in self.psrs]).astype('float')
         if 'FR' in psrparam: x *= 2. # plot GW frequency, not rotational frequency
-        
+        print len(set(x))
         # obtain y-axis values
         y = getattr(self, kind)
        
@@ -826,10 +850,10 @@ class ResultsMP(object):
             
         ax.set_ylabel(ylabel)
         
-        if title: ax.set_title(self.injkind + self.pdif + ' injections on ' + self.det + ' ' + self.run + ' data' + '\n' + t)
+        if title: ax.set_title(self.injkind + self.pdif + ' injections on ' + self.det + ' ' + self.run + ' data ' + self.extra_name + '\n' + t)
         
         if xlim!=0: ax.set_xlim(xlim[0], xlim[1])
         
         # save
         filename = 'mp_' + self.det + self.run + '_' + self.injkind + self.pdif + '_' + kind
-        plt.savefig(path + filename + '.' + filetype, bbox_inches='tight')
+        plt.savefig(path + self.extra_name + filename + '.' + filetype, bbox_inches='tight')
