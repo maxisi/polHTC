@@ -8,10 +8,12 @@ import sys
 import os
 import math
 import socket
+
 # set up plotting backend
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+plt.rcParams['mathtext.fontset'] = "stix"
 
 from globs import general as g
 
@@ -657,7 +659,7 @@ class Results(object):
     
         
 class ResultsMP(object):
-    def __init__(self, det, run, injkind, pdif, logprint='WARNING', verbose=False):
+    def __init__(self, injkind, det='H1', run='S5', pdif='p', logprint='WARNING', verbose=False):
         
         g.setuplog('resultsMP_' + det + '_' + run + '_' + injkind + pdif, logprint=logprint)
         self.log = g.logging.getLogger('ResultsMP')
@@ -790,7 +792,7 @@ class ResultsMP(object):
                 self.failed += [psr]
 
                 
-    def plot(self, kind, psrparam='FR0', extra_name='', scale=1., methods=g.search_methods, path='scratch/plots/', filetype='pdf', log=False, title=True, legend_loc='lower right', xlim=(0,1500)):
+    def plot(self, statkind, psrparam='FR0', extra_name='', scale=1., methods=g.search_methods, path='scratch/plots/', filetype='pdf', log=False, title=True, legend_loc='lower right', xlim=(0,1500), grid=True):
         '''
         Produces plot of efficiency indicator (noise, min-hrec) vs a PSR parameter (e.g. FR0, DEC, 'RAS').
         '''
@@ -799,61 +801,72 @@ class ResultsMP(object):
             self.minhdet[0]
         except:
             self.get_stats()
-        
-        plt.rcParams['mathtext.fontset'] = "stix"
-        
-        self.log.info('Plotting ' + kind + ' vs. PSR ' + psrparam)
+       
         
         # obtain x-axis values
         x = np.array([psr.param[psrparam] for psr in self.psrs]).astype('float')
         if 'FR' in psrparam: x *= 2. # plot GW frequency, not rotational frequency
-        print len(set(x))
-        # obtain y-axis values
-        y = getattr(self, kind)
+        if psrparam=='FR0': self.freq = x
+        
        
-        # Plot
-        fig, ax = plt.subplots(1)
-        
-        for m in methods:
-            plt.plot(x, y[m], g.plotcolor[m]+'+', label=m)
-        
-        plt.legend(loc=legend_loc, numpoints=1)
-        
-        # Style
-        if log: ax.set_yscale('log')     
-        
-        ax.set_xlabel('GW Frequency [Hz]')
-        
-        # parse kind
-        if kind.startswith('h'):
-            t = 'Strength'
-            yl = '$h_{rec}$'
-        elif kind.startswith('s'):
-            t = 'Significance'
-            yl = '$s$'
-            
-        if kind[2:] == 'slope':
-            t += ' best fit slope at ' + str(self.noise_threshold) + ' detection confidence'
-            ylabel = 'Slope (' + yl + ' vs. $h_{inj}$)'
-            
-        elif kind[2:] == 'rmse':
-            t += ' best fit RMSE at ' + str(self.noise_threshold) + ' detection confidence'
-            ylabel = 'RMSE (' + yl + ' vs. $h_{inj}$)'
-            
-        elif kind[2:] == 'noise':
-            t += ' of noise threshold at ' + str(self.noise_threshold) + ' detection confidence'
-            ylabel = yl
-            
+        if statkind=='all':
+            kinds = ['h_slope', 'h_rmse', 'h_noise', 's_slope', 's_rmse', 's_noise', 'minh']
         else:
-            t = 'Lowest injection strength detected at ' + str(self.noise_threshold) + ' confidence'
-            ylabel = '$h_{inj}$'
+            kinds = [statkind]
             
-        ax.set_ylabel(ylabel)
+        for kind in kinds:
         
-        if title: ax.set_title(self.injkind + self.pdif + ' injections on ' + self.det + ' ' + self.run + ' data ' + self.extra_name + '\n' + t)
+            self.log.info('Plotting ' + kind + ' vs. PSR ' + psrparam)
+            
+            # obtain y-axis values
+            y = getattr(self, kind)
         
-        if xlim!=0: ax.set_xlim(xlim[0], xlim[1])
-        
-        # save
-        filename = 'mp_' + self.det + self.run + '_' + self.injkind + self.pdif + '_' + kind
-        plt.savefig(path + self.extra_name + filename + '.' + filetype, bbox_inches='tight')
+            # Plot
+            fig, ax = plt.subplots(1)
+            
+            for m in methods:
+                plt.plot(x, y[m], g.plotcolor[m]+'+', label=m)
+            
+            plt.legend(loc=legend_loc, numpoints=1)
+            
+            # Style
+            if log and kind!='s_noise': ax.set_yscale('log')     
+            
+            ax.set_xlabel('GW Frequency [Hz]')
+            
+            # parse kind
+            if kind.startswith('h'):
+                t = 'Strength'
+                yl = '$h_{rec}$'
+            elif kind.startswith('s'):
+                t = 'Significance'
+                yl = '$s$'
+                
+            if kind[2:] == 'slope':
+                t += ' best fit slope at ' + str(self.noise_threshold) + ' detection confidence'
+                ylabel = 'Slope (' + yl + ' vs. $h_{inj}$)'
+                
+            elif kind[2:] == 'rmse':
+                t += ' best fit RMSE at ' + str(self.noise_threshold) + ' detection confidence'
+                ylabel = 'RMSE (' + yl + ' vs. $h_{inj}$)'
+                
+            elif kind[2:] == 'noise':
+                t += ' of noise threshold at ' + str(self.noise_threshold) + ' detection confidence'
+                ylabel = yl
+                
+            else:
+                t = 'Lowest injection strength detected at ' + str(self.noise_threshold) + ' confidence'
+                ylabel = '$h_{inj}$'
+                
+            ax.set_ylabel(ylabel)
+            
+            if title: ax.set_title(self.injkind + self.pdif + ' injections on ' + self.det + ' ' + self.run + ' data ' + self.extra_name + '\n' + t)
+            
+            if xlim!=0: ax.set_xlim(xlim[0], xlim[1])
+            
+            if grid: ax.grid()
+            
+            # save
+            filename = 'mp_' + self.det + self.run + '_' + self.injkind + self.pdif + '_' + kind
+            plt.savefig(path + self.extra_name + filename + '.' + filetype, bbox_inches='tight')
+            plt.close()
