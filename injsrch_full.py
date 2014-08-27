@@ -9,6 +9,7 @@ import logging
 import numpy as np
 
 from globs import general as g
+g.setuplog('full_%(det)s%(run)s_%(psr)s_%(injkind)s%(pdif)s' % locals()) # argument added to log filename
 from globs import results as res
 
 '''
@@ -24,8 +25,6 @@ ninst = int(ninstSTR)
 ninj = int(ninjSTR)
 
 # setup log
-g.setuplog('single_%(det)s%(run)s_%(psr)s_%(injkind)s%(pdif)s' % locals()) # argument added to log filename
-
 log = logging.getLogger('InjSrch Prep')
 
 log.info('Preparing inj-search for PSR %(psr)s on %(det)s %(run)s data with %(injkind)s %(pdif)s injections.' % locals())

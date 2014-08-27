@@ -57,7 +57,7 @@ for dir in g.localpaths:
         os.makedirs(pathname + '/' + dir)
         log.debug(dir)
     except OSError:
-        log.debug('"globals/%(dir)s" already exists' % locals())
+        log.debug('"%(pathname)s/%(dir)s" already exists' % locals())
         
 log.info('Writing ID record.')
 

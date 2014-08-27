@@ -1588,24 +1588,63 @@ paramFormat = {
                 }
 
 # read PSR list
-def read_psrlist(name=''):
+def read_psrlist(name='', det=False, run=False):
+
     log = logging.getLogger('psrlst')
+    
     psrs = []
     
-    if name=='':
-        p = paths['psrlist']
-    else:
-        p = 'config/psrlist_' + name + '.txt'
+    ### Determine what list to open ###
     
-    try:
-        with open(p, 'r') as f:
-            for line in f.readlines():
-                psrs += [line.strip()] # (.strip() removes \n character)
-        return psrs
+    # -- Return all PSRs
+    if name in ['', 'all']:
+        log.debug('Returning all PSRs in list.')
+        p = paths['psrlist']
+        
+        try:
+            with open(p, 'r') as f:
+                for line in f.readlines():
+                    psrs += [line.strip()] # (.strip() removes \n character) 
+            return psrs
+        except:
+            message = 'Could not open psrlist text in: ' + p
+            log.error(message, exc_info=True)
+    
+    # -- Return bad PSRs
+    elif 'bad' in name:
+        log.debug('Returning list of bad PSRs.')
+        badpsrs = []
+        try:
+            with open(paths['badpsrs'], 'r') as f:
+                for line in f.readlines(): badpsrs += [line.strip()]
+                # (.strip() removes \n character)
+        except:
+            log.warning('No PSR exclusion list found')
+            
+        return badpsrs
+    
+    # -- Return some sub-list    
+    else:
+        if det and psr:
+            try:
+                # Determine whether name is a chunk index (e.g. '2' or 2).
+                int(name)
+                log.debug('Taking list #' + str(name))
+                # If it is, assume the requested PSRs are those in the list named psrlist_det_run_listID.txt
+                p = 'config/psrlist_' + det + '_' + run + '_' + name + '.txt'
+            except ValueError:
+                # Assume 'name' is already a composed list name
+                p = 'config/psrlist_' + name + '.txt'
+                
+            try:
+                with open(p, 'r') as f:
+                    for line in f.readlines():
+                        psrs += [line.strip()] # (.strip() removes \n character) 
+                return psrs
+            except:
+                message = 'Could not open psrlist text in: ' + p
+                log.error(message, exc_info=True)
 
-    except:
-        message = 'Could not open psrlist text in: ' + p
-        log.error(message, exc_info=True)
 
 # CONVERSIONS
 def hmsformat(*args):

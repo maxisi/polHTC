@@ -16,16 +16,16 @@ import matplotlib.pyplot as plt
 plt.rcParams['mathtext.fontset'] = "stix"
 
 from globs import general as g
+#import general as g
+
+
+g.setuplog('results')
 
 
 class Results(object):
-    def __init__(self, det, run, psr, kind, pdif='p', methods=g.search_methods, extra_name='', verbose=False, logprint='ERROR'):
+    def __init__(self, det, run, psr, kind, pdif, methods=g.search_methods, extra_name='', verbose=False, log=True):
         
-        try:
-            self.log = logging.getLogger(psr)
-        except:
-            g.setuplog('results_%(det)s_%(run)s_%(psr)s_%(kind)s%(pdif)s' % locals(), logprint=logprint)
-            self.log = g.logging.getLogger(psr)
+        self.log = logging.getLogger('results.'+kind+'.'+psr)
             
         self.verbose = verbose
 
@@ -659,69 +659,51 @@ class Results(object):
     
         
 class ResultsMP(object):
-    def __init__(self, injkind, det='H1', run='S5', pdif='p', logprint='WARNING', verbose=False):
-        
-        g.setuplog('resultsMP_' + det + '_' + run + '_' + injkind + pdif, logprint=logprint)
-        self.log = g.logging.getLogger('ResultsMP')
-        
-        self.verbose = verbose
-
+    def __init__(self, injkind, det='H1', run='S5', pdif='p'):
         self.det = det
         self.run = run
         self.injkind = injkind
         self.pdif = pdif
             
-    def load(self, path='', extra_name='', listID='all'):
+    def load(self, path=None, name='', listID='all', verbose=False):
         '''
         Load PSR results for all pulsars in list.
+        Saves results objects to dictionary 'self.results'.
         '''
     
-        self.log.info('Loading PSR results.')
+        print 'Loading PSR results.'
         
-        self.extra_name = extra_name
+        ### SETUP ###
         
-        # determine what PSRs to analyze from argument
-        try:
-            # Determine whether psrIN is a chunk index (e.g. '2'). 
-            int(listID)
-            
-            self.log.debug('Taking list #' + str(listID))
-            
-            # If it is, assume the requested PSRs are those in the list named psrlist_run_listID.txt
-            psrlist = g.read_psrlist(name = det + '_' + run + '_' + listID)
+        # Determine source file path:
+        #   if a path was provided, use it;
+        #   if not, create Cluster object and use its public dir
+        p = path or g.Cluster().public_dir
 
-        except ValueError:
-            if listID == 'all':
-                self.log.debug('Taking all PSRs in list.')
-                psrlist = g.read_psrlist()
-                
-            else:
-                self.log.error('Invalid value for listID: ' + str(listID))
-                sys.exit(1)
-
-        # load PSR exclusion list (if it exists):
-        try:
-            with open(g.paths['badpsrs'], 'r') as f:
-                badpsrs=[]
-                for line in f.readlines():
-                    badpsrs += [line.strip()] # (.strip() removes \n character)
-                goodpsrs = list( set(psrlist) - set(badpsrs) )
-        except:
-            self.log.warning('No PSR exclusion list found')
-            goodpsrs = list( set(psrlist) )
-            
+        self.extra_name = name
+        
+        # Load PSR lists
+        
+        psrlist = g.read_psrlist(name=listID, det=self.det, run=self.run)
+        badpsrs = g.read_psrlist(name='bad')
+                    
+        goodpsrs = set(psrlist) - set(badpsrs)
+        
+        # Process
+        
         self.failed  = []
-        
         self.results = {}
+        
         for psr in goodpsrs:
             try:
                 # create results object
-                self.results[psr] = Results(self.det, self.run, psr, self.injkind, self.pdif, extra_name=extra_name, logprint='ERROR')
+                self.results[psr] = Results(self.det, self.run, psr, self.injkind, self.pdif, extra_name=name, log=0)
                 # load results
-                self.results[psr].load(path=path)
+                self.results[psr].load(path=p)
                 
             except:
-                self.log.warning('Unable to load ' + psr + ' results.', exc_info=self.verbose)
+                print 'Warning: Unable to load ' + psr + ' results.'
+                if verbose: print sys.exc_info()
 
                 self.failed += [psr]
                 
@@ -729,12 +711,15 @@ class ResultsMP(object):
     
     def get_stats(self, noise_threshold=.99, band_conf=.95):
         '''
-        Load PSR results for all pulsars in list and take basic efficiency statistics.
+        Take all efficiency statistics for all PSRs loaded.
+        If no results loaded, attempts to load from file using 'self.load'.
         '''
         
-        self.noise_threshold = noise_threshold
+        self.log.debug('Computing result statistics.')
         
-        self.log.debug('Opening result files.')
+        ### SETUP ###
+        
+        self.noise_threshold = noise_threshold
         
         # create stat containers
         
@@ -744,6 +729,7 @@ class ResultsMP(object):
 
         self.minh = {}
 
+        # (purposedly verbose to be compatible with python 2.6.6)
         for m in g.search_methods:
             self.minh[m]    = []
             
@@ -761,7 +747,7 @@ class ResultsMP(object):
         
         for psr in self.psrlist:
             try:
-                # create results object
+                # obtain results object
                 r = self.results[psr]
                 
                 # get hrec noise and slope
