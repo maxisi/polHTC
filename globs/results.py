@@ -446,7 +446,7 @@ class Results(object):
                                 # shade confidence band
                                 ax.fill_between(self.hinj, botband_line, topband_line, color=g.plotcolor[m], alpha=alpha/10, where=self.hinj>0)
             
-            if slope[m]==maxslope:     
+            if slope[m]==maxslope: #BUG HERE!   
                 # set axes limits
                 ax.set_xlim(0., scale * max(self.hinj))
                 if setylim: ax.set_ylim(0., scale * np.around(y[m].max(), 1)) # without the around the axes disapear when Sid
@@ -668,7 +668,7 @@ class ResultsMP(object):
         self.noise_threshold = 0
         # (0 indicates stats haven't been taken yet)
             
-    def load(self, path=None, name='', listID='all', verbose=False):
+    def load(self, path=None, extra_name='', listID='all', verbose=False):
         '''
         Load PSR results for all pulsars in list.
         Saves results objects to dictionary 'self.results'.
@@ -683,7 +683,7 @@ class ResultsMP(object):
         #   if not, create Cluster object and use its public dir
         p = path or g.Cluster().public_dir
 
-        self.extra_name = name
+        self.extra_name = extra_name
         
         # Load PSR lists
         
@@ -700,7 +700,7 @@ class ResultsMP(object):
         for psr in goodpsrs:
             try:
                 # create results object
-                r = Results(self.det, self.run, psr, self.injkind, self.pdif, extra_name=name)
+                r = Results(self.det, self.run, psr, self.injkind, self.pdif, extra_name=extra_name)
                 # load results
                 r.load(path=p)
                 
@@ -710,7 +710,6 @@ class ResultsMP(object):
             except:
                 print 'Warning: Unable to load ' + psr + ' results.'
                 if verbose: print sys.exc_info()
-                print psr
 
                 self.failed += [psr]
                 
@@ -821,7 +820,7 @@ class ResultsMP(object):
                     
         
                 
-    def plot(self, statkind, psrparam='FR0', extra_name='', scale=1., methods=g.search_methods, path='scratch/plots/', filetype='pdf', log=False, title=True, legend_loc='lower right', xlim=None, grid=True):
+    def plot(self, statkinds, psrparam='fgw', extra_name='', scale=1., methods=g.search_methods, path='scratch/plots/', filetype='pdf', log=False, title=True, legend=True, legend_loc='lower right', xlim=None, grid=True):
         '''
         Produces plot of efficiency indicator (noise, min-hrec) vs a PSR parameter (e.g. FR0, DEC, 'RAS').
         '''
@@ -833,35 +832,45 @@ class ResultsMP(object):
        
         
         # obtain x-axis values
-        x = np.array([psr.param[psrparam] for psr in self.psrs]).astype('float')
-        if 'FR' in psrparam: x *= 2. # plot GW frequency, not rotational frequency
-        if psrparam=='FR0': self.freq = x
-        
-       
-        if statkind=='all':
-            kinds = ['h_slope', 'h_rmse', 'h_noise', 's_slope', 's_rmse', 's_noise', 'minh']
+        if 'gw' in psrparam:
+            # plot GW frequency, not rotational frequency
+            x = 2 * np.array([psr.param['FR0'] for psr in self.psrs]).astype('float')
         else:
-            kinds = [statkind]
+            x = np.array([psr.param[psrparam] for psr in self.psrs]).astype('float')
+        
+        if statkinds=='all':
+            kinds = ['h_slope', 'h_rmse', 'h_noise', 's_slope', 's_rmse', 's_noise', 'hmin']
+        elif isinstance(statkinds, str):
+            kinds = [statkinds]
+        elif isinstance(statkinds, list):
+            kinds = statkinds
+        else:
+            print 'ERROR: unrecognized statkind "'+str(statkinds)+'".'
             
         for kind in kinds:
         
-            self.log.info('Plotting ' + kind + ' vs. PSR ' + psrparam)
+            print 'Plotting ' + kind + ' vs. PSR ' + psrparam
             
             # obtain y-axis values
             y = getattr(self, kind)
         
-            # Plot
+            # create new figure for each stat kind
             fig, ax = plt.subplots(1)
             
-            for m in methods:
-                plt.plot(x, y[m], g.plotcolor[m]+'+', label=m)
-            
-            plt.legend(loc=legend_loc, numpoints=1)
+            # plot all methods on same axes
+            for m in methods: plt.plot(x, y[m], g.plotcolor[m]+'+', label=m)
             
             # Style
-            if log and kind!='s_noise': ax.set_yscale('log')     
+            if legend: plt.legend(loc=legend_loc, numpoints=1)
             
-            ax.set_xlabel('GW Frequency [Hz]')
+            if log and kind!='s_noise': ax.set_yscale('log')
+            # (logscale if requested and if not sig noise threshold)
+            # (allows for better formatting with 'all')
+            
+            if 'gw' in psrparam:
+                ax.set_xlabel('GW Frequency [Hz]')
+            else:
+                ax.set_xlabel(psrparam)
             
             # parse kind
             if kind.startswith('h'):
@@ -885,13 +894,13 @@ class ResultsMP(object):
                 
             else:
                 t = 'Lowest injection strength detected at ' + str(self.noise_threshold) + ' confidence'
-                ylabel = '$h_{inj}$'
+                ylabel = '$h_{min}$'
                 
             ax.set_ylabel(ylabel)
             
             if title: ax.set_title(self.injkind + self.pdif + ' injections on ' + self.det + ' ' + self.run + ' data ' + self.extra_name + '\n' + t)
             
-            if xlim!=0: ax.set_xlim(xlim[0], xlim[1])
+            if xlim: ax.set_xlim(xlim[0], xlim[1])
             
             if grid: ax.grid()
             
@@ -899,3 +908,5 @@ class ResultsMP(object):
             filename = 'mp_' + self.det + self.run + '_' + self.injkind + self.pdif + '_' + kind
             plt.savefig(path + self.extra_name + filename + '.' + filetype, bbox_inches='tight')
             plt.close()
+            
+            print 'Plot saved to ' + path + self.extra_name + filename + '.' + filetype
