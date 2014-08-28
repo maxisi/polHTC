@@ -7,5 +7,5 @@ arg=("J0534+2200" "H1" "S5" "GR" "p" "$NINST" "$NINJ")
 
 ./injsrch_master.py "${arg[@]}"
 
-condor_submit subs/injsrch_H1S5_J0534+2200_GRp.sub
+condor_submit subs/injsrch_H1S5_"J0534+2200"_GRp.sub
 

@@ -23,7 +23,7 @@ g.setuplog('results')
 
 
 class Results(object):
-    def __init__(self, det, run, psr, kind, pdif, methods=g.search_methods, extra_name='', verbose=False, log=True):
+    def __init__(self, det, run, psr, kind, pdif, methods=g.search_methods, extra_name='', verbose=False):
         
         self.log = logging.getLogger('results.'+kind+'.'+psr)
             
@@ -175,6 +175,7 @@ class Results(object):
         except:
             message = 'Unable to load collected results from: ' + export_path
             self.log.error(message, exc_info=self.verbose)
+            sys.exit(1)
             print message
 
     def pickseries(self, kind):
@@ -664,6 +665,8 @@ class ResultsMP(object):
         self.run = run
         self.injkind = injkind
         self.pdif = pdif
+        self.noise_threshold = 0
+        # (0 indicates stats haven't been taken yet)
             
     def load(self, path=None, name='', listID='all', verbose=False):
         '''
@@ -689,7 +692,7 @@ class ResultsMP(object):
                     
         goodpsrs = set(psrlist) - set(badpsrs)
         
-        # Process
+        ### PROCESS ###
         
         self.failed  = []
         self.results = {}
@@ -697,25 +700,28 @@ class ResultsMP(object):
         for psr in goodpsrs:
             try:
                 # create results object
-                self.results[psr] = Results(self.det, self.run, psr, self.injkind, self.pdif, extra_name=name, log=0)
+                r = Results(self.det, self.run, psr, self.injkind, self.pdif, extra_name=name)
                 # load results
-                self.results[psr].load(path=p)
+                r.load(path=p)
+                
+                self.results[psr] = r
+                # note that if there's an error loading, PSR object is NOT added to list
                 
             except:
                 print 'Warning: Unable to load ' + psr + ' results.'
                 if verbose: print sys.exc_info()
+                print psr
 
                 self.failed += [psr]
                 
-        self.psrlist = list( set(goodpsrs) - set(self.failed) )
+        self.psrlist = list( goodpsrs - set(self.failed) )
     
-    def get_stats(self, noise_threshold=.99, band_conf=.95):
+    def get_stats(self, noise_threshold=.99, band_conf=.95, verbose=False):
         '''
         Take all efficiency statistics for all PSRs loaded.
-        If no results loaded, attempts to load from file using 'self.load'.
         '''
         
-        self.log.debug('Computing result statistics.')
+        print 'Computing result statistics.'
         
         ### SETUP ###
         
@@ -727,11 +733,11 @@ class ResultsMP(object):
             for stat in ['slope', 'rmse', 'noise']:
                 setattr(self, kind + '_' + stat, {})
 
-        self.minh = {}
+        self.hmin = {}
 
         # (purposedly verbose to be compatible with python 2.6.6)
         for m in g.search_methods:
-            self.minh[m]    = []
+            self.hmin[m]    = []
             
             self.h_slope[m] = []
             self.h_rmse[m]  = []
@@ -757,7 +763,7 @@ class ResultsMP(object):
                 sslope, srmse, _, _, snoise = r.quantify('s', noise_threshold=noise_threshold, band_conf=band_conf)
                 
                 # get min h detected
-                minh = r.min_h_det(confidence=noise_threshold)
+                hmin = r.min_h_det(confidence=noise_threshold)
                 
                 # save                
                 for m in r.search_methods:
@@ -769,22 +775,59 @@ class ResultsMP(object):
                     self.s_rmse[m]  += [srmse[m]]
                     self.s_noise[m] += [snoise[m]]
                     
-                    self.minh[m] += [minh[m]]
+                    self.hmin[m] += [hmin[m]]
 
                 # get PSR data
                 self.psrs += [g.Pulsar(psr)]
-            except:
-                self.log.warning('Unable to get stats from ' + psr + ' results.', exc_info=self.verbose)
-                self.failed += [psr]
-
                 
-    def plot(self, statkind, psrparam='FR0', extra_name='', scale=1., methods=g.search_methods, path='scratch/plots/', filetype='pdf', log=False, title=True, legend_loc='lower right', xlim=(0,1500), grid=True):
+            except:
+                print 'Warning: unable to get stats from ' + psr + ' results.'
+                if verbose: print sys.exc_info()
+                self.failed += [psr]
+    
+    def sortparams(self, target='psrlist', by='hmin', methods=None, noise_threshold=None):
+        '''
+        Returns instance of list of name 'name' sorted by hmin.
+        'name' can be 'psrlist', 'fgw' (=2*FR0) or the name of a PSR parameter (e.g. 'RAS')
+        '''
+        
+        ## SETUP
+        
+        nt = noise_threshold or self.noise_threshold
+        
+        # check stats are loaded and noise thresholds agree
+        if (nt==0 or nt!=self.noise_threshold): self.get_stats()
+        
+        srchmethods = methods or self.hmin.keys()
+        
+        # parse name of list to be sorted
+        if target == 'psrlist':
+            y = self.psrlist
+        elif 'gw' in target:
+            y = 2 * np.array([psr.param['FR0'] for psr in self.psrs]).astype('float')
+        else:
+            y = np.array([psr.param[target] for psr in self.psrs]).astype('float')
+            
+        # parse name of list to be sorted BY
+        x_dict = getattr(self, by)
+        
+        ## PROCESS
+        y_sort = {}
+        for m in srchmethods:
+            x = self.hmin[m]
+            y_sort[m] = [yi for (xi,yi) in sorted(zip(x,y))]
+
+        return y_sort
+                    
+        
+                
+    def plot(self, statkind, psrparam='FR0', extra_name='', scale=1., methods=g.search_methods, path='scratch/plots/', filetype='pdf', log=False, title=True, legend_loc='lower right', xlim=None, grid=True):
         '''
         Produces plot of efficiency indicator (noise, min-hrec) vs a PSR parameter (e.g. FR0, DEC, 'RAS').
         '''
         
         try:
-            self.minhdet[0]
+            self.hmin[methods[0]]
         except:
             self.get_stats()
        
