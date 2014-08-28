@@ -114,7 +114,7 @@ class Results(object):
         
         if path=='':        
             # Determine export destination.
-            cluster = Cluster()
+            cluster = g.Cluster()
             path = cluster.public_dir
         
         try:
@@ -157,7 +157,7 @@ class Results(object):
         
         if path=='':        
             # Determine origin destination.
-            cluster = Cluster()
+            cluster = g.Cluster()
             path = cluster.public_dir
         
         export_path = path + self.paths['export']
