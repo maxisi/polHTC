@@ -9,5 +9,5 @@ trash/
 plots/
 *.swp
 .DS_Store
-*.py~
+*~
 *.py.swp
