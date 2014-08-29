@@ -399,20 +399,28 @@ class Results(object):
         
         methods = methods or self.search_methods
         
-        self.log.debug('Creating pair and searching.')
-        
-        if 'pair' not in dir(self):
-            self.pair = g.Pair(self.psr, self.det)
-            self.pair.load_finehet(self.run, load_vectors=True)
-        
         # try to load search results from file; otherwise, search
         try:
             filename = 'ob_' + self.det + self.run + '_' + self.psr
+            
             with open(g.paths['ob'] + filename + '.p', 'rb') as f:
                 results_ob = pickle.load(f)
+            
+            # check health of file
+            [results_ob[m] for m in methods]
+            
+            self.log.debug('OB results loaded.')
+            
         except:
+            if 'pair' not in dir(self):
+                self.log.debug('Creating pair and loading data.')
+                self.pair = g.Pair(self.psr, self.det)
+                self.pair.load_finehet(self.run, load_vectors=True)
+            
+            self.log.debug('Searching finehet.')
             results_ob = self.pair.search_finehet(methods=methods, save=1)
         
+        # processing
         self.log.debug('Obtaining stats.')
         
         hmin = self.min_h_det(noise_threshold)
@@ -1059,7 +1067,7 @@ class ResultsMP(object):
         self.load_psrs()
         
         try:
-            self.h_ob[methods[0]]
+            [self.h_ob[methods[m]] for m in methods]
         except:
             self.openboxes(methods=methods)
        

@@ -8,10 +8,6 @@ import cPickle as pickle
 import logging
 import numpy as np
 
-from globs import general as g
-g.setuplog('fullGauss_%(det)s%(run)s_%(psr)s_%(injkind)s%(pdif)s' % locals()) # argument added to log filename
-from globs import results as res
-
 '''
 Performs a FULL analysis for a given PSR, detector and injection kind and phase. USES GAUSSIAN NOISE.
 Loops over instantiations and saves results.
@@ -23,6 +19,10 @@ process_name, psr, det, run, injkind, pdif, ninstSTR, ninjSTR = sys.argv
 #note: arguments are taken as strings: need to convert to numerical values.
 ninst = int(ninstSTR)
 ninj = int(ninjSTR)
+
+from globs import general as g
+g.setuplog('fullGauss_%(det)s%(run)s_%(psr)s_%(injkind)s%(pdif)s' % locals()) # argument added to log filename
+from globs import results as res
 
 # setup log
 log = logging.getLogger('InjSrch Prep')

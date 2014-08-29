@@ -468,10 +468,13 @@ class Pair(object):
         
         return np.array(dm)
 
-    def search_finehet(self, methods=search_methods, save=False):
+    def search_finehet(self, methods=search_methods, pol=None, inc=None, save=False):
         
         log = self.log
         log.info('Opening box for ' + self.psr.name + ' ' + self.det.name + ' ' + self.run)
+        
+        pol = pol or self.psr.param['POL']
+        inc = inc or self.psr.param['INC']
         
         # check vectors
         if not self.det.check_vectors(self.time, filename=self.psr.name):
@@ -490,10 +493,10 @@ class Pair(object):
             log.info('Searching: ' + m)
             
             # obtain design matrix and divide by standard deviation
-            A = self.design_matrix(m, self.psr.param['POL'], self.psr.param['INC']) / std
+            A = self.design_matrix(m, pol, inc) / std
             # note that dm will be complex-valued, but the imaginary part is 0.
             # this is useful later when dotting with b
-            
+
             # define data vector
             b = self.data / std
             
@@ -503,7 +506,6 @@ class Pair(object):
             # Note that np.linalg.svd returns Vt, not V. in NR notation
             # (http://docs.scipy.org/doc/numpy/reference/generated/numpy.linalg.svd.html)
 
-            
             # define covariance matrix
             cov = np.dot(np.dot(V.T, W**2), V) # See 'Covariance' page in Polarizations tab of LIGO 2013 Notebook
             
@@ -512,7 +514,7 @@ class Pair(object):
             
             # results:
             a = np.dot(VtW, Utb.T)
-            
+
             # strength:
             if m in ['GR', 'G4v']:
                 h = 2 * (abs(a).sum()) / len(a)
@@ -530,7 +532,7 @@ class Pair(object):
                             
             if save:
                 try:
-                    filename = 'ob_' + self.det.name + self.run + '_' + self.psr.name
+                    filename = 'ob_' + self.det.name + self.run + '_' + self.psr.name + '_' m
                     with open(paths['ob'] + filename + '.p', 'wb') as f:
                         pickle.dump(results, f)
                 except:
