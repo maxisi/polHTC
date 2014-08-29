@@ -11,6 +11,7 @@ globalpaths = (
             'logs/',
             'globs/data/',
             'globs/vectors/',
+            'globs/ob/',
             'config/',
             'subs/',
             'dags/'

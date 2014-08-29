@@ -2,6 +2,7 @@
 analyses/
 globs/vectors/
 globs/data/
+globs/ob/
 logs/
 subs/
 trash/

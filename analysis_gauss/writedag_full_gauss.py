@@ -54,6 +54,8 @@ dagname = 'dags/fullgauss_%(det)s%(run)s_%(psrIN)s.dag' % locals()
 home = os.path.expanduser('~')
 project_dir = home + '/polHTC'
 
+analysis_folder = '/analysis_gauss' # this serves to separate unrelated executables
+
 # get hostname to determine what server we are on
 cluster = g.Cluster()
 
@@ -62,7 +64,7 @@ scratch_dir = cluster.scratch_dir + 'fullgauss_$(psr)_$(det)$(run)_$(injkind)$(p
 
 subfile_lines = [
                 'Universe = Vanilla',
-                'Executable = ' + project_dir + '/injsrch_full_gauss.py',
+                'Executable = ' + project_dir + analysis_folder + '/injsrch_full_gauss.py',
                 'initialdir = ' + project_dir + '/',
                 'arguments = "$(psr) $(det) $(run) $(injkind) $(pdif) $(ninst) $(ninj)"' % locals(),
                 'Output = ' + scratch_dir + '.out',

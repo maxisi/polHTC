@@ -9,8 +9,6 @@ import os
 import math
 import socket
 # set up plotting backend
-import matplotlib
-matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 ##########################################################################################
@@ -129,7 +127,7 @@ def het(f, data, t):
     template = np.exp(1j * omega * t)
     return template * data
 
-def pvalue(series, nbins, normed=True, getcdf=False):
+def pvalue(series, nbins, fitorder=5, normed=True, getcdf=False):
     '''
     Returns 1-CDF series for a given set of data.
     '''
@@ -141,7 +139,7 @@ def pvalue(series, nbins, normed=True, getcdf=False):
     if normed: cdf /= np.max(cdf)
 
     # x-axis
-    x = np.arange(firstbin, firstbin + binsize*nbins, binsize)
+    x = np.arange(firstbin, firstbin + binsize*nbins, binsize)[:nbins]
     
     # y-axis
     if getcdf:
@@ -149,10 +147,10 @@ def pvalue(series, nbins, normed=True, getcdf=False):
     else:
         y = 1 - cdf # return p-value
 
-    # fit a 2nd degree polynomial to the log (?)
+    # fit a 'fitorder' degree polynomial to the log (?)
     ylog = np.log(y)
     
-    p = np.polyfit(x[:-1], ylog[:-1], 5)
+    p = np.polyfit(x[:-1], ylog[:-1], fitorder)
 
     
     # create fit function
@@ -333,7 +331,7 @@ class Pair(object):
         self.log.info('Checking finehet data is available.')
         
         if p=='':
-            datapath = 'globs/data/' + self.det.name + '/' + run
+            datapath = paths['data'] + self.det.name + '/' + run
             dataname = 'finehet_' + self.psr.name + '_' + self.det.name + '.hdf5'
             p = datapath + '/' + dataname
 
@@ -451,7 +449,7 @@ class Pair(object):
                 dy = self.det.dy
                         
             except AttributeError:
-                self.log.warning('No det vectors loaded. Attempting to load.', exc_info=True)
+                self.log.warning('No det vectors loaded. Attempting to load.', exc_info=False)
             
                 self.det.load_vectors(self.time, filename=self.psr.name)
             
@@ -470,7 +468,7 @@ class Pair(object):
         
         return np.array(dm)
 
-    def openbox(self, methods=search_methods):
+    def search_finehet(self, methods=search_methods, save=False):
         
         log = self.log
         log.info('Opening box for ' + self.psr.name + ' ' + self.det.name + ' ' + self.run)
@@ -529,6 +527,15 @@ class Pair(object):
                             'h' : h,
                             's' : s
                             }
+                            
+            if save:
+                try:
+                    filename = 'ob_' + self.det.name + self.run + '_' + self.psr.name
+                    with open(paths['ob'] + filename + '.p', 'wb') as f:
+                        pickle.dump(results, f)
+                except:
+                    self.log.error('Unable to save OB results', exc_info=True)
+                        
         return results
 
 
@@ -1712,8 +1719,10 @@ paths = {
             'psrcat' : 'globs/psrcat.p',
             'psrlist' : 'config/psrlist.txt',
             'badpsrs' : 'config/badpsrs.txt',
-            'originalData' : '/home/matthew/analyses/S6_all/results',
-            'vectors' : 'globs/vectors'
+            #'originalData' : '/home/matthew/analyses/S6_all/results',
+            'vectors' : 'globs/vectors',
+            'data' : 'globs/data/',
+            'ob' : 'globs/ob/'
             }
             
 def analysis_path(det, run, psr, kind, pdif):
