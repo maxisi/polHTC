@@ -42,10 +42,10 @@ log.info('Performing ' + str(ninj) + ' injections on ' + str(ninst) + ' instanti
 
 ## ANALYSIS PARAMETERS
 frange = [1.0e-7, 1.0e-5] # frequencies for re-heterodynes
-hinjrange=[1.0E-27, 1.0E-23] # injection strengths IMP! MIGHT NEED TO BE TUNED!
+hinjrange=[1.0E-27, 1.0E-24] # injection strengths IMP! MIGHT NEED TO BE TUNED!
 
-if ('J0534+2200' or 'J1701-3006C') in psr:
-    hinjrange=[1.0E-27, 1.0E-24]
+if 'J1701-3006C' == psr:
+    hinjrange=[1.0E-27, 1.0E-25]
 
 ## STRUCTURE
 log.info('Creating file structure.')
@@ -168,6 +168,8 @@ try:
     home = os.path.expanduser('~')
     project_dir = home + '/polHTC'
 
+    analysis_folder = '/analysis_single'
+
     # get hostname to determine what server we are on
     cluster = g.Cluster()
 
@@ -178,7 +180,7 @@ try:
     
     subfile_lines = [
                     'Universe = Vanilla',
-                    'Executable = ' + project_dir + '/injsrch_process.py',
+                    'Executable = ' + project_dir + analysis_folder + '/injsrch_process.py',
                     'initialdir = ' + project_dir + '/',
                     'arguments = "%(psr)s %(det)s %(run)s %(kind)s %(pdif)s $(Process)"' % locals(),
                     'Output = ' + scratch_dir + name + '-$(Process).out',

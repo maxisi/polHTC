@@ -27,11 +27,11 @@ NINJ=${@:$OPTIND+1:1}
 
 arg=("$PSR" "$DET" "$RUN" "$KIND" "$PDIF" "$NINST" "$NINJ")
 
-./analysis_single/injsrch_master.py "${arg[@]}"
+./analysis_single/injsrch_master_norange.py "${arg[@]}"
 
 # Report and prompt user before submitting
 
-echo "Analyzing "$NINST" instantiations with "$NINJ" injections. Parameters:"
+echo "Analyzing "$NINST" instantiations with "$NINJ" injections (NO RANGE). Parameters:"
 echo -e "\tPulsar:\t"$PSR""
 echo -e "\tData:\t"$DET" "$RUN""
 echo -e "\tInj:\t"$KIND" "$PDIF""
@@ -39,10 +39,10 @@ echo -e "\tInj:\t"$KIND" "$PDIF""
 while true; do 
 	read -p "Submit?" yn 
 	case $yn in  
-		[Yy]* ) condor_submit subs/injsrch_"$DET""$RUN"_"$PSR"_"$KIND""$PDIF".sub; break;;
+		[Yy]* ) condor_submit subs/norange_"$DET""$RUN"_"$PSR"_"$KIND""$PDIF".sub; break;;
 		* ) exit;; 
 	esac 
 done
 
-# condor_submit subs/injsrch_"$DET""$RUN"_"$PSR"_"$KIND""$PDIF".sub;;
+# condor_submit subs/norange_"$DET""$RUN"_"$PSR"_"$KIND""$PDIF".sub;;
 
