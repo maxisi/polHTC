@@ -17,10 +17,9 @@ the pulsar list.
 try:
     # Determine whether psrIN is a chunk index (e.g. '2'). 
     int(psrIN)
-    
+     
     # If it is, assume the requested PSRs are those in the list named psrlist_run_psrIN.txt
     psrlist = g.read_psrlist(name = det + '_' + run + '_' + psrIN)
-
 except ValueError:
     if psrIN == 'all':
         # assuming all pulsars in psrlist should be included
@@ -31,8 +30,8 @@ except ValueError:
 
 # load PSR exclusion list (if it exists):
 try:
+    badpsrs = []
     with open(g.paths['badpsrs'], 'r') as f:
-        badpsrs=[]
         for line in f.readlines():
             badpsrs += [line.strip()] # (.strip() removes \n character)
 except:
@@ -88,10 +87,10 @@ def lines(det, run, psr, method, gridsize):
     home = os.path.expanduser('~')
     project_dir = home + '/polHTC/'
 
-    jobname = injkind + pdif + '_' + psr
+    jobname = method + '_' + psr
 
     l = [
-        '# ' + psr + ' ' + injkind + pdif + '\n',
+        '# ' + psr + ' ' + method + '\n',
         'JOB ' + jobname + ' ' + project_dir + subname,
         'VARS %(jobname)s psr="%(psr)s"' % locals(),
         'VARS %(jobname)s det="%(det)s"' % locals(),
@@ -106,7 +105,7 @@ def lines(det, run, psr, method, gridsize):
 
 
 with open(dagname, 'w') as f:
-    f.write('# %(det)s %(run)s %(psrIN)s %(method)s %(gridsize)s\n\n' % locals() )
+    f.write('# %(det)s %(run)s %(psrIN)s %(gridsize)s\n\n' % locals() )
     f.write('CONFIG dags/dagman.config\n\n') # points to configuration file with DAGman variables
     
     for psr in goodpsrs:

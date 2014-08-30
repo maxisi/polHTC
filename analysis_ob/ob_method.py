@@ -3,7 +3,7 @@
 import random
 import cPickle as pickle
 import logging
-
+import sys
 
 
 '''
@@ -104,7 +104,7 @@ else:
 
 log.info('Saving results')
 try:
-    filename = 'ob_' + self.det.name + self.run + '_' + self.psr.name + '_' + method
+    filename = 'ob_' + det + run + '_' + psr + '_' + method
     with open(g.paths['ob'] + filename + '.p', 'wb') as f:
         pickle.dump(results, f)
 except:

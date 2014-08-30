@@ -532,7 +532,7 @@ class Pair(object):
                             
             if save:
                 try:
-                    filename = 'ob_' + self.det.name + self.run + '_' + self.psr.name + '_' m
+                    filename = 'ob_' + self.det.name + self.run + '_' + self.psr.name + '_' + m
                     with open(paths['ob'] + filename + '.p', 'wb') as f:
                         pickle.dump(results, f)
                 except:
@@ -1634,25 +1634,25 @@ def read_psrlist(name='', det=False, run=False):
     
     # -- Return some sub-list    
     else:
-        if det and psr:
-            try:
-                # Determine whether name is a chunk index (e.g. '2' or 2).
-                int(name)
-                log.debug('Taking list #' + str(name))
-                # If it is, assume the requested PSRs are those in the list named psrlist_det_run_listID.txt
-                p = 'config/psrlist_' + det + '_' + run + '_' + name + '.txt'
-            except ValueError:
-                # Assume 'name' is already a composed list name
-                p = 'config/psrlist_' + name + '.txt'
+        try:
+            # Determine whether name is a chunk index (e.g. '2' or 2).
+            int(name)
+            log.debug('Taking list #' + str(name))
+            # Assume requested PSRs are those in the list named psrlist_det_run_listID.txt
+            p = 'config/psrlist_' + det + '_' + run + '_' + name + '.txt'
+
+        except ValueError:
+            # Assume 'name' is already a composed list name
+            p = 'config/psrlist_' + name + '.txt'
                 
-            try:
-                with open(p, 'r') as f:
-                    for line in f.readlines():
-                        psrs += [line.strip()] # (.strip() removes \n character) 
-                return psrs
-            except:
-                message = 'Could not open psrlist text in: ' + p
-                log.error(message, exc_info=True)
+        try:
+            with open(p, 'r') as f:
+                for line in f.readlines():
+                    psrs += [line.strip()] # (.strip() removes \n character) 
+            return psrs
+        except:
+            message = 'Could not open psrlist text in: ' + p
+            log.error(message, exc_info=True)
 
 
 # CONVERSIONS
