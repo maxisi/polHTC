@@ -45,6 +45,8 @@ pair.det.load_vectors(pair.time, filename=psr)
 
 if method in ['GR', 'G4v']:
 
+    src = pair.psr
+
     ## SETUP
     log.info('Preparing search parameters.')
 
