@@ -393,32 +393,28 @@ class Results(object):
     
     def openbox(self, methods=None, noise_threshold=.95, band_conf=.95, p_nbins=100, p_fitorder=3):
         
-        methods = methods or [self.injkind]
+        methods = methods or [self.injkind, 'Sid']
         
         self.log.info('Opening box.')
         
-        methods = methods or self.search_methods
-        
         # try to load search results from file; otherwise, search
-        try:
-            filename = 'ob_' + self.det + self.run + '_' + self.psr
-            
-            with open(g.paths['ob'] + filename + '.p', 'rb') as f:
-                results_ob = pickle.load(f)
-            
-            # check health of file
-            [results_ob[m] for m in methods]
-            
-            self.log.debug('OB results loaded.')
-            
-        except:
-            if 'pair' not in dir(self):
-                self.log.debug('Creating pair and loading data.')
-                self.pair = g.Pair(self.psr, self.det)
-                self.pair.load_finehet(self.run, load_vectors=True)
-            
-            self.log.debug('Searching finehet.')
-            results_ob = self.pair.search_finehet(methods=methods, save=1)
+        for m in methods:
+            try:
+                filename = 'ob_' + self.det + self.run + '_' + self.psr + '_' + m
+                
+                with open(g.paths['ob'] + filename + '.p', 'rb') as f:
+                    results_ob = pickle.load(f)
+                
+                self.log.debug('OB results loaded.')
+                
+            except:
+                if 'pair' not in dir(self):
+                    self.log.debug('Creating pair and loading data.')
+                    self.pair = g.Pair(self.psr, self.det)
+                    self.pair.load_finehet(self.run, load_vectors=True)
+                
+                self.log.debug('Searching finehet.')
+                results_ob = self.pair.search_finehet(methods=methods, save=1)
         
         # processing
         self.log.debug('Obtaining stats.')
@@ -896,18 +892,18 @@ class ResultsMP(object):
                 if verbose: print sys.exc_info()
                 self.failed += [psr]
     
-    def load_psrs(self, force=0):
+#    def load_psrs(self, force=0):
 
-        if 'psrs' not in dir(self) or force:
-            self.psrs = [g.Pulsar(psr) for psr in self.psrlist]
+#        if 'psrs' not in dir(self) or force:
+#            self.psrs = [g.Pulsar(psr) for psr in self.psrlist]
 
-        else:
-            print 'Pulsars already loaded. Use "force" option to reload.'
+#        else:
+#            print 'Pulsars already loaded. Use "force" option to reload.'
     
     def sortby(self, target='psrlist', by='hmin', methods=None, noise_threshold=None):
         '''
-        Returns instance of list of name 'name' sorted by hmin.
-        'name' can be 'psrlist', 'fgw' (=2*FR0) or the name of a PSR parameter (e.g. 'RAS')
+        Returns instance of list of name 'target' sorted by 'by'.
+        'target' can be 'psrlist', 'fgw' (=2*FR0) or the name of a PSR parameter (e.g. 'RAS')
         '''
         
         ## SETUP
@@ -1062,10 +1058,7 @@ class ResultsMP(object):
         Produces plot of ob indicator (h_ob, s_ob, p_ob) vs a PSR parameter (e.g. FR0, DEC, 'RAS').
         '''
         
-        methods = methods or [self.injkind]
-        
-        self.load_psrs()
-        
+        # check if OB results already loaded
         try:
             [self.h_ob[methods[m]] for m in methods]
         except:

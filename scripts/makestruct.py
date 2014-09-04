@@ -8,10 +8,11 @@ import os
 
 # Create global directory structure
 globalpaths = (
+            'lib/',
+            'data/finhet',
+            'data/vectors,
             'logs/',
-            'globs/data/',
-            'globs/vectors/',
-            'globs/ob/',
+            'results/ob/',
             'config/',
             'subs/',
             'dags/'

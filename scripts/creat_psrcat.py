@@ -7,7 +7,7 @@ from urllib2 import urlopen
 import cPickle as pickle
 import numpy as np
 
-from globals import general as g
+from lib import general as g
 
 '''
 Gets location parameters for pulsars in input list from ATNF online catalogue.
