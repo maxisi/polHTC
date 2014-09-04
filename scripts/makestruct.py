@@ -9,13 +9,13 @@ import os
 # Create global directory structure
 globalpaths = (
             'lib/',
-            'data/finhet',
-            'data/vectors,
+            'data/',
+            'tmp/vectors/',
+	    'tmp/plots/',
+	    'tmp/htc/'
+	    'tmp/injsrch/',
             'logs/',
-            'results/ob/',
             'config/',
-            'subs/',
-            'dags/'
             )
             
 print 'Creating global file structure:'
