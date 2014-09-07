@@ -408,11 +408,7 @@ class Pair(object):
         self.log.info('Creating ' + kind + pdif + ' signal.')
         
         # Retrieve detector vectors.
-        try:
-            dx = self.det.dx
-            dy = self.det.dy
-                        
-        except AttributeError:
+        if not ('dx' in dir(self.det) and 'dy' in dir(self.det)):
             self.log.warning('No det vectors loaded. Attempting to load.', exc_info=True)
             
             self.det.load_vectors(self.time, filename=self.psr.name)
@@ -538,7 +534,41 @@ class Pair(object):
                 except:
                     self.log.error('Unable to save OB results', exc_info=True)
                         
-        return results   
+        return results
+        
+
+##########################################################################################
+class Cluster(object):
+    
+    def __init__(self, name=''):
+        
+        # Set identity
+        if name=='':
+            # get hostname to determine what server we are on
+            self.hostname = socket.gethostname()
+        else:
+            self.hostname = name
+        
+        # Determine scratch and public directories
+        if 'ldas' in self.hostname:
+            self.scratch_dir = '/usr1/max.isi/'
+            self.public_dir  = '/home/max.isi/public_html/'
+            
+        elif 'atlas' in self.hostname:
+            # get result of hostname -s command in bash
+            hs = self.hostname.split('.')[0]
+            #if hs == 'atlas3': hs = 'atlas3.atlas.aei.uni-hannover.de'
+            self.scratch_dir = '/atlas/user/' + hs + '/max.isi/'
+            self.public_dir  =  '/home/max.isi/WWW/LSC/'
+            
+        elif self.hostname in ['pccdev1', 'pcdev2', 'hydra','trout']:
+            # assuming Nemo cluster
+            self.scratch_dir = '/home/max.isi/scratch/'
+            self.public_dir = '/home/max.isi/public_html/'
+            
+        else:
+            self.scratch_dir = 'logs/'
+            self.public_dir  = ''        
 
         
 ##########################################################################################
@@ -764,7 +794,7 @@ def read_psrlist(name='', det=False, run=False):
     # -- Return all PSRs
     if name in ['', 'all']:
         log.debug('Returning all PSRs in list.')
-        p = paths['psrlist']
+        p = paths['psrlist'] + '.txt'
         
         try:
             with open(p, 'r') as f:
@@ -795,11 +825,11 @@ def read_psrlist(name='', det=False, run=False):
             int(name)
             log.debug('Taking list #' + str(name))
             # Assume requested PSRs are those in the list named psrlist_det_run_listID.txt
-            p = 'config/psrlist_' + det + '_' + run + '_' + name + '.txt'
+            p = paths['psrlist'] + '_' + det + '_' + run + '_' + name + '.txt'
 
         except ValueError:
             # Assume 'name' is already a composed list name
-            p = 'config/psrlist_' + name + '.txt'
+            p = paths['psrlist'] + '_' + name + '.txt'
                 
         try:
             with open(p, 'r') as f:
@@ -877,7 +907,7 @@ paths = {
             #'originalData' : '/home/matthew/analyses/S6_all/results',
             'extrapsrparam' : 'config/psrextra.txt',
             'psrcat'        : 'config/psrcat.p',
-            'psrlist'       : 'config/psrlist.txt',
+            'psrlist'       : 'config/psrlist',
             'badpsrs'       : 'config/badpsrs.txt',
             'vectors'       : 'tmp/vectors',
             'ob'            : 'tmp/ob/',

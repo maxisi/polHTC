@@ -1,7 +1,8 @@
 #! /usr/bin/env python 
 
 import os, sys
-#sys.path.append(os.path.expanduser('~') +'/polHTC/')
+
+sys.path.append(os.path.expanduser('~') +'/polHTC/')
 from lib import general as g
 
 '''
@@ -15,46 +16,29 @@ the pulsar list.
 args = sys.argv
 if len(args) == 6:
     processname, det, run, psrIN, ninstSTR, ninjSTR = args
-    analysis_name = 'full'
+    
+    name = ''
 elif len(args) == 7:
     processname, det, run, psrIN, ninstSTR, ninjSTR, name = args
-    analysis_name = 'full' + name
+
 else:
     print 'Too many arguments to unpack.'
     sys.exit(1)
-
+    
+analysis_name = 'full' + name
 
 # determine what PSRs to analyze from argument
-try:
-    # Determine whether psrIN is a chunk index (e.g. '2'). 
-    int(psrIN)
-    
-    # If it is, assume the requested PSRs are those in the list named psrlist_run_psrIN.txt
-    psrlist = g.read_psrlist(name = det + '_' + run + '_' + psrIN)
-
-except ValueError:
-    if psrIN == 'all':
-        # assuming all pulsars in psrlist should be included
-        psrlist = g.read_psrlist()
-    else:
-        # assuming one single psr was requested
-        psrlist = [psrIN]
+psrlist= g.read_psrlist(det=det, run=run, name=psrIN)
 
 # load PSR exclusion list (if it exists):
-try:
-    with open(g.paths['badpsrs'], 'r') as f:
-        badpsrs=[]
-        for line in f.readlines():
-            badpsrs += [line.strip()] # (.strip() removes \n character)
-except:
-    print 'WARNING: no PSR exclusion list found'
+badpsrs = g.read_psrlist(name='bad')
 
 goodpsrs = list( set(psrlist) - set(badpsrs) )
 
 ##########################################################################################
 # PATHS
 
-subname = g.paths['subs'] + 'generic_' + analysis_name + '.sub'
+subname = g.paths['subs'] + analysis_name + '.sub'
 
 dagname = g.dag_path(det, run, psrIN, name=analysis_name)
 
@@ -77,7 +61,7 @@ scratch_dir = cluster.scratch_dir + analysis_name + '_$(psr)_$(det)$(run)_$(injk
 
 subfile_lines = [
                 'Universe = Vanilla',
-                'Executable = ' + project_dir + analysis_folder + analysis_name + '.py',
+                'Executable = ' + project_dir + analysis_folder + 'exe' + name + '.py',
                 'initialdir = ' + project_dir + '/',
                 'arguments = "$(psr) $(det) $(run) $(injkind) $(pdif) $(ninst) $(ninj)"' % locals(),
                 'Output = ' + scratch_dir + '.out',

@@ -2,6 +2,8 @@
 
 import os
 import sys
+
+sys.path.append(os.path.expanduser('~') +'/polHTC/')
 from lib import general as g
 
 processname, det, run, psrIN, gridsize = sys.argv
@@ -14,56 +16,39 @@ the pulsar list.
 ##########################################################################################
 
 # determine what PSRs to analyze from argument
-try:
-    # Determine whether psrIN is a chunk index (e.g. '2'). 
-    int(psrIN)
-     
-    # If it is, assume the requested PSRs are those in the list named psrlist_run_psrIN.txt
-    psrlist = g.read_psrlist(name = det + '_' + run + '_' + psrIN)
-except ValueError:
-    if psrIN == 'all':
-        # assuming all pulsars in psrlist should be included
-        psrlist = g.read_psrlist()
-    else:
-        # assuming one single psr was requested
-        psrlist = [psrIN]
+psrlist= g.read_psrlist(det=det, run=run, name=psrIN)
 
 # load PSR exclusion list (if it exists):
-try:
-    badpsrs = []
-    with open(g.paths['badpsrs'], 'r') as f:
-        for line in f.readlines():
-            badpsrs += [line.strip()] # (.strip() removes \n character)
-except:
-    print 'WARNING: no PSR exclusion list found'
+badpsrs = g.read_psrlist(name='bad')
 
 goodpsrs = list( set(psrlist) - set(badpsrs) )
 
 ##########################################################################################
 # PATHS
 
-subname = 'subs/ob.sub'
+analysis_name = 'ob'
 
-dagname = 'dags/ob_%(det)s%(run)s_%(psrIN)s.dag' % locals()
+analysis_folder = '/analyses/ob/' # this serves to separate unrelated executables
+
+home = os.path.expanduser('~')
+project_dir = home + '/polHTC'
+
+# define scratch space
+scratch_dir = g.Cluster().scratch_dir + analysis_name + '_$(psr)_$(det)$(run)s'
+
+subname =  g.paths['subs'] + analysis_name + '.sub'
+
+dagname = g.dag_path(det, run, psrIN, name=analysis_name)
+
+config  = g.paths['dags'] + 'dagman.config'
 
 
 ##########################################################################################
 # WRITE SUBMIT
 
-home = os.path.expanduser('~')
-project_dir = home + '/polHTC'
-
-analysis_folder = '/analyses/ob' # this serves to separate unrelated executables
-
-# get hostname to determine what server we are on
-cluster = g.Cluster()
-
-# define scratch space
-scratch_dir = cluster.scratch_dir + 'ob_$(psr)_$(det)$(run)s'
-
 subfile_lines = [
                 'Universe = Vanilla',
-                'Executable = ' + project_dir + analysis_folder + '/ob_method.py',
+                'Executable = ' + project_dir + analysis_folder + 'exe.py',
                 'initialdir = ' + project_dir + '/',
                 'arguments = "$(psr) $(det) $(run) $(method) $(gridsize)"' % locals(),
                 'Output = ' + scratch_dir + '.out',
@@ -106,7 +91,7 @@ def lines(det, run, psr, method, gridsize):
 
 with open(dagname, 'w') as f:
     f.write('# %(det)s %(run)s %(psrIN)s %(gridsize)s\n\n' % locals() )
-    f.write('CONFIG dags/dagman.config\n\n') # points to configuration file with DAGman variables
+    f.write('CONFIG '+ config + '\n\n') # points to configuration file with DAGman variables
     
     for psr in goodpsrs:
             for method in ['GR', 'G4v', 'Sid']:
@@ -115,7 +100,7 @@ with open(dagname, 'w') as f:
 
 
 # Configure Dagman to not limit the number of times a node is put on hold
-with open('dags/dagman.config', 'w') as f:
+with open(config, 'w') as f:
     f.write('DAGMAN_MAX_JOB_HOLDS = 0')
 
 print 'DAG written to: ' + dagname
