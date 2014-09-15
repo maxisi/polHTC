@@ -8,6 +8,6 @@ NINJ=$5
 
 arg=("$DET" "$RUN" "$PSRIN" "$NINST" "$NINJ")
 
-./writedag_full.py "${arg[@]}"
+./analyses/full/writedag.py "${arg[@]}"
 
-condor_submit_dag dags/full_"$DET""$RUN"_"$PSRIN".dag
+condor_submit_dag tmp/htc/full_"$DET""$RUN"_"$PSRIN".dag

@@ -96,7 +96,7 @@ with open(dagname, 'w') as f:
 
                     txt_lines = [
                         '# ' + psr + ' ' + injkind + pdif + '\n',
-                        'JOB ' + jobname + ' ' + project_dir + subname,
+                        'JOB ' + jobname + ' ' + project_dir + '/' + subname,
                         'VARS %(jobname)s psr="%(psr)s"' % locals(),
                         'VARS %(jobname)s det="%(det)s"' % locals(),
                         'VARS %(jobname)s run="%(run)s"' % locals(),
