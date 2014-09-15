@@ -12,7 +12,7 @@ globalpaths = (
             'data/',
             'tmp/vectors/',
 	    'tmp/plots/',
-	    'tmp/htc/'
+	    'tmp/htc/',
 	    'tmp/injsrch/',
             'logs/',
             'config/',
