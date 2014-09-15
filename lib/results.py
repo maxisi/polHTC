@@ -35,7 +35,7 @@ class Results(object):
         self.injkind = kind
         self.pdif = pdif
 
-        # Defining local srchmethods to avoid relying on the global 'search_methods'
+        # Defining local srchmethods to avoid relying on lib.general.
         # This also allows one to load only results of a specific method.
         if isinstance(methods, basestring):
             # assuming only one method was requested, e.g. 'GR'
@@ -44,30 +44,39 @@ class Results(object):
             # assuming a list of methods was requested, e.g. ['GR', 'G4v']
             self.search_methods = methods
         else:
-            self.log.warning('Search method: "' + str(methods) + '" is not a string or a list')
+            self.log.warning('Search method: %r is not a string or a list'
+                             % methods)
 
         self.paths = {
-                    'analysis' : g.analysis_path(det, run, psr, kind, pdif),
-                    'export'   : extra_name + 'results_' + det + run + '_' + psr + '_' + kind + pdif + '.hdf5'
-                    }
+            'analysis': g.analysis_path(det, run, psr, kind, pdif),
+            'export': extra_name + 'results_' + det + run + '_' + psr + '_' +
+                      kind + pdif + '.hdf5'
+        }
 
-        # Initialize result containers (DELIBERATELY NOT CONCISE TO SUPPORT NUMPY 2.6.6)
-        self.hrec = {} # recovered strength
-        self.srec = {} # recovery significance
-        self.arec = {} # recovery significance
+        self.hinj = None
+        self.ninst = None
+        self.ninj = None
+
+        # Initialize result containers
+        # (DELIBERATELY NOT CONCISE TO SUPPORT NUMPY 2.6.6)
+        self.hrec = {}  # recovered strength
+        self.srec = {}  # recovery significance
+        self.arec = {}  # recovery significance
         for m in self.search_methods:
             self.hrec[m] = []
             self.srec[m] = []
             self.arec[m] = []
 
-    #-----------------------------------------------------------------------------
+    #--------------------------------------------------------------------------
     # IO operations
 
     def collect(self):
-        '''
-        Collects results from multiple files in analysis_path/results as produced by
-        submitting several injsrch_process jobs to Condor. NOT USED BY NEWEST VERSION.
-        '''
+        """
+        Collects results from multiple files in analysis_path/results as
+        produced by
+        submitting several injsrch_process jobs to Condor. NOT USED BY
+        NEWEST VERSION.
+        """
 
         self.log.info('Collecting results.')
 
@@ -77,10 +86,12 @@ class Results(object):
             with h5py.File(path + '/info.hdf5', 'r') as f:
                 self.hinj = f['inj/h'][:]
         except:
-            self.log.error('FATAL: did not find injsrch info in: ' + path, exc_info=True)
+            self.log.error('FATAL: did not find injsrch info in: ' + path,
+                           exc_info=True)
 
         self.ninst = len(self.hinj)
-        self.ninj = len(np.flatnonzero(self.hinj)) # count nonzero elements in hinj
+        # count nonzero elements in hinj:
+        self.ninj = len(np.flatnonzero(self.hinj))
 
         self.log.debug('Looping over files.')
 
@@ -107,10 +118,11 @@ class Results(object):
         return self.hrec, self.srec
 
     def export(self, path=''):
-        '''
-        Exports results to hdf5 file. If no destination path is provided, takes cluster
-        public access folder as destination. This defaults to pwd when cluster is not identified.
-        '''
+        """
+        Exports results to hdf5 file. If no destination path is provided, takes
+        cluster  public access folder as destination. This defaults to pwd when
+        cluster is not identified.
+        """
 
         self.log.info('Exporting results.')
 
@@ -119,19 +131,20 @@ class Results(object):
             cluster = g.Cluster()
             path = cluster.public_dir
 
-        try:
-            export_path = '/home/max.isi/public_html/' + self.paths['export']
+        export_path = '/home/max.isi/public_html/' + self.paths['export']
 
+        try:
             with h5py.File(export_path, 'w') as f:
 
                 # save injected h
-                f.create_dataset('hinj', data = self.hinj)
+                f.create_dataset('hinj', data=self.hinj)
 
                 # save recovered h and s
                 for m in self.search_methods:
                     grp = f.create_group(m)
-                    grp.create_dataset('hrec', data = self.hrec[m])
-                    grp.create_dataset('srec', data = self.srec[m])
+                    grp.create_dataset('hrec', data=self.hrec[m])
+                    grp.create_dataset('srec', data=self.srec[m])
+                    grp.create_dataset('arec', data=self.arec[m])
 
         except IOError:
             export_path = path + self.paths['export']
@@ -139,22 +152,24 @@ class Results(object):
             with h5py.File(export_path, 'w') as f:
 
                 # save injected h
-                f.create_dataset('hinj', data = self.hinj)
+                f.create_dataset('hinj', data=self.hinj)
 
                 # save recovered h and s
                 for m in self.search_methods:
                     grp = f.create_group(m)
-                    grp.create_dataset('hrec', data = self.hrec[m])
-                    grp.create_dataset('srec', data = self.srec[m])
+                    grp.create_dataset('hrec', data=self.hrec[m])
+                    grp.create_dataset('srec', data=self.srec[m])
+                    grp.create_dataset('arec', data=self.arec[m])
         except:
             message = 'Unable to save collected results to: ' + export_path
             self.log.error(message, exc_info=self.verbose)
 
     def load(self, path=''):
-        '''
-        Loads results from hdf5 file. If no origin path is provided, takes cluster
-        public access folder as destination. This defaults to pwd when cluster is not identified.
-        '''
+        """
+        Loads results from hdf5 file. If no origin path is provided, takes
+        cluster public access folder as destination. This defaults to pwd when
+        cluster is not identified.
+        """
         self.log.info('Loading results.')
 
         if path=='':
@@ -178,13 +193,12 @@ class Results(object):
             message = 'Unable to load collected results from: ' + export_path
             self.log.error(message, exc_info=self.verbose)
             sys.exit(1)
-            print message
 
     def pickseries(self, kind):
-        '''
-        Returns already loaded recovered data of 'kind'  and makes sure it exists.
+        """
+        Returns already-loaded recovered data of 'kind', making sure it exists.
         (Small snippet of code use multiple times below.)
-        '''
+        """
 
         try:
             if kind in ['s', 'srec', 'sig']:
@@ -772,7 +786,7 @@ class ResultsMP(object):
         self.noise_threshold = 0
         # (0 indicates stats haven't been taken yet)
 
-    #-----------------------------------------------------------------------------
+    #--------------------------------------------------------------------------
     # IO operations
 
     def load(self, path=None, extra_name='', listID='all', verbose=False):
