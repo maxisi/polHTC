@@ -1,4 +1,4 @@
-#! /usr/bin/env python 
+#! /usr/bin/env python
 
 import random
 import os
@@ -91,7 +91,7 @@ def params(src, frange, hinjrange, ninj, ninst, log):
     incs = [random.uniform(inc_range[0], inc_range[1]) for n in np.arange(0, ninj)]
     incinj = np.zeros(ninst) # empty vector (most instantiations won't have injections)
     incinj[injLocations] = incs # injection strength index (indicates hinj for each inst)
-    
+
     return freq, polsrch, incsrch, hinj, polinj, incinj
 
 freq_lst, polsrch_lst, incsrch_lst, hinj_lst, polinj_lst, incinj_lst = params(pair.psr, frange, hinjrange, ninj, ninst, log)
@@ -115,7 +115,7 @@ for n in np.arange(0, ninst):
     hinj = hinj_lst[n]
     polinj = polinj_lst[n]
     incinj = incinj_lst[n]
-    
+
     ## RE-HETERODYNE
 
     log.info('Reheterodyne.')
@@ -132,40 +132,40 @@ for n in np.arange(0, ninst):
     # search
     for m in g.search_methods:
             log.info('Searching: ' + m)
-        
+
             # obtain design matrix and divide by standard deviation
             A = pair.design_matrix(m, polsrch, incsrch) / pair.sigma
             # note that dm will be complex-valued, but the imaginary part is 0.
             # this is useful later when dotting with b
-        
+
             # define data vector
             b = inst / pair.sigma
-        
+
             # perform SVD decomposition (http://web.mit.edu/be.400/www/SVD/Singular_Value_Decomposition.htm)
             U, s, V = np.linalg.svd(A.T, full_matrices=False)
             W = np.diag(1./s)
             # Note that np.linalg.svd returns Vt, not V. in NR notation
             # (http://docs.scipy.org/doc/numpy/reference/generated/numpy.linalg.svd.html)
 
-        
+
             # define covariance matrix
             cov = np.dot(np.dot(V.T, W**2), V) # See 'Covariance' page in Polarizations tab of LIGO 2013 Notebook
-        
+
             VtW = np.dot(V.T, W)
             Utb = np.dot(U.T, b)
-        
+
             # results:
             a = np.dot(VtW, Utb.T)
-        
+
             # strength:
             if m in ['GR', 'G4v']:
                 results.hrec[m] += [2 * (abs(a).sum()) / len(a)]
             else:
                 results.hrec[m] += [2 * np.linalg.norm(a)]
-        
+
             # significance:
             results.srec[m] += [np.sqrt(abs(np.dot(a.conj(), np.linalg.solve(cov, a))))]
-        
+
 
 log.info('Saving results')
 results.export()

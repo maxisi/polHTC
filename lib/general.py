@@ -45,15 +45,15 @@ def setuplog(logname, logpath='logs/', logsave='DEBUG', logprint='WARNING'):
 # #############################################################################
 # CONSTANTS
 
-ss = 86164.0905  # Seconds in a sidereal day
+SS = 86164.0905  # Seconds in a sidereal day
 
-w = 2 * np.pi / ss  # Sidereal angular frequency of Earth
+SIDFREQ = 2 * np.pi / SS  # Sidereal angular frequency of Earth
 
-rE = 6378.137e3  # Earth radius (m)
+EARTHRADIUS = 6378.137e3  # Earth radius (m)
 
-periodLIGO = 1 / 16384.  # LIGO data sampling period (s), from M. Pitkin
+TSAMPLING = 1 / 16384.  # LIGO data sampling period (s), from M. Pitkin
 
-c = 299792458.  # Speed of light (m/s)
+C = 299792458.  # Speed of light (m/s)
 
 search_methods = ['GR', 'G4v',
                   'Sid']  # 'AP', 'Sid'] # ECONOMIC VERSION WITH JUST SID
@@ -61,70 +61,6 @@ search_methods = ['GR', 'G4v',
 
 # #############################################################################
 # FUNCTIONS
-
-def detarms(lat, lon, x_east, arm_ang, t):
-    """
-    Computes detector arms for given detector parameters and time vector.
-    """
-    # Angle between detector and Aries (vernal equinox) at time t
-    # fiducial GPS time t0=630763213 (12hUT1 1/1/2000, JD245154).
-    # See http://aa.usno.navy.mil/faq/docs/GAST.php
-    offset = 67310.5484088 * w  # Aries-Greenwich angle at fiducial time (GMST)
-    lmst = offset + w * (t - 630763213) + lon  # (LMST)
-
-    # Earth center to North pole
-    northPole = np.array([0, 0, 1])
-
-    # The zenith is obtained using the detector location
-    zenith = np.array([
-        np.cos(lat) * np.cos(lmst),
-        np.cos(lat) * np.sin(lmst),
-        np.array([np.sin(lat)] * len(t))
-    ]).transpose()  # [[x0, y0, z0], ...]
-
-    # Local vectors are obtained from North pole and zenith
-    localEast = np.cross(northPole, zenith)
-    localNorth = np.cross(zenith, localEast)
-
-    # Rotating local vectors yields dx & dy. They are then normalized
-    xArm = np.cos(x_east) * localEast + np.sin(x_east) * localNorth
-    xArm /= np.sqrt(np.sum(xArm ** 2., axis=1))[..., None]
-
-    # yArm is created from xArm using the angle between arms
-    perp_xz = np.cross(zenith, xArm)
-    yArm = xArm * np.cos(arm_ang) + perp_xz * np.sin(arm_ang)
-    # equals perp_xz when angle between arms is 90deg
-    yArm /= np.sqrt(np.sum(yArm ** 2., axis=1))[..., None]
-
-    # scale dz to have norm Earth radius
-    dz = rE * zenith
-
-    return xArm, yArm, dz
-
-
-def srcarms(dec, ras, psi):
-    """
-    Computes source arms for given PSR parameters (DEC, RAS).
-    """
-    north = np.array([0, 0, 1])
-
-    # take source location vector components in celestial coordinates
-    # and invert direction multiplying by -1 to get wave vector wz
-    wz = np.array([-math.cos(dec) * math.cos(ras),
-                   -math.cos(dec) * math.sin(ras),
-                   -math.sin(dec)])
-
-    wy = np.cross(wz, north)
-    wy /= np.sqrt(np.sum(wy ** 2))
-
-    wx = np.cross(wy, wz)
-    wx /= np.sqrt(np.sum(wx ** 2))
-
-    # rotate vectors by polarization angle
-    wxRot = -wy * np.cos(psi) + wx * np.sin(psi)
-    wyRot = wx * np.cos(psi) + wy * np.sin(psi)
-
-    return wxRot, wyRot, wz
 
 
 def het(f, data, t):
@@ -212,14 +148,14 @@ def bindata(x, y, window):
 class Pulsar(object):
     def __init__(self, psrname):
 
+        """
+        Initializes pulsar object.
+
+        :param psrname: pulsar PSR code.
+        """
         self.log = logging.getLogger('Pulsar')
 
         self.name = psrname
-
-        self.wx = None
-        self.wy = None
-        self.wz = None
-        self.psi = None
 
         self.log.info('Retrieving catalogue info.')
         try:
@@ -232,32 +168,48 @@ class Pulsar(object):
 
         except IOError:
             self.log.error(
-                'Could not find PSR catalogue in: ' + paths['psrcat'],
+                'Could not find PSR catalogue in: %r' % paths['psrcat'],
                 exc_info=True)
 
         self.log.info('Computing source vectors.')
 
-    def vectors(self, psi=None, save=False):
+    def vectors(self, psi=None):
         """
-        Returns source vectors. Polarization angle psi can be provided (
-        default psi=0).
-        Vectors are not saved in class unless the save=True. Note that there
-        is almost no
-        computational advantage in saving these vectors: they are
-        inexpensive to compute.
+        Returns source vectors. Polarization angle psi can be provided
+        (default psi=0).
+
+        Note that there is almost no computational advantage in saving these
+        vectors as they are inexpensive to compute.
         """
 
-        psi = psi or self.param['POL']
+        if psi is None:
+            psi = self.param['POL']
 
-        wx, wy, wz = srcarms(self.param['DEC'], self.param['RAS'], psi)
+        dec = self.param['DEC']
+        ras = self.param['RAS']
 
-        if save:
-            self.wx = wx
-            self.wy = wy
-            self.wz = wz
-            self.psi = psi
+        # Compute vectors:
+        north = np.array([0, 0, 1])
 
-        return wx, wy, wz
+        # source location vector components in celestial coordinates
+        srcloc = np.array([math.cos(dec) * math.cos(ras),
+                           math.cos(dec) * math.sin(ras),
+                           math.sin(dec)])
+
+        # direction of wave propagation is the opposite of srcloc
+        wz = - srcloc
+
+        wx = np.cross(srcloc, north)
+        wx /= np.sqrt(np.sum(wx ** 2))
+
+        wy = np.cross(wx, srcloc)
+        wy /= np.sqrt(np.sum(wy ** 2))
+
+        # rotate vectors by polarization angle
+        wx_psi = wx * np.cos(psi) + wy * np.sin(psi)
+        wy_psi = wy * np.cos(psi) - wx * np.sin(psi)
+
+        return wx_psi, wy_psi, wz
 
 
 class Detector(object):
@@ -273,9 +225,8 @@ class Detector(object):
 
         self.param = detparams[self.observatory]
 
-        self.vecpath = paths[
-                           'vectors'] + '/detvec' + self.name  # path to
-                           # vectors
+        # path to vectors
+        self.vecpath = paths['vectors'] + '/detvec' + self.name
 
     def create_vectors(self, t, filename=''):
         """
@@ -284,13 +235,44 @@ class Detector(object):
 
         self.log.info('Creating detector vectors.')
 
-        dx, dy, dz = detarms(
-            self.param['lat'],
-            self.param['lon'],
-            self.param['x_east'],
-            self.param['arm_ang'],
-            t
-        )
+        lat = self.param['lat']
+        lon = self.param['lon']
+        x_east = self.param['x_east']
+        arm_ang = self.param['arm_ang']
+
+        # Angle between detector and Aries (vernal equinox) at time t
+        # fiducial GPS time t0=630763213 (12hUT1 1/1/2000, JD245154).
+        # See http://aa.usno.navy.mil/faq/docs/GAST.php
+        offset = 67310.5484088 * SIDFREQ
+        # offset = Aries-Greenwich angle at fiducial time (GMST)
+        lmst = offset + SIDFREQ * (t - 630763213) + lon # (LMST)
+
+        # Earth center to North pole
+        northPole = np.array([0, 0, 1])
+
+        # The zenith is obtained using the detector location
+        zenith = np.array([
+            np.cos(lat) * np.cos(lmst),
+            np.cos(lat) * np.sin(lmst),
+            np.array([np.sin(lat)] * len(t))
+        ]).transpose()  # [[x0, y0, z0], ...]
+
+        # Local vectors are obtained from North pole and zenith
+        localEast = np.cross(northPole, zenith)
+        localNorth = np.cross(zenith, localEast)
+
+        # Rotating local vectors yields dx & dy. They are then normalized
+        dx = np.cos(x_east) * localEast + np.sin(x_east) * localNorth
+        dx /= np.sqrt(np.sum(dx ** 2., axis=1))[..., None]
+
+        # yArm is created from xArm using the angle between arms
+        perp_xz = np.cross(zenith, dx)
+        dy = dx * np.cos(arm_ang) + perp_xz * np.sin(arm_ang)
+        # equals perp_xz when angle between arms is 90deg
+        dy /= np.sqrt(np.sum(dy ** 2., axis=1))[..., None]
+
+        # scale dz to have norm Earth radius
+        dz = EARTHRADIUS * zenith
 
         self.log.info('Saving detector vectors.')
 
@@ -310,7 +292,7 @@ class Detector(object):
         self.log.info('Checking health of detector vector files.')
         try:
             with h5py.File(self.vecpath + filename + '.hdf5', 'r') as f:
-                # make sure time series are the same            
+                # make sure time series are the same
 
                 try:
                     if any(f['/time'][:] != np.array(t)):
@@ -356,13 +338,12 @@ class Pair(object):
         self.run = None
         self.time = None
         self.data = None
+
         self.sigma = None
 
-        try:
-            self.log = logging.getLogger('Pair')
-        except:
-            setuplog('pair')
-            self.log = logging.getLogger('Pair')
+        self.Signal = None
+
+        self.log = logging.getLogger('Pair')
 
     def load_finehet(self, run, p='', check_vectors=False, load_vectors=False):
 
@@ -401,7 +382,6 @@ class Pair(object):
 
         except:
             self.log.error('FATAL: No PSR data found in: ' + p, exc_info=True)
-            print sys.exc_info()
 
     def get_sigma(self):
         """
@@ -417,7 +397,7 @@ class Pair(object):
         t = self.time
 
         # find number of days which the data spans
-        ndays = int(np.ceil((t[-1] - t[0]) / ss))
+        ndays = int(np.ceil((t[-1] - t[0]) / SS))
 
         # this will also be the number of bins over which the data will be
         # split
@@ -454,35 +434,32 @@ class Pair(object):
         return np.array(self.sigma)
 
     def signal(self, kind, pdif, pol, inc):
+        """ Returns simulated signal. Loads detector vectors if necessary.
 
+        :param kind: signal kind, e.g. 'GR' or 'G4v'.
+        :param pdif: phase diffrence between components, 'p', 'm' or 0.
+        :param pol: source polarization angle.
+        :param inc: source inclination angle.
+        :return: sig: simulated signal time series.
+        """
         self.log.info('Creating ' + kind + pdif + ' signal.')
 
-        # Retrieve detector vectors.
-        if not ('dx' in dir(self.det) and 'dy' in dir(self.det)):
-            self.log.warning('No det vectors loaded. Attempting to load.',
-                             exc_info=True)
+        signal = self.Signal or Signal.from_objects(self.det, self.psr,
+                                                    time=self.time)
 
-            self.det.load_vectors(self.time, filename=self.psr.name)
+        sig = signal(kind, pol=pol, inc=inc, pdif=pdif)
 
-        dx = self.det.dx
-        dy = self.det.dy
+        return sig
 
-        # Retrieve source vectors.
-        wx, wy, wz = self.psr.vectors(psi=pol)
+    def design_matrix(self, kind, pol=0):
+        """ Returns design matrix for template `kind`.
 
-        # Build signal. (See note under TEMPLATE INFORMATION below.)
-
-        signal = np.zeros(len(self.time)) + 1j * np.zeros(len(self.time))
-
-        for A, a in templateinfo[kind].iteritems():
-            signal += a(inc, pdif) * (A(dx, dy, wx, wy, wz) + 0j)
-
-        return signal
-
-    def design_matrix(self, kind, pol, inc):
-        # Retrieve detector vectors.
+        :param kind: template type ('GR', 'G4v', 'Sid' or 'AP')
+        :param pol: [optional] source polarization angle
+        :return: dm: design matrix
+        """
         if kind == 'Sid':
-            theta = w * self.time
+            theta = SIDFREQ * self.time
             dm = [
                 np.ones(len(theta)),
                 np.cos(theta),
@@ -491,36 +468,22 @@ class Pair(object):
                 np.sin(2. * theta)
             ]
         else:
-            try:
-                dx = self.det.dx
-                dy = self.det.dy
-
-            except AttributeError:
-                self.log.warning('No det vectors loaded. Attempting to load.',
-                                 exc_info=False)
-
-                self.det.load_vectors(self.time, filename=self.psr.name)
-
-                dx = self.det.dx
-                dy = self.det.dy
-
-            # Retrieve source vectors.
-            wx, wy, wz = self.psr.vectors(psi=pol)
-
             # Build design matrix
             # NOTE: THERE'S NO SCALING OF h AT THIS STAGE!
 
+            signal = self.Signal or Signal.from_objects(self.det, self.psr,
+                                                        time=self.time)
+
             dm = []
-            for A, a in templateinfo[kind].iteritems():
-                dm += [a(inc, '0') * (A(dx, dy, wx, wy, wz) + 0j)]
+            for A, a in signal.templates[kind].iteritems():
+                dm += [A(psi=pol) + 0j]
 
         return np.array(dm)
 
     def search_finehet(self, methods=search_methods, pol=None, inc=None,
                        save=False):
 
-        log = self.log
-        log.info(
+        self.log.info(
             'Opening box for ' + self.psr.name + ' ' + self.det.name + ' ' +
             self.run)
 
@@ -541,10 +504,10 @@ class Pair(object):
 
         # search
         for m in methods:
-            log.info('Searching: ' + m)
+            self.log.info('Searching: ' + m)
 
             # obtain design matrix and divide by standard deviation
-            A = self.design_matrix(m, pol, inc) / std
+            A = self.design_matrix(m, pol) / std
             # note that dm will be complex-valued, but the imaginary part is 0.
             # this is useful later when dotting with b
 
@@ -572,10 +535,7 @@ class Pair(object):
             a = np.dot(VtW, Utb.T)
 
             # strength:
-            if m in ['GR', 'G4v']:
-                h = 2 * (abs(a).sum()) / len(a)
-            else:
-                h = 2 * np.linalg.norm(a)
+            h = 2 * np.linalg.norm(a)
 
             # significance:
             s = np.sqrt(abs(np.dot(a.conj(), np.linalg.solve(cov, a))))
@@ -636,90 +596,195 @@ class Cluster(object):
 # TEMPLATE INFORMATION
 
 # Polarization functions:
+class Signal(object):
+    log = logging.getLogger('Signal')
 
-# - tensor
-def pl(dx, dy, wx, wy, wz):
-    # order matters because of broadcasting in numpy
-    wxdx = np.dot(dx, wx)
-    wxdy = np.dot(dy, wx)
-    wydx = np.dot(dx, wy)
-    wydy = np.dot(dy, wy)
-    # Cross checked with PRD 85, 043005 (2012), PRD 79, 082002 (2009)
-    return (wxdx ** 2 - wxdy ** 2 - wydx ** 2 + wydy ** 2) / 2.
+    def __init__(self):
+        """
+        Simulates signals of different kinds for a given detector and source.
 
+        Class designed to be sub-classed.
+        """
 
-def cr(dx, dy, wx, wy, wz):
-    wxdx = np.dot(dx, wx)
-    wydx = np.dot(dx, wy)
-    wxdy = np.dot(dy, wx)
-    wydy = np.dot(dy, wy)
-    # Cross checked with PRD 85, 043005 (2012), PRD 79, 082002 (2009)
-    return wxdx * wydx - wxdy * wydy
+        # templateinfo dictionary includes an entry for each template.
+        # In turn, each entry stores a dictionary indexed by AP function and
+        # containing the weight associated to the polarization.
+        # NOTE: both the index (e.g. cr) and the content (e.g. np.cos(iota))
+        # are FUNCTIONS, not strings, so that they can be called directly
+        # without need for 'eval' or other methods.
+        # (n = norm, p = phase)
+        self.templates = {
+            'GR': {
+                self.pl: lambda i, pd: (1. + np.cos(i) ** 2) / 2. + 0j,
+                self.cr: lambda i, pd: np.cos(i) * np.exp(1j * pcat[pd])
+            },
+            'G4v': {
+                self.xz: lambda i, pd: np.sin(i) + 0j,
+                self.yz: lambda i, pd: np.sin(i) * math.cos(i) *
+                                       np.exp(1j * pcat[pd])
+            },
+            'AP': {
+                self.pl: lambda i, pd: 1. + 0j,
+                self.cr: lambda i, pd: 1. + 0j,
+                self.xz: lambda i, pd: 1. + 0j,
+                self.yz: lambda i, pd: 1. + 0j,
+                self.br: lambda i, pd: 1. + 0j
+            }
+        }
 
+    @classmethod
+    def from_objects(cls, det, src, time=None):
 
-# - vector
-def xz(dx, dy, wx, wy, wz):
-    wxdx = np.dot(dx, wx)
-    wzdx = np.dot(dx, wz)
-    wxdy = np.dot(dy, wx)
-    wzdy = np.dot(dy, wz)
-    # Cross checked with PRD 85, 043005 (2012), PRD 79, 082002 (2009)
-    return wxdx * wzdx - wxdy * wzdy
+        if det.dx is None or det.dy is None:
+            cls.log.warning('Detector has no vectors.')
 
+            if time is not None:
+                cls.log.debug('Time provided: attempting to load.')
+                det.load_vectors(time, filename=src.name)
+            else:
+                cls.log.error('Cannot proceed.')
 
-def yz(dx, dy, wx, wy, wz):
-    wydx = np.dot(dx, wy)
-    wzdx = np.dot(dx, wz)
-    wydy = np.dot(dy, wy)
-    wzdy = np.dot(dy, wz)
-    # Cross checked with PRD 85, 043005 (2012), PRD 79, 082002 (2009)
-    return wydx * wzdx - wydy * wzdy
+        cls.dx = det.dx
+        cls.dy = det.dy
+        cls.wx, cls.wy, cls.wz = src.vectors(psi=0)
 
+        return cls()
 
-# - scalar
-def br(dx, dy, wx, wy, wz):
-    wxdx = np.dot(dx, wx)
-    wxdy = np.dot(dy, wx)
-    wydx = np.dot(dx, wy)
-    wydy = np.dot(dy, wy)
-    # Cross checked with PRD 85, 043005 (2012), PRD 79, 082002 (2009)
-    return (wxdx ** 2 - wxdy ** 2 + wydx ** 2 - wydy ** 2) / 2.
+    @classmethod
+    def from_names(cls, detname, psrname, time):
+        det = Detector(detname)
+        det.load_vectors(time)
 
+        src = Pulsar(psrname)
 
-def lo(dx, dy, wx, wy, wz):
-    wzdx = np.dot(dx, wz)
-    wzdy = np.dot(dy, wz)
-    # Cross checked with PRD 85, 043005 (2012), PRD 79, 082002 (2009)
-    return np.sqrt(2) * (wzdx ** 2 - wzdy ** 2) / 2.
+        cls.dx = det.dx
+        cls.dy = det.dy
+        cls.wx, cls.wy, cls.wz = src.vectors(psi=0)
 
-# templateinfo dictionary includes an entry for each template. In turn,
-# each entry contains
-# a dictionary indexed by AP function and containing the weight associated
-# to the polarization.
-# NOTE: both the index (e.g. cr) and the content (e.g. np.cos(iota) ) are
-# FUNCTIONS, not
-# strings, so that they can be called directly without need for 'eval' or
-# other methods.
+        return cls()
 
-# (n = norm, p = phase)
-templateinfo = {
-    'GR': {
-        pl: lambda iota, pdif: (1. + np.cos(iota) ** 2) / 2. + 0j,
-        cr: lambda iota, pdif: np.cos(iota) * np.exp(1j * pcat[pdif])
-    },
-    'G4v': {
-        xz: lambda iota, pdif: np.sin(iota) + 0j,
-        yz: lambda iota, pdif: np.sin(iota) * math.cos(iota) * np.exp(
-            1j * pcat[pdif])
-    },
-    'AP': {
-        pl: lambda iota, pdif: 1. + 0j,
-        cr: lambda iota, pdif: 1. + 0j,
-        xz: lambda iota, pdif: 1. + 0j,
-        yz: lambda iota, pdif: 1. + 0j,
-        br: lambda iota, pdif: 1. + 0j
-    }
-}
+    def __call__(self, kind, pol=0, inc=None, pdif='p'):
+        """
+        Returns signal of knd
+        :param kind: kind of signal: 'GR', 'G4v', 'AP' or a single polarization
+        :param pol: [optional] polarization angle; default: 0.
+        :param inc: [optional] incliation angle; default: kind-dependent.
+        :param pdif: [optional] phase difference; default: 'p'.
+        :return: signal
+        """
+        if kind in self.templates.keys():
+            if kind == 'G4v':
+                inc = inc or np.pi/2
+            else:
+                inc = inc or 0
+            # Build signal
+            signal = np.zeros(len(self.dx)) + 1j * np.zeros(len(self.dx))
+            for A, a in self.templates[kind].iteritems():
+                signal += a(inc, pdif) * (A(psi=pol) + 0j)
+
+        elif kind in ['pl', 'cr', 'xz', 'yz', 'br', 'lo']:
+            signal = getattr(self, kind)(psi=pol)
+
+        return signal
+
+    def rotsrcvec(self, psi):
+        """
+        Rotate source vectors by `psi` (counterclockwise facing from Earth).
+        """
+        wx_psi = self.wx * np.cos(psi) + self.wy * np.sin(psi)
+        wy_psi = self.wy * np.cos(psi) - self.wx * np.sin(psi)
+        wz = self.wz
+
+        return wx_psi, wy_psi, wz
+
+    # - tensor
+    def pl(self, psi=0):
+        """
+        Return plus polarization.
+        :param psi: [optional]
+        :return: ap
+        """
+        wx, wy, wz = self.rotsrcvec(psi)
+
+        # order matters because of broadcasting in numpy
+        wxdx = np.dot(self.dx, wx)
+        wxdy = np.dot(self.dy, wx)
+        wydx = np.dot(self.dx, wy)
+        wydy = np.dot(self.dy, wy)
+
+        # Cross checked with PRD 85, 043005 (2012), PRD 79, 082002 (2009)
+        ap = (wxdx ** 2 - wxdy ** 2 - wydx ** 2 + wydy ** 2) / 2.
+
+        return ap
+
+    def cr(self, psi=0):
+        """
+        Return cross polarization.
+        :param psi:  [optional]
+        :return: ap
+        """
+        wx, wy, wz = self.rotsrcvec(psi)
+
+        wxdx = np.dot(self.dx, wx)
+        wydx = np.dot(self.dx, wy)
+        wxdy = np.dot(self.dy, wx)
+        wydy = np.dot(self.dy, wy)
+
+        # Cross checked with PRD 85, 043005 (2012), PRD 79, 082002 (2009)
+        ap = wxdx * wydx - wxdy * wydy
+
+        return ap
+
+    # - vector
+    def xz(self, psi=0):
+        wx, wy, wz = self.rotsrcvec(psi)
+
+        wxdx = np.dot(self.dx, wx)
+        wzdx = np.dot(self.dx, wz)
+        wxdy = np.dot(self.dy, wx)
+        wzdy = np.dot(self.dy, wz)
+
+        # Cross checked with PRD 85, 043005 (2012), PRD 79, 082002 (2009)
+        ap = wxdx * wzdx - wxdy * wzdy
+
+        return ap
+
+    def yz(self, psi=0):
+        wx, wy, wz = self.rotsrcvec(psi)
+
+        wydx = np.dot(self.dx, wy)
+        wzdx = np.dot(self.dx, wz)
+        wydy = np.dot(self.dy, wy)
+        wzdy = np.dot(self.dy, wz)
+        # Cross checked with PRD 85, 043005 (2012), PRD 79, 082002 (2009)
+        ap = wydx * wzdx - wydy * wzdy
+
+        return ap
+
+    # - scalar
+    def br(self, psi=0):
+        wx, wy, wz = self.rotsrcvec(psi)
+
+        wxdx = np.dot(self.dx, wx)
+        wxdy = np.dot(self.dy, wx)
+        wydx = np.dot(self.dx, wy)
+        wydy = np.dot(self.dy, wy)
+
+        # Cross checked with PRD 85, 043005 (2012), PRD 79, 082002 (2009)
+        ap = (wxdx ** 2 - wxdy ** 2 + wydx ** 2 - wydy ** 2) / 2.
+
+        return ap
+
+    def lo(self, psi=0):
+        wx, wy, wz = self.rotsrcvec(psi)
+
+        wzdx = np.dot(self.dx, wz)
+        wzdy = np.dot(self.dy, wz)
+
+        # Cross checked with PRD 85, 043005 (2012), PRD 79, 082002 (2009)
+        ap = np.sqrt(2) * (wzdx ** 2 - wzdy ** 2) / 2.
+
+        return ap
 
 pcat = {
     'p': np.pi / 2.,
@@ -757,7 +822,7 @@ def detnames(d):
     elif d in ['LHO', 'LLO', 'VIR']:
         det = d
     else:
-        print('g.datenames: This is not a valid det name: ' + str(d))
+        print('general.datenames: %r is not a valid det name.' % d)
         sys.exit()
     return det
 
@@ -807,13 +872,14 @@ detparams = {
 pol_sym = {'pl': '+', 'cr': '\\times', 'xz': 'x', 'yz': 'y', 'br': 'b',
            'lo': 'l'}
 
-pol_names = {
+pols = {
     'pl': 'plus',
     'cr': 'cross',
     'xz': 'vector x',
     'yz': 'vector y',
     'br': 'breathing',
-    'lo': 'longitudinal'}
+    'lo': 'longitudinal'
+}
 
 pol_kinds = {
     'vector': ['xz', 'yz'],
@@ -821,7 +887,7 @@ pol_kinds = {
     'scalar': ['br', 'lo']
 }
 
-pols = ['pl', 'cr', 'br', 'lo', 'xz', 'yz']
+#pols = ['pl', 'cr', 'br', 'lo', 'xz', 'yz']
 
 
 # #############################################################################
@@ -894,7 +960,7 @@ def read_psrlist(name='', det=False, run=False):
 
         return badpsrs
 
-    # -- Return some sub-list    
+    # -- Return some sub-list
     else:
         try:
             # Determine whether name is a chunk index (e.g. '2' or 2).
@@ -954,7 +1020,7 @@ def hms_rad(*args):
     #  frequency of the Earth
     h, m, s = hmsformat(args)
     sec = s + 60 * (m + 60 * h)
-    return sec * w
+    return sec * SIDFREQ
 
 
 def dms_deg(*args):
@@ -967,7 +1033,7 @@ def masyr_rads(masyr):
     # Converts milliarcseconds/yr to radians/second
     asyr = masyr * 10 ** -3  # mas/yr to arcseconds/yr
     radyr = asyr * np.pi / 648000.  # as/yr to rad/yr (Wikipedia)
-    rads = radyr / ss  # rad/yr to rad/s
+    rads = radyr / SS  # rad/yr to rad/s
     return rads
 
 
