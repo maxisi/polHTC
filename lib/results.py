@@ -859,7 +859,7 @@ class ResultsMP(object):
         self.hmin = {}
 
         # (purposedly verbose to be compatible with python 2.6.6)
-        for m in g.search_methods:
+        for m in g.SEARCHMETHODS:
             self.hmin[m]    = []
 
             self.h_slope[m] = []
@@ -953,7 +953,7 @@ class ResultsMP(object):
 
     #-----------------------------------------------------------------------------
     # Open boxes
-    def openboxes(self, methods=g.search_methods, noise_threshold=.95, band_conf=.95):
+    def openboxes(self, methods=g.SEARCHMETHODS, noise_threshold=.95, band_conf=.95):
         '''
         Opens boxes for all PSRs in list and saves results.
         '''

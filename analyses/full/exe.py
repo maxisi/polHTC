@@ -4,6 +4,7 @@ import random
 import sys
 import logging
 import numpy as np
+import os
 
 """
 Performs a FULL analysis for a given PSR, detector and injection kind & phase.
@@ -12,18 +13,18 @@ Loops over instantiations and saves results.
 
 # unpack
 process_name, psr, det, run, injkind, pdif, ninstSTR, ninjSTR = sys.argv
-print 'i am alive'
+
 #note: arguments are taken as strings: need to convert to numerical values.
 ninst = int(ninstSTR)
 ninj = int(ninjSTR)
-print 'i am still alive'
+
 sys.path.append(os.path.expanduser('~') + '/polHTC/')
 sys.path.append(os.getcwd())
 
 from lib import general as g
 g.setuplog('full_%(det)s%(run)s_%(psr)s_%(injkind)s%(pdif)s' % locals())
 from lib import results as res
-print 'yest im here'
+
 # setup log
 log = logging.getLogger('InjSrch Prep')
 
@@ -130,9 +131,9 @@ for n in np.arange(0, ninst):
 
     # unpack results
     for m in g.SEARCHMETHODS:
-        results.hrec[m] += [results_n['h'][m]]
-        results.srec[m] += [results_n['s'][m]]
-        results.arec[m] += [results_n['a'][m]]
+        results.hrec[m] += [results_n[m]['h']]
+        results.srec[m] += [results_n[m]['s']]
+        results.arec[m] += [results_n[m]['a']]
 
 
 log.info('Saving results')
