@@ -55,7 +55,7 @@ TSAMPLING = 1 / 16384.  # LIGO data sampling period (s), from M. Pitkin
 
 C = 299792458.  # Speed of light (m/s)
 
-search_methods = ['GR', 'G4v',
+SEARCHMETHODS = ['GR', 'G4v',
                   'Sid']  # 'AP', 'Sid'] # ECONOMIC VERSION WITH JUST SID
 
 
@@ -480,24 +480,25 @@ class Pair(object):
 
         return np.array(dm)
 
-    def search_finehet(self, methods=search_methods, pol=None, inc=None,
-                       save=False):
+    def search(self, data=None, methods=SEARCHMETHODS, pol=None, save=False):
 
-        self.log.info(
-            'Opening box for ' + self.psr.name + ' ' + self.det.name + ' ' +
-            self.run)
+        if data is None:
+            self.log.info('Opening box for %s %s %s.'
+                          % (self.psr.name, self.det.name, self.run))
+            data = self.data
+        elif isinstance(data, (np.ndarray, list)):
+            self.log.info('Searching for signals in %s %s %s time-series.'
+                          % (self.psr.name, self.det.name, self.run))
 
-        pol = pol or self.psr.param['POL']
-        inc = inc or self.psr.param['INC']
+        if pol is None:
+            pol = self.psr.param['POL']
 
         # check vectors
         if not self.det.check_vectors(self.time, filename=self.psr.name):
             self.det.create_vectors(self.time, filename=self.psr.name)
 
         # get sigma
-        try:
-            std = self.sigma
-        except AttributeError:
+        if self.sigma is None:
             std = self.get_sigma()
 
         results = {}
@@ -512,11 +513,9 @@ class Pair(object):
             # this is useful later when dotting with b
 
             # define data vector
-            b = self.data / std
+            b = data / std
 
-            # perform SVD decomposition (
-            # http://web.mit.edu/be.400/www/SVD/Singular_Value_Decomposition
-            # .htm)
+            # perform SVD decomposition
             U, s, V = np.linalg.svd(A.T, full_matrices=False)
             W = np.diag(1. / s)
             # Note that np.linalg.svd returns Vt, not V. in NR notation
@@ -926,15 +925,16 @@ paramFormat = {
 
 # read PSR list
 def read_psrlist(name='', det=False, run=False):
+    setuplog('psrlist')
     log = logging.getLogger('psrlst')
 
     psrs = []
 
-    # ## Determine what list to open ###
+    ### Determine what list to open ###
 
     # -- Return all PSRs
     if name in ['', 'all']:
-        log.debug('Returning all PSRs in list.')
+        log.info('Returning all PSRs in list.')
         p = paths['psrlist'] + '.txt'
 
         try:
@@ -948,7 +948,7 @@ def read_psrlist(name='', det=False, run=False):
 
     # -- Return bad PSRs
     elif 'bad' in name:
-        log.debug('Returning list of bad PSRs.')
+        log.info('Returning list of bad PSRs.')
         badpsrs = []
         try:
             with open(paths['badpsrs'], 'r') as f:
@@ -965,17 +965,19 @@ def read_psrlist(name='', det=False, run=False):
         try:
             # Determine whether name is a chunk index (e.g. '2' or 2).
             int(name)
-            log.debug('Taking list #' + str(name))
+            log.info('Taking list #' + str(name))
             # Assume requested PSRs are those in the list named
             # psrlist_det_run_listID.txt
             p = paths['psrlist'] + '_' + det + '_' + run + '_' + name + '.txt'
 
         except ValueError:
             # Assume 'name' is already a composed list name
+            log.info('Taking list of name: %r' % name)
             p = paths['psrlist'] + '_' + name + '.txt'
 
         try:
             with open(p, 'r') as f:
+                print 'opened'
                 for line in f.readlines():
                     psrs += [line.strip()]  # (.strip() removes \n character)
             return psrs

@@ -1,4 +1,4 @@
-#! /usr/bin/env python 
+#! /usr/bin/env python
 
 import sys
 import h5py
@@ -45,13 +45,13 @@ try:
         freq = f['srch/freq'][n]
         polsrch = f['srch/pol'][n]
         incsrch = f['srch/inc'][n]
-    
+
         hinj = f['inj/h'][n]
         polinj = f['inj/pol'][n]
         incinj = f['inj/inc'][n]
 except:
     log.error('FATAL: did not find injsrch info in: ' + pathname, exc_info=True)
-    
+
 log.info('Create PSR-det pair and load data and std.')
 
 pair = g.Pair(psr, det)
@@ -76,42 +76,42 @@ if hinj != 0:
 results = {}
 
 # search
-for m in g.search_methods:
+for m in g.SEARCHMETHODS:
         log.info('Searching: ' + m)
-        
+
         # obtain design matrix and divide by standard deviation
         A = pair.design_matrix(m, polsrch, incsrch) / pair.sigma
         # note that dm will be complex-valued, but the imaginary part is 0.
         # this is useful later when dotting with b
-        
+
         # define data vector
         b = inst / pair.sigma
-        
+
         # perform SVD decomposition (http://web.mit.edu/be.400/www/SVD/Singular_Value_Decomposition.htm)
         U, s, V = np.linalg.svd(A.T, full_matrices=False)
         W = np.diag(1./s)
         # Note that np.linalg.svd returns Vt, not V. in NR notation
         # (http://docs.scipy.org/doc/numpy/reference/generated/numpy.linalg.svd.html)
 
-        
+
         # define covariance matrix
         cov = np.dot(np.dot(V.T, W**2), V) # See 'Covariance' page in Polarizations tab of LIGO 2013 Notebook
-        
+
         VtW = np.dot(V.T, W)
         Utb = np.dot(U.T, b)
-        
+
         # results:
         a = np.dot(VtW, Utb.T)
-        
+
         # strength:
         if injkind in ['GR', 'G4v']:
             h = 2 * (abs(a).sum()) / len(a)
         else:
             h = 2 * np.linalg.norm(a)
-        
+
         # significance:
         s = np.sqrt(abs(np.dot(a.conj(), np.linalg.solve(cov, a))))
-        
+
         results[m] = {
                         'a' : a,
                         'h' : h,
