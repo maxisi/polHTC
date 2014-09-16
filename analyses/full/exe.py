@@ -35,8 +35,10 @@ log.info('Performing ' + str(ninj) + ' injections on ' + str(ninst) +
 
 
 ## ANALYSIS PARAMETERS
-frange = [1.0e-7, 1.0e-5]  # frequencies for re-heterodynes
-hinjrange=[1.0E-27, 1.0E-23]  # injection strengths IMP: MIGHT NEED TO BE TUNED
+# frequencies for re-heterodynes
+frange = [1.0e-7, 1.0e-5]
+# injection strengths IMP: MIGHT NEED TO BE TUNED!
+hinjrange = [1.0E-27, 1.0E-23]
 
 ## CHECK FINEHET DATA EXISTS AND EXTRACT TIME SERIES
 pair = g.Pair(psr, det)
@@ -102,7 +104,7 @@ incinj_lst[injLocations] = incs
 
 # setup results
 results = res.Results(det, run, psr, injkind, pdif)
-results.hinj = hinj_lst
+results.hinj = []
 
 
 for n in np.arange(0, ninst):
@@ -126,6 +128,11 @@ for n in np.arange(0, ninst):
         log.info('Injecting.')
         inst += (hinj/2.) * pair.signal(injkind, pdif, polinj, incinj)
         # note factor of 1/2, see MP (2.12)
+        h = [hinj * ap(incinj, pdif) for _, ap in
+             pair.Signal.templates[injkind].iteritems()]
+        hinj = np.linalg.norm(h)
+
+    results.hinj.append(hinj)
 
     results_n = pair.search(data=inst, pol=pair.psr.param['POL'])
 

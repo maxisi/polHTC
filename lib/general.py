@@ -55,8 +55,8 @@ TSAMPLING = 1 / 16384.  # LIGO data sampling period (s), from M. Pitkin
 
 C = 299792458.  # Speed of light (m/s)
 
-SEARCHMETHODS = ['GR', 'G4v',
-                  'Sid']  # 'AP', 'Sid'] # ECONOMIC VERSION WITH JUST SID
+SEARCHMETHODS = ['GR', 'G4v', 'Sid']
+# 'AP', 'Sid'] # ECONOMIC VERSION WITH JUST SID
 
 
 # #############################################################################
@@ -558,44 +558,6 @@ class Pair(object):
         return results
 
 
-# #############################################################################
-class Cluster(object):
-    def __init__(self, name=''):
-
-        # Set identity
-        if name == '':
-            # get hostname to determine what server we are on
-            self.hostname = socket.gethostname()
-        else:
-            self.hostname = name
-
-        # Determine scratch and public directories
-        if 'ldas' in self.hostname:
-            self.scratch_dir = '/usr1/max.isi/'
-            self.public_dir = '/home/max.isi/public_html/'
-
-        elif 'atlas' in self.hostname:
-            # get result of hostname -s command in bash
-            hs = self.hostname.split('.')[0]
-            # if hs == 'atlas3': hs = 'atlas3.atlas.aei.uni-hannover.de'
-            self.scratch_dir = '/atlas/user/' + hs + '/max.isi/'
-            self.public_dir = '/home/max.isi/WWW/LSC/'
-
-        elif self.hostname in ['pccdev1', 'pcdev2', 'hydra', 'trout']:
-            # assuming Nemo cluster
-            self.scratch_dir = '/home/max.isi/scratch/'
-            self.public_dir = '/home/max.isi/public_html/'
-
-        else:
-            self.scratch_dir = 'logs/'
-            self.public_dir = ''
-
-
-###############################################################################
-
-# TEMPLATE INFORMATION
-
-# Polarization functions:
 class Signal(object):
     log = logging.getLogger('Signal')
 
@@ -785,6 +747,42 @@ class Signal(object):
         ap = np.sqrt(2) * (wzdx ** 2 - wzdy ** 2) / 2.
 
         return ap
+
+
+class Cluster(object):
+    def __init__(self, name=''):
+
+        # Set identity
+        if name == '':
+            # get hostname to determine what server we are on
+            self.hostname = socket.gethostname()
+        else:
+            self.hostname = name
+
+        # Determine scratch and public directories
+        if 'ldas' in self.hostname:
+            self.scratch_dir = '/usr1/max.isi/'
+            self.public_dir = '/home/max.isi/public_html/'
+
+        elif 'atlas' in self.hostname:
+            # get result of hostname -s command in bash
+            hs = self.hostname.split('.')[0]
+            # if hs == 'atlas3': hs = 'atlas3.atlas.aei.uni-hannover.de'
+            self.scratch_dir = '/atlas/user/' + hs + '/max.isi/'
+            self.public_dir = '/home/max.isi/WWW/LSC/'
+
+        elif self.hostname in ['pccdev1', 'pcdev2', 'hydra', 'trout']:
+            # assuming Nemo cluster
+            self.scratch_dir = '/home/max.isi/scratch/'
+            self.public_dir = '/home/max.isi/public_html/'
+
+        else:
+            self.scratch_dir = 'logs/'
+            self.public_dir = ''
+
+###############################################################################
+
+# TEMPLATE INFORMATION
 
 pcat = {
     'p': np.pi / 2.,
@@ -1071,9 +1069,8 @@ def analysis_path(det, run, psr, kind, pdif):
 
 
 def submit_path(det, run, psr, kind, pdif, name='injsrch'):
-    p = paths[
-            'subs'] + '%(name)s_%(det)s%(run)s_%(psr)s_%(kind)s%(pdif)s.sub' \
-                      % locals()
+    p = paths['subs'] + '%(name)s_%(det)s%(run)s_%(psr)s_%(kind)s%(pdif)s.sub'\
+                        % locals()
     return p
 
 

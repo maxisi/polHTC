@@ -1,4 +1,4 @@
-#! /usr/bin/env python 
+#! /usr/bin/env python
 
 import sys
 from lib import results as res
@@ -25,5 +25,6 @@ r.collect()
 # Export results
 r.export()
 
-print 'Results for %(det)s %(run)s %(psr)s with %(kind)s %(pdif)s injections expported to:' % locals()
+print 'Results for %s %s %s with %s %s injections exported to:' \
+      % (det, run, psr, kind, pdif)
 print r.paths['export']

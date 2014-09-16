@@ -1,4 +1,4 @@
-#! /usr/bin/env python 
+#! /usr/bin/env python
 
 import sys
 from datetime import datetime
@@ -57,8 +57,8 @@ for dir in g.localpaths:
         os.makedirs(pathname + '/' + dir)
         log.debug(dir)
     except OSError:
-        log.debug('"%(pathname)s/%(dir)s" already exists' % locals())
-        
+        log.debug('"%(pathname)s/%(d)s" already exists' % locals())
+
 log.info('Writing ID record.')
 
 idtext = [
@@ -72,13 +72,13 @@ idtext = [
             '\nninst:\t'   + str(ninst),
             'frange:\t' + str(frange),
             '\nninj:\t'     + str(ninj),
-            'hinj:\t' + str(hinjrange)   
+            'hinj:\t' + str(hinjrange)
             ]
 
 with open(pathname + '/id.txt', 'w') as f:
     for line in idtext: f.write(line + '\n')
     f.write('\n###\nREFERENCE: PSR, pulsar name; det, detector name; run, data run (S5, S6); kind, kind of injection (GR, G4v); pdif, phase difference between injection components (p, m, 0); ninst, number of background instantiations; ninj, number of injections.')
-    
+
 
 ## CHECK FINEHET DATA EXISTS AND EXTRACT TIME SERIES
 psrdet = g.Pair(psr, det)
@@ -141,19 +141,19 @@ log.info('Saving rehetereodyne, injection and search parameters')
 
 try:
     f = h5py.File(pathname + '/info.hdf5', 'w')
-    
+
     srch_grp = f.create_group('srch')
-    
+
     srch_grp.create_dataset('freq', data = freq)
     srch_grp.create_dataset('pol', data = polsrch)
     srch_grp.create_dataset('inc', data = incsrch)
-    
+
     inj_grp = f.create_group('inj')
-    
+
     inj_grp.create_dataset('h', data = hinj)
     inj_grp.create_dataset('pol', data = polinj)
     inj_grp.create_dataset('inc', data = incinj)
-    
+
     f.close()
 except:
     log.error('FATAL: could not save injsrch info in: '+pathname + '/info.hdf5', exc_info=True)
@@ -175,9 +175,9 @@ try:
 
     # define scratch space
     scratch_dir = cluster.scratch_dir
-    
+
     name = 'norange'
-    
+
     subfile_lines = [
                     'Universe = Vanilla',
                     'Executable = ' + project_dir + analysis_folder + '/injsrch_process.py',
@@ -194,6 +194,6 @@ try:
         for l in subfile_lines: f.write(l + '\n')
 
     print 'Submit written: ' + g.submit_path(det, run, psr, kind, pdif, name=name)
-    
+
 except:
     log.error('Unable to write submit file!', exc_info=True)

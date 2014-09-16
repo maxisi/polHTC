@@ -1,4 +1,4 @@
-#! /usr/bin/env python 
+#! /usr/bin/env python
 
 import os
 import sys
@@ -6,19 +6,21 @@ from lib import general as g
 
 pname, det, run, psrIN, ninstSTR, ninjSTR = sys.argv
 
-'''
-Writes DAG file for a complete MANY-PSR analysis; namely, injections of all kinds.
-Dag submits one job per PSR, each submit includes ninst jobs. (DEPRECATED)
-'''
+"""
+Writes DAG file for a complete MANY-PSR analysis; namely, injections of all
+kinds. Dag submits one job per PSR, each submit includes ninst jobs.
+(DEPRECATED)
+"""
 
 dagname = g.dag_path(det, run, psrIN)
 
 # determine what PSRs to analyze from argument
 try:
-    # Determine whether psrIN is a chunk index (e.g. '2'). 
+    # Determine whether psrIN is a chunk index (e.g. '2').
     int(psrIN)
-    
-    # If it is, assume the requested PSRs are those in the list named psrlist_run_psrIN.txt
+
+    # If it is, assume the requested PSRs are those in the list named
+    # psrlist_run_psrIN.txt
     psrlist = g.read_psrlist(name = det + '_' + run + '_' + psrIN)
 
 except ValueError:
@@ -48,7 +50,7 @@ def lines(det, run, psr, injkind, pdif, ninstSTR, ninjSTR):
     project_dir = home + '/polHTC/'
 
     jobname = injkind + pdif + '_' + psr
-    
+
     l = [
         '# ' + psr + ' ' + injkind + pdif + '\n',
         'JOB ' + jobname + ' ' + project_dir + g.submit_path(det, run, psr, injkind, pdif),
@@ -57,7 +59,7 @@ def lines(det, run, psr, injkind, pdif, ninstSTR, ninjSTR):
         'CATEGORY %(jobname)s analysis' % locals(),
         '\n'
         ]
-    
+
     return l
 
 # write dag

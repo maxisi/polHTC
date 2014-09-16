@@ -1,13 +1,12 @@
 import logging
-from datetime import datetime
-import numpy as np
-import scipy.stats
 import cPickle as pickle
-import h5py
 import sys
 import os
-import math
-import socket
+
+import numpy as np
+
+import h5py
+
 
 # set up plotting backend
 #import matplotlib
@@ -16,7 +15,6 @@ import matplotlib.pyplot as plt
 plt.rcParams['mathtext.fontset'] = "stix"
 
 from . import general as g
-
 
 g.setuplog('results')
 
@@ -73,9 +71,8 @@ class Results(object):
     def collect(self):
         """
         Collects results from multiple files in analysis_path/results as
-        produced by
-        submitting several injsrch_process jobs to Condor. NOT USED BY
-        NEWEST VERSION.
+        produced by submitting several injsrch_process jobs to Condor.
+        NOT USED BY NEWEST VERSION.
         """
 
         self.log.info('Collecting results.')
@@ -85,9 +82,16 @@ class Results(object):
         try:
             with h5py.File(path + '/info.hdf5', 'r') as f:
                 self.hinj = f['inj/h'][:]
+                incinj = f['inj/inc'][:]
         except:
-            self.log.error('FATAL: did not find injsrch info in: ' + path,
-                           exc_info=True)
+            raise IOError('FATAL: did not find injsrch info in: ' + path)
+
+        # rescale hinj
+        hinj_new = []
+        for h, i in zip(self.hinj, incinj):
+            h = [h * ap(i, self.pdif) for _, ap in
+                 g.Signal().templates[self.injkind].iteritems()]
+            hinj_new.append(np.linalg.norm(h))
 
         self.ninst = len(self.hinj)
         # count nonzero elements in hinj:
@@ -95,11 +99,10 @@ class Results(object):
 
         self.log.debug('Looping over files.')
 
-        for n in np.arange(0, self.ninst):
+        for n in range(self.ninst):
             self.log.debug('File ' + str(n))
+            filename = path + '/results/r' + str(n) + '.p'
             try:
-                filename = path + '/results/r' + str(n) + '.p'
-
                 with open(filename, 'rb') as f:
 
                     # load results dictionary
@@ -801,7 +804,7 @@ class ResultsMP(object):
 
         # Determine source file path:
         #   if a path was provided, use it;
-        #   if not, create Cluster object and use its public dir
+        #   if not, create Cluster object and use its public d
         p = path or g.Cluster().public_dir
 
         self.extra_name = extra_name
@@ -910,7 +913,7 @@ class ResultsMP(object):
 
 #    def load_psrs(self, force=0):
 
-#        if 'psrs' not in dir(self) or force:
+#        if 'psrs' not in d(self) or force:
 #            self.psrs = [g.Pulsar(psr) for psr in self.psrlist]
 
 #        else:
