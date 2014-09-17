@@ -27,7 +27,7 @@ NINJ=${@:$OPTIND+1:1}
 
 arg=("$PSR" "$DET" "$RUN" "$KIND" "$PDIF" "$NINST" "$NINJ")
 
-./analysis_single/injsrch_master.py "${arg[@]}"
+./analyses/single/injsrch_master.py "${arg[@]}"
 
 # Report and prompt user before submitting
 
@@ -39,7 +39,7 @@ echo -e "\tInj:\t"$KIND" "$PDIF""
 while true; do 
 	read -p "Submit?" yn 
 	case $yn in  
-		[Yy]* ) condor_submit subs/injsrch_"$DET""$RUN"_"$PSR"_"$KIND""$PDIF".sub; break;;
+		[Yy]* ) condor_submit tmp/htc/injsrch_"$DET""$RUN"_"$PSR"_"$KIND""$PDIF".sub; break;;
 		* ) exit;; 
 	esac 
 done
