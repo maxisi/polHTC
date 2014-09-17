@@ -525,7 +525,7 @@ class Pair(object):
 
             # define covariance matrix
             cov = np.dot(np.dot(V.T, W ** 2),V)
-            # See 'Covariance' page in Polarizations tab of LIGO 2013 Notebook
+            # see 'Covariance' page in Polarizations tab of LIGO 2013 Notebook
 
             VtW = np.dot(V.T, W)
             Utb = np.dot(U.T, b)

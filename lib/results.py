@@ -138,24 +138,17 @@ class Results(object):
 
         # Determine export destination.
         path = path or g.Cluster().public_dir
-
         export_path = path + self.paths['export']
 
-        try:
-            with h5py.File(export_path, 'w') as f:
-
-                # save injected h
-                f.create_dataset('hinj', data=self.hinj)
-
-                # save recovered h and s
-                for m in self.search_methods:
-                    grp = f.create_group(m)
-                    grp.create_dataset('hrec', data=self.hrec[m])
-                    grp.create_dataset('srec', data=self.srec[m])
-                    grp.create_dataset('arec', data=self.arec[m])
-        except:
-            message = 'Unable to save collected results to: ' + export_path
-            self.log.error(message, exc_info=verbose or self.verbose)
+        with h5py.File(export_path, 'w') as f:
+            # save injected h
+            f.create_dataset('hinj', data=self.hinj)
+            # save recovered h and s
+            for m in self.search_methods:
+                grp = f.create_group(m)
+                grp.create_dataset('hrec', data=self.hrec[m])
+                grp.create_dataset('srec', data=self.srec[m])
+                # grp.create_dataset('arec', data=self.arec[m])
 
     def load(self, path=None):
         """
