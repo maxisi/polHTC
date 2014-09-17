@@ -274,8 +274,8 @@ class Results(object):
             self.log.debug('Selecting fit data.')
 
             # pick false postives above noise threshold
-            x = self.hinj[np.where(self.hinj != 0 and d[m]>noise[m])]
-            y = d[m][np.where(self.hinj != 0 and d[m]>noise[m])]
+            x = self.hinj[(self.hinj != 0 * d[m] > noise[m])]
+            y = d[m][(self.hinj != 0 * d[m] > noise[m])]
 
             # put vectors in proper shape for lstsq function
             x_vertical = np.reshape(x, (len(x), 1))
