@@ -238,7 +238,8 @@ class Results(object):
         # return dictionary of thresholds
         return noise_threshold
 
-    def quantify(self, kind, methods=[], noise_threshold=.9, band_conf=.9, stats=False, window=2e-26):
+    def quantify(self, kind, methods=None, noise_threshold=.9, band_conf=.9,
+                 stats=False, window=2e-26):
         '''
         Performs a linear fit ignoring values of hinj=0 and those under noise threshold.
         Returns:
@@ -251,30 +252,30 @@ class Results(object):
 
         self.log.info('Performing linear fit of ' + str(kind) + ' data.')
 
-        if methods==[]:
-            methods = self.search_methods
+        methods = methods or self.search_methods
 
         # obtain data
-        d, _  = self.pickseries(kind)
+        d, _ = self.pickseries(kind)
 
         # obtain noise levels
-        noise = self.get_noise_threshold(kind, methods=methods, threshold=noise_threshold)
+        noise = self.get_noise_threshold(kind, methods=methods,
+                                         threshold=noise_threshold)
 
         # get linear fit
         slope = {}
-        rmse  = {}
-        ymax  = {}
-        ymin  = {}
-        x_short   = {}
-        rollmean  = {}
-        rollstd   = {}
+        rmse = {}
+        ymax = {}
+        ymin = {}
+        x_short = {}
+        rollmean = {}
+        rollstd = {}
         for m in methods:
 
             self.log.debug('Selecting fit data.')
 
             # pick false postives above noise threshold
-            x = self.hinj[(self.hinj!=0) & (d[m]>noise[m])]
-            y = d[m][(self.hinj!=0) & (d[m]>noise[m])]
+            x = self.hinj[np.where(self.hinj != 0 and d[m]>noise[m])]
+            y = d[m][np.where(self.hinj != 0 and d[m]>noise[m])]
 
             # put vectors in proper shape for lstsq function
             x_vertical = np.reshape(x, (len(x), 1))
@@ -500,8 +501,8 @@ class Results(object):
             # construct noise line, best fit line and confidence band around it
             noise_line = [noise[m]] * len(self.hinj)
             bestfit_line = slope[m] * self.hinj
-            topband_line = slope[m] * self.hinj + (ymax[m][1]- slope[m] * ymax[m][0])
-            botband_line = slope[m] * self.hinj + (ymin[m][1]- slope[m] * ymin[m][0])
+            topband_line = slope[m] * self.hinj + (ymax[m][1]-slope[m] * ymax[m][0])
+            botband_line = slope[m] * self.hinj + (ymin[m][1]-slope[m] * ymin[m][0])
 
             # plot
             if not hide_data:
