@@ -103,6 +103,8 @@ class Results(object):
 
         self.log.debug('Looping over files.')
 
+        search_methods = set()
+
         for n in range(self.ninst):
             self.log.debug('File ' + str(n))
             filename = path + '/results/r' + str(n) + '.p'
@@ -114,15 +116,18 @@ class Results(object):
                     for m in results.keys():
                         self.hrec[m].append(results[m]['h'])
                         self.srec[m].append(results[m]['s'])
+                    search_methods = search_methods.union(set(results.keys()))
             except:
                 message = 'Unable to load result info from: ' + filename
                 self.log.error(message, exc_info=True)
                 print message
                 print sys.exc_info()
 
+        self.search_methods = list(search_methods)
+
         return self.hrec, self.srec
 
-    def export(self, path=''):
+    def export(self, path=None, verbose=None):
         """
         Exports results to hdf5 file. If no destination path is provided, takes
         cluster  public access folder as destination. This defaults to pwd when
@@ -131,29 +136,12 @@ class Results(object):
 
         self.log.info('Exporting results.')
 
-        if path=='':
-            # Determine export destination.
-            cluster = g.Cluster()
-            path = cluster.public_dir
+        # Determine export destination.
+        path = path or g.Cluster().public_dir
 
-        export_path = '/home/max.isi/public_html/' + self.paths['export']
+        export_path = path + self.paths['export']
 
         try:
-            with h5py.File(export_path, 'w') as f:
-
-                # save injected h
-                f.create_dataset('hinj', data=self.hinj)
-
-                # save recovered h and s
-                for m in self.search_methods:
-                    grp = f.create_group(m)
-                    grp.create_dataset('hrec', data=self.hrec[m])
-                    grp.create_dataset('srec', data=self.srec[m])
-                    grp.create_dataset('arec', data=self.arec[m])
-
-        except IOError:
-            export_path = path + self.paths['export']
-
             with h5py.File(export_path, 'w') as f:
 
                 # save injected h
@@ -167,9 +155,9 @@ class Results(object):
                     grp.create_dataset('arec', data=self.arec[m])
         except:
             message = 'Unable to save collected results to: ' + export_path
-            self.log.error(message, exc_info=self.verbose)
+            self.log.error(message, exc_info=verbose or self.verbose)
 
-    def load(self, path=''):
+    def load(self, path=None):
         """
         Loads results from hdf5 file. If no origin path is provided, takes
         cluster public access folder as destination. This defaults to pwd when
@@ -177,19 +165,14 @@ class Results(object):
         """
         self.log.info('Loading results.')
 
-        if path=='':
-            # Determine origin destination.
-            cluster = g.Cluster()
-            path = cluster.public_dir
-
+        # Determine origin destination.
+        path = path or g.Cluster().public_dir
         export_path = path + self.paths['export']
 
         try:
             with h5py.File(export_path, 'r') as f:
-
                 # load injected h
                 self.hinj = f['hinj'][:]
-
                 # load recovered h and s
                 for m in self.search_methods:
                     self.hrec[m] = f[m + '/hrec'][:]
