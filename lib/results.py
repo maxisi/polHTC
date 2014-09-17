@@ -81,19 +81,23 @@ class Results(object):
 
         try:
             with h5py.File(path + '/info.hdf5', 'r') as f:
-                self.hinj = f['inj/h'][:]
+                hinj = f['inj/h'][:]
                 incinj = f['inj/inc'][:]
+                polinj = f['inj/pol'][:]
         except:
             raise IOError('FATAL: did not find injsrch info in: ' + path)
 
-        # rescale hinj
+        # rescale hinj (note h_effective is independent of psi)
         hinj_new = []
-        for h, i in zip(self.hinj, incinj):
+        for h, i in zip(hinj, incinj):
             h = [h * ap(i, self.pdif) for _, ap in
                  g.Signal().templates[self.injkind].iteritems()]
             hinj_new.append(np.linalg.norm(h))
 
+        self.hinj = np.array(hinj_new)
+
         self.ninst = len(self.hinj)
+
         # count nonzero elements in hinj:
         self.ninj = len(np.flatnonzero(self.hinj))
 
@@ -104,14 +108,12 @@ class Results(object):
             filename = path + '/results/r' + str(n) + '.p'
             try:
                 with open(filename, 'rb') as f:
-
                     # load results dictionary
                     results = pickle.load(f)
-
                     # for each method retrieve h and s
-                    for m in self.search_methods:
-                        self.hrec[m] += [results[m]['h']]
-                        self.srec[m] += [results[m]['s']]
+                    for m in results.keys():
+                        self.hrec[m].append(results[m]['h'])
+                        self.srec[m].append(results[m]['s'])
             except:
                 message = 'Unable to load result info from: ' + filename
                 self.log.error(message, exc_info=True)
