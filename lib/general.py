@@ -1061,7 +1061,7 @@ paths = {
 
 def analysis_path(det, run, psr, kind, pdif):
     analysis = 'injsrch_' + det + run + '_' + psr + '_' + kind + pdif
-    pathname = 'tmp/' + det + '/' + run + '/' + analysis
+    pathname = 'tmp/injsrch/' + det + '/' + run + '/' + analysis
     return pathname
 
 
