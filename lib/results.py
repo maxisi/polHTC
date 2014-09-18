@@ -83,7 +83,6 @@ class Results(object):
             with h5py.File(path + '/info.hdf5', 'r') as f:
                 hinj = f['inj/h'][:]
                 incinj = f['inj/inc'][:]
-                polinj = f['inj/pol'][:]
         except:
             raise IOError('FATAL: did not find injsrch info in: ' + path)
 
@@ -104,10 +103,10 @@ class Results(object):
         self.log.debug('Looping over files.')
 
         search_methods = set()
-
         for n in range(self.ninst):
             self.log.debug('File ' + str(n))
             filename = path + '/results/r' + str(n) + '.p'
+
             try:
                 with open(filename, 'rb') as f:
                     # load results dictionary

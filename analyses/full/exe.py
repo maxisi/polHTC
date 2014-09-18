@@ -34,18 +34,22 @@ log.info('Performing ' + str(ninj) + ' injections on ' + str(ninst) +
          ' instantiations.')
 
 
-## ANALYSIS PARAMETERS
-# frequencies for re-heterodynes
-frange = [1.0e-7, 1.0e-5]
-# injection strengths IMP: MIGHT NEED TO BE TUNED!
-hinjrange = [1.0E-27, 1.0E-23]
-
 ## CHECK FINEHET DATA EXISTS AND EXTRACT TIME SERIES
 pair = g.Pair(psr, det)
 pair.load_finehet(run)
 pair.get_sigma()
 pair.det.load_vectors(pair.time, filename=psr)
 
+
+## ANALYSIS PARAMETERS
+# frequencies for re-heterodynes
+frange = [1.0e-7, 1.0e-5]
+# injection strengths IMP: MIGHT NEED TO BE TUNED!
+fgw = 2 * pair.psr.param['FR0']
+if fgw < 180 or 300 < fgw < 400:
+    hinjrange = [1.0E-27, 1.0E-23]
+else:
+    hinjrange = [1.0E-27, 1.0E-24]
 
 ## GET SEARCH AND INJECTION RANDOM PARAMETERS
 

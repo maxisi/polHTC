@@ -498,9 +498,7 @@ class Pair(object):
             self.det.create_vectors(self.time, filename=self.psr.name)
 
         # get sigma
-        std = self.sigma
-        if std is None:
-            std = self.get_sigma()
+        std = self.sigma or self.get_sigma()
 
         results = {}
 
