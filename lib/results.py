@@ -113,8 +113,8 @@ class Results(object):
                     results = pickle.load(f)
                     # for each method retrieve h and s
                     for m in results.keys():
-                        self.hrec[m].append(results[m]['h'][0])
-                        self.srec[m].append(results[m]['s'][0])
+                        self.hrec[m].append(results[m]['h'])
+                        self.srec[m].append(results[m]['s'])
                     search_methods = search_methods.union(set(results.keys()))
             except:
                 message = 'Unable to load result info from: ' + filename
