@@ -113,8 +113,8 @@ class Results(object):
                     results = pickle.load(f)
                     # for each method retrieve h and s
                     for m in results.keys():
-                        self.hrec[m].append(results[m]['h'])
-                        self.srec[m].append(results[m]['s'])
+                        self.hrec[m].append(results[m]['h'][0])
+                        self.srec[m].append(results[m]['s'][0])
                     search_methods = search_methods.union(set(results.keys()))
             except:
                 message = 'Unable to load result info from: ' + filename
@@ -273,8 +273,10 @@ class Results(object):
             self.log.debug('Selecting fit data.')
 
             # pick false postives above noise threshold
-            x = self.hinj[(self.hinj != 0 * d[m] > noise[m])]
-            y = d[m][(self.hinj != 0 * d[m] > noise[m])]
+	    print noise[m]
+	    print d[m]
+            x = self.hinj[(self.hinj != 0) & (d[m] > noise[m])]
+            y = d[m][(self.hinj != 0) & (d[m] > noise[m])]
 
             # put vectors in proper shape for lstsq function
             x_vertical = np.reshape(x, (len(x), 1))
