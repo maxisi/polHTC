@@ -444,8 +444,9 @@ class Pair(object):
         """
         self.log.info('Creating ' + kind + pdif + ' signal.')
 
-        signal = self.Signal or Signal.from_objects(self.det, self.psr,
-                                                    time=self.time)
+        if self.Signal is None:
+            self.Signal = Signal.from_objects(self.det,self.psr,time=self.time)
+        signal = self.Signal
 
         sig = signal(kind, pol=pol, inc=inc, pdif=pdif)
 
