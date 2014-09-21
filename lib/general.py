@@ -148,8 +148,7 @@ def bindata(x, y, window):
 class Pulsar(object):
     def __init__(self, psrname):
 
-        """
-        Initializes pulsar object.
+        """Initializes pulsar object.
 
         :param psrname: pulsar PSR code.
         """
@@ -533,7 +532,7 @@ class Pair(object):
             a = np.dot(VtW, Utb.T)
 
             # strength:
-            h = 2 * np.linalg.norm(a)
+            h = np.linalg.norm(a)
 
             # significance:
             s = np.sqrt(abs(np.dot(a.conj(), np.linalg.solve(cov, a))))

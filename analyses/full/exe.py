@@ -87,15 +87,13 @@ hinj_lst[injLocations] = injections
 # create ninj random values for pol and inc:
 random.seed(2)
 
-pols = [random.uniform(pol_range[0], pol_range[1])
-        for i in np.arange(0, ninj)]
+pols = [random.uniform(pol_range[0], pol_range[1]) for i in range(ninj)]
 # empty vector (most instantiations won't have injections):
 polinj_lst = np.zeros(ninst)
 # injection strength index (indicates hinj_lst for each inst):
 polinj_lst[injLocations] = pols
 
-incs = [random.uniform(inc_range[0], inc_range[1])
-        for i in np.arange(0, ninj)]
+incs = [random.uniform(inc_range[0], inc_range[1]) for i in range(ninj)]
 # empty vector (most instantiations won't have injections):
 incinj_lst = np.zeros(ninst)
 # injection strength index (indicates hinj_lst for each inst):
@@ -111,7 +109,7 @@ results = res.Results(det, run, psr, injkind, pdif)
 results.hinj = []
 
 
-for n in np.arange(0, ninst):
+for n in range(ninst):
 
     freq = freq_lst[n]
 
@@ -120,13 +118,10 @@ for n in np.arange(0, ninst):
     incinj = incinj_lst[n]
 
     ## RE-HETERODYNE
-
     log.info('Reheterodyne.')
-
     inst = g.het(freq, pair.data, pair.time)
 
     ## SEARCH
-
     # inject if needed
     if hinj != 0:
         log.info('Injecting.')
@@ -135,17 +130,14 @@ for n in np.arange(0, ninst):
         h = [hinj * ap(incinj, pdif) for _, ap in
              pair.Signal.templates[injkind].iteritems()]
         hinj = np.linalg.norm(h)
-
-    results.hinj.append(hinj)
-
+    # search
     results_n = pair.search(data=inst, pol=pair.psr.param['POL'])
-
     # unpack results
+    results.hinj.append(hinj)
     for m in g.SEARCHMETHODS:
-        results.hrec[m] += [results_n[m]['h']]
-        results.srec[m] += [results_n[m]['s']]
-        results.arec[m] += [results_n[m]['a']]
-
+        results.hrec[m].append(2 * results_n[m]['h'])
+        results.srec[m].append(results_n[m]['s'])
+        results.arec[m].append(results_n[m]['a'])
 
 log.info('Saving results')
 results.export()

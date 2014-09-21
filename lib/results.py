@@ -4,6 +4,7 @@ import sys
 import os
 
 import numpy as np
+from collections import OrderedDict
 
 import h5py
 
@@ -32,6 +33,7 @@ class Results(object):
         self.psr = psr
         self.injkind = kind
         self.pdif = pdif
+        self.pair = None
 
         # Defining local srchmethods to avoid relying on lib.general.
         # This also allows one to load only results of a specific method.
@@ -84,7 +86,7 @@ class Results(object):
                 hinj = f['inj/h'][:]
                 incinj = f['inj/inc'][:]
         except:
-            raise IOError('FATAL: did not find injsrch info in: ' + path)
+            raise IOError('Did not find injsrch info in: ' + path)
 
         # rescale hinj (note h_effective is independent of psi)
         hinj_new = []
@@ -116,15 +118,17 @@ class Results(object):
                         self.hrec[m].append(results[m]['h'])
                         self.srec[m].append(results[m]['s'])
                     search_methods = search_methods.union(set(results.keys()))
-            except:
+            except IOError:
                 message = 'Unable to load result info from: ' + filename
                 self.log.error(message, exc_info=True)
                 print message
                 print sys.exc_info()
 
-        self.search_methods = list(search_methods)
+        for m in search_methods:
+            self.hrec[m] = np.array(self.hrec[m])
+            self.srec[m] = np.array(self.srec[m])
 
-        return self.hrec, self.srec
+        self.search_methods = list(search_methods)
 
     def export(self, path=None, verbose=None):
         """
@@ -165,6 +169,8 @@ class Results(object):
             with h5py.File(export_path, 'r') as f:
                 # load injected h
                 self.hinj = f['hinj'][:]
+                self.ninst = len(self.hinj)
+                self.ninj = len(self.hinj[self.hinj>0])
                 # load recovered h and s
                 for m in self.search_methods:
                     self.hrec[m] = f[m + '/hrec'][:]
@@ -184,580 +190,519 @@ class Results(object):
             if kind in ['s', 'srec', 'sig']:
                 y = self.srec
                 name = '$s$'
-
             elif kind in ['h', 'hrec', 'h0']:
                 y = self.hrec
                 name = '$h_{rec}$'
-
             else:
                 self.log.error('Did not recognize value "' + str(kind) + '".', exc_info=True)
                 sys.exit(1)
-
             return y, name
 
         except:
             self.log.error('No data. Try loading results with .load()', exc_info=True)
             sys.exit(1)
 
-    #-----------------------------------------------------------------------------
+    #--------------------------------------------------------------------------
     # Statistics
 
-    def get_noise_threshold(self, kind, methods=[], threshold=.9):
-        '''
-        Returns the value of hrec/srec which is above a threshold (def 90%) of the false
-        positives. This percentage can be adapted by providing a different 'threshold' value.
-        Takes one argument that indicates whether the hrec or srec stat is computed.
-        '''
+    def get_detection_threshold(self, kind, threshold, methods=None):
+        """
+        Returns the value of hrec/srec which is above a threshold (def 99%)
+        of the noise only instantiations.
 
-        if methods==[]:
-            methods = self.search_methods
-
-        d, _ = self.pickseries(kind)
-
-        noise_threshold = {}
-        for m in methods:
-            # array of false positives
-            false_pos = d[m][self.hinj==0]
-            n_false_pos = len(false_pos)
-
-            # sort by loudness
-            false_pos_sorted = np.sort(false_pos)
-
-            # get threshold location
-            t_loc = int(threshold * n_false_pos)
-
-            # issue warning if threshold is above all false-positives
-            if t_loc>=(n_false_pos - 1):
-                self.log.warning('Threshold placed at loudest false positive.')
-                t_loc = n_false_pos - 1
-
-            # get threshold value
-            noise_threshold[m] = false_pos_sorted[t_loc]
-
-        # return dictionary of thresholds
-        return noise_threshold
-
-    def quantify(self, kind, methods=None, noise_threshold=.9, band_conf=.9,
-                 stats=False, window=2e-26):
-        '''
-        Performs a linear fit ignoring values of hinj=0 and those under noise threshold.
-        Returns:
-        m       such that y = m*x from lstsq fit (float)
-        rmse    sum of residuals = Sum[(x-y)^2], so RMSE = sqrt(s.o.r/N) (float)
-        ymax    point defining line parallel to fit that encloses b_c% of pts OVER fit (inj, rec)
-        ymin    point defining line parallel to fit that encloses b_c% of pts UNDER fit (inj,rec)
-        noise   result of get_noise_threshold()
-        '''
-
-        self.log.info('Performing linear fit of ' + str(kind) + ' data.')
+        This percentage can be adapted by providing a different
+        'threshold' value.
+        Takes one argument that indicates whether the hrec or srec stat is
+        computed.
+        """
 
         methods = methods or self.search_methods
 
-        # obtain data
         d, _ = self.pickseries(kind)
 
-        # obtain noise levels
-        noise = self.get_noise_threshold(kind, methods=methods,
-                                         threshold=noise_threshold)
+        detection_threshold = {}
+        for m in methods:
+            # array of false positives
+            noise_only = d[m][self.hinj == 0]
+            n_noise_only = len(noise_only)
+            # sort by loudness
+            noise_only_sorted = np.sort(noise_only)
+            # get threshold location
+            t_loc = int(threshold * n_noise_only)
+            # issue warning if threshold is above all false-positives
+            if t_loc >= (n_noise_only - 1):
+                self.log.warning('Threshold placed at loudest false positive.')
+                t_loc = n_noise_only - 1
+            # get threshold value
+            detection_threshold[m] = noise_only_sorted[t_loc]
+        # return dictionary of thresholds
+        return detection_threshold
 
+    def quantify(self, kind, detection_threshold, methods=None, band_conf=None,
+                 rollwindow=None):
+        """
+        Performs a linear fit ignoring values of hinj=0 and those under
+        noise threshold.
+
+        Returns
+        -------
+        m: `float`
+            such that y = m*x from lstsq fit
+        rmse: `float`
+            sum of residuals = Sum[(x-y)^2], so RMSE = sqrt(s.o.r/N)
+        ymax: `float`
+            point defining line parallel to fit that encloses b_c% of
+            pts OVER fit (inj, rec)
+        ymin: `float`
+            point defining line parallel to fit that encloses b_c% of
+            pts UNDER fit (inj,rec)
+        noise: `float`
+            result of get_detection_threshold()
+        """
+
+        self.log.info('Performing linear fit of ' + str(kind) + ' data.')
+        methods = methods or self.search_methods
+        # obtain data
+        d, _ = self.pickseries(kind)
+        # obtain noise levels
+        noise = self.get_detection_threshold(kind, detection_threshold,
+                                             methods=methods)
         # get linear fit
         slope = {}
         rmse = {}
         ymax = {}
         ymin = {}
+        y1side = {}
         x_short = {}
         rollmean = {}
         rollstd = {}
         for m in methods:
-
             self.log.debug('Selecting fit data.')
-
             # pick false postives above noise threshold
-	    print noise[m]
-	    print d[m]
             x = self.hinj[(self.hinj != 0) & (d[m] > noise[m])]
             y = d[m][(self.hinj != 0) & (d[m] > noise[m])]
-
             # put vectors in proper shape for lstsq function
             x_vertical = np.reshape(x, (len(x), 1))
             y_vertical = np.reshape(y, (len(y), 1))
 
             self.log.debug('Performing fit.')
-
-            # fit using lstsq routine
-            # http://docs.scipy.org/doc/numpy/reference/generated/numpy.linalg.lstsq.html
-            p, residualSum, _, _ = np.linalg.lstsq(x_vertical, y_vertical)
-
+            # Fit datapoints to a straight line with y--intersect = 0
+            # http://docs.scipy.org/doc/numpy/reference/generated/
+            # numpy.linalg.lstsq.html
+            p, residualsum, _, _ = np.linalg.lstsq(x_vertical, y_vertical)
             slope[m] = p[0][0]
+            # the sum of residuals is the squared Euclidean 2-norm for each
+            # column in b - a*x; i.e., sum of residuals = Sum[(x-y)^2],
+            # so RMSE = sqrt(s.o.r./N)
+            rmse[m] = np.sqrt(residualsum[0]/len(y))
 
-            # the sum of residuals is the squared Euclidean 2-norm for each column in b - a*x
-            # sum of residuals = Sum[(x-y)^2], so RMSE = sqrt(s.o.r./N)
-            rmse[m] = np.sqrt(residualSum[0]/len(y))
+            if band_conf:
+                self.log.debug('Computing bands at %f confidence.' % band_conf)
+                # Compute lines parallel to fit line that enclose `band_conf`
+                # fraction of points.
+                # 1. subtract fit from data and sort
+                deviations = y - slope[m]*x
+                # 2a. find deviation above (band_conf %) of all points
+                dev_top = deviations[deviations > 0]
+                top_id = int(np.ceil(band_conf * len(dev_top)))
+                if top_id > len(dev_top)-1:
+                    self.log.warning('Confidence maximum above all points.')
+                    top_id = -1
+                # 2b. find corresponding (yinj, yrec)
+                rec_top = y[deviations > 0]
+                inj_top = x[deviations > 0]
+                ymax[m] = [(yi, yr) for (dev, yi, yr) in
+                           sorted(zip(dev_top, inj_top, rec_top))][top_id]
+                # 3a. find value that is below (band_conf %) of all datapoints
+                dev_bot = deviations[deviations <= 0]
+                min_id = int(np.floor((1-band_conf) * len(dev_top)))
+                # (note (1-band_conf) due to sorting of negative values.)
+                if min_id > len(dev_top)-1:
+                    self.log.warning('Confidence minimum below all points.')
+                    min_id = -1
+                # 3b. find corresponding (yinj, yrec)
+                rec_bot = y[deviations <= 0]
+                inj_bot = x[deviations <= 0]
+                ymin[m] = [(yi, yr) for (dev, yi, yr) in
+                           sorted(zip(dev_bot, inj_bot, rec_bot))][min_id]
 
-            self.log.debug('Computing bands at ' + str(band_conf) + ' confidence.')
+                # Get one sided confidence limit
+                # (point to the left of b_c% of all points)
+                oneside_id = int(np.floor((1-band_conf) * len(deviations)))
+                y1side[m] = [(yi, yr) for (dev, yi, yr) in
+                             sorted(zip(deviations, x, y))][oneside_id]
 
-            # compute lines parallel to fit line that enclose band_conf (def 90%) of points
-
-            # 1. subtract fit from data and sort
-            deviations = y - slope[m]*x
-
-            # 2a. find hrec/srec (y)  value that is above (band_conf %) of all datapoints
-            dev_pos = deviations[deviations>0]
-
-            max_ind = int(np.ceil(band_conf * len(dev_pos)))
-
-            if max_ind>(len(dev_pos)-1):
-                max_ind = -1
-
-            dev_max = np.sort(dev_pos)[max_ind]
-
-            ymax_rec = y[np.where(deviations==dev_max)[0][0]]
-            # (note that many points might lay on the top/bottom lines, so where might return
-            # multiple values; we just need one, so we take the first.)
-
-            # 2b. find corresponding hinj value
-            ymax_inj_loc = np.where(y==ymax_rec)[0]
-
-            if len(ymax_inj_loc)!=1:
-                # error caused if the value is found multiple times (len>1) or not at all (len=0)
-                self.log.error('Cannot find ' + kind + ' max inj.', exc_info=True)
-
-            ymax_inj = x[ymax_inj_loc[0]]
-
-            ymax[m] = (ymax_inj, ymax_rec)
-
-            # 3a. find value that is below (band_conf %) of all datapoints
-            dev_neg = deviations[deviations<0]
-
-            min_ind = int(np.floor((1-band_conf) * len(dev_pos)))
-            # (note (1-band_conf) because of negative values.)
-
-            if min_ind>(len(dev_pos)-1):
-                min_ind = -1
-
-            dev_min = np.sort(dev_neg)[min_ind]
-
-            ymin_rec = y[np.where(deviations==dev_min)[0][0]]
-
-            # 3b. find corresponding hinj value
-            ymin_inj_loc = np.where(y==ymin_rec)[0]
-
-            if len(ymin_inj_loc)!=1:
-                # error caused if the value is found multiple times (len>1) or not at all (len=0)
-                self.log.error('Cannot find ' + kind + ' min inj.', exc_info=True)
-
-            ymin_inj = x[ymin_inj_loc]
-
-            ymin[m] = (ymin_inj, ymin_rec)
-
-            #######
-            ### ROLLING STATS ADDENDUM
-            if stats:
-                # splitt data into h-bins of width window
-                xsegments, ysegments = g.bindata(x, y, window)
-
+            if rollwindow:
+                x = self.hinj[self.hinj != 0]
+                y = d[m][self.hinj != 0]
+                self.log.debug('Computing rolling statistics.')
+                # split data into h-bins of width window
+                xsegments, ysegments = g.bindata(x, y, rollwindow)
                 # take rolling mean of y (i.e. the mean of each segment)
-                # (the if condition checks segment not empty)
-                rollmean[m] = np.array([ys.mean() for ys in ysegments if any(ys)]).flatten()
-
+                # (the if condition checks segment is not empty)
+                rollmean[m] = np.array([ys.mean() for ys in ysegments
+                                        if any(ys)]).flatten()
                 # take rolling std of y (i.e. the std of each segment)
-                rollstd[m] = np.array([ys.std() for ys in ysegments if any(ys)]).flatten()
-
+                rollstd[m] = np.array([ys.std() for ys in ysegments
+                                       if any(ys)]).flatten()
                 # get avg x location to plot
-                x_short[m] = np.array([(xs[0] + xs[-1])/2. for xs in xsegments if any(xs)]).flatten()
+                x_short[m] = np.array([(xs[0] + xs[-1])/2. for xs in xsegments
+                                       if any(xs)]).flatten()
+        # produce output
+        return noise, slope, rmse, ymax, ymin, y1side, x_short, rollmean,\
+               rollstd
 
-        # return dictionary of thresholds and rmse's
-        return slope, rmse, ymax, ymin, noise, x_short, rollmean, rollstd
+    def min_h_det(self, detection_threshold, confidence=.95):
+        """Returns strength of smallest detected injection, computed using the
+        significance curve and the corresponding detection.
 
-    def min_h_det(self, confidence=.9):
-        '''
-        Returns strength of smallest detected injection, computed using the significance curve
-        and the corresponding noise threshold. The significance threshold is translated into a
-        strenght by means of the fit.
-        '''
+        The significance threshold is translated into a strength by means
+        of the fit.
+        """
 
         self.log.info('Obtaining min h det.')
-
         # obtain significance noise threshold and best--fit line slope
-        slope, _, _, _, noise, _, _, _ = self.quantify('s', noise_threshold=confidence)
+        noise, slope, _, _, _, y1side, _, _, _ =\
+            self.quantify('s', detection_threshold, band_conf=confidence)
+
+        if confidence == 0:
+            for m in self.search_methods:
+                y1side[m] = (0, 0)
 
         minh = {}
         for m, n in noise.iteritems():
-            minh[m] = n / slope[m]
+            minh[m] = (n - (y1side[m][1] - slope[m] * y1side[m][0])) / slope[m]
 
         return minh
 
-    #-----------------------------------------------------------------------------
+    #--------------------------------------------------------------------------
     # Open box
 
-    def openbox(self, methods=None, noise_threshold=.95, band_conf=.95, p_nbins=100, p_fitorder=3):
+    def openbox(self, methods=None, det_thrsh=.999, det_conf=.95,
+                p_nbins=100, p_fitorder=3, band_conf=.95):
 
         methods = methods or [self.injkind, 'Sid']
 
         self.log.info('Opening box.')
-
         # try to load search results from file; otherwise, search
         for m in methods:
             try:
-                filename = 'ob_' + self.det + self.run + '_' + self.psr + '_' + m
-
+                filename = 'ob_%s%s_%s_%s' % (self.det, self.run, self.psr, m)
                 with open(g.paths['ob'] + filename + '.p', 'rb') as f:
                     results_ob = pickle.load(f)
-
                 self.log.debug('OB results loaded.')
-
-            except:
-                if 'pair' not in dir(self):
-                    self.log.debug('Creating pair and loading data.')
-                    self.pair = g.Pair(self.psr, self.det)
+            except IOError:
+                self.pair = self.pair or g.Pair(self.psr, self.det)
+                if self.pair.data is None:
                     self.pair.load_finehet(self.run, load_vectors=True)
+                results_ob = self.pair.search(methods=methods, save=True)
 
-                self.log.debug('Searching finehet.')
-                results_ob = self.pair.search_finehet(methods=methods, save=1)
-
-        # processing
         self.log.debug('Obtaining stats.')
+        hmin = self.min_h_det(det_thrsh, det_conf)
 
-        hmin = self.min_h_det(noise_threshold)
-
-        slope, _, ymax, ymin, _, _, _, _ = self.quantify('s', noise_threshold=noise_threshold, band_conf=band_conf, methods=methods)
+        _, slope, _, ymax, ymin, _, _, _, _ =\
+            self.quantify('s', detection_threshold=det_thrsh,
+                          band_conf=band_conf, methods=methods)
 
         h_ob = {}
         s_ob = {}
-        conf_int  = {}
+        conf_int = {}
         hmin_dist = {}
         p_ob = {}
-
         for m in methods:
-
             # Open box (ob) values
             h_ob[m] = results_ob[m]['h']
             s_ob[m] = results_ob[m]['s']
-
             # Background (bk) values
-            h_bk = self.hrec[m][self.hinj==0]
             s_bk = self.srec[m][self.hinj==0]
 
             self.log.debug('Forming confidence interval.')
-
+            # get fit value
             h_ob_fit = s_ob[m] / slope[m]
-
-            ntop = (ymax[m][1]- slope[m] * ymax[m][0])
+            # get confidence limits
             nbot = (ymin[m][1]- slope[m] * ymin[m][0])
-
             h_ob_max = (h_ob_fit - nbot) / slope[m]
-
+            ntop = (ymax[m][1]- slope[m] * ymax[m][0])
             h_ob_min = (h_ob_fit - ntop) / slope[m]
-
+            # pack
             conf_int[m] = [float(h_ob_min), float(h_ob_fit), float(h_ob_max)]
 
             self.log.debug('Comparing to h_min.')
-
-            hmin_dist[m] = h_ob[m] - hmin[m]
+            hmin_dist[m] = (h_ob[m] - hmin[m]) / hmin[m]
 
             self.log.debug('Fitting p-value curve.')
-
-            _, _, s_pfit = g.pvalue(s_bk, p_nbins, fitorder=p_fitorder)
-
+            s_pfit = g.pvalue(s_bk, p_nbins, fitorder=p_fitorder)[2]
             p_ob[m] = s_pfit(s_ob[m])
 
         return h_ob, s_ob, p_ob, hmin_dist, conf_int
 
-    #-----------------------------------------------------------------------------
+    #--------------------------------------------------------------------------
     # Plots
 
-    def plot(self, kind, aux='simple', noise_threshold=.99, band_conf=.95, methods=[], path='scratch/plots/', title=True, filetype='png', alpha=.3, shade=True, scale=1., extra_name='', hide_data=False, legend=True, setylim=True, stats=False, stats_color='y', window=2e-24):
-        '''
-        Plots 'kind' (hrec/srec) vs hinj for methods listed in 'methods'.
-        The argument 'aux' determines what extra features to include:
-        -- 'full'/'all'
-            For all methods adds: noise line above 'noise_threshold' (0-1) of the false positives
-            best fit line, confidence band at 'band_conf' (0-1) confidence, shading if 'shade'.
-        -- 'medium'
-            For the "best" method: noise line above 'noise_threshold' (0-1) of false positives
-            best fit line, confidence band at 'band_conf' (0-1) confidence, shading if 'shade'.
-        -- 'simple'
-            For the "best" method: noise line above 'noise_threshold' (0-1) of false positives
-            best fit line.
-        -- other
-            Just the data points.
-        '''
+    def plot(self, kind, aux='simple', detection_threshold=.999, band_conf=.95,
+             methods=None, title=True, filetype='png', alpha=.3, shade=True,
+             scale=1., hide_data=False, legend=True, xlim=None, ylim=None,
+             rollwindow=2e-26, rollcolor=None, band=True, bestonly=False,
+             extra_name='', path=g.paths['plots']):
+        """Plots 'kind' (hrec/srec) vs hinj for methods listed in 'methods'.
+        """
 
         methods = methods or self.search_methods
 
         self.log.info('Plotting.')
-
         # obtain data
         y, kindname = self.pickseries(kind)
-
-        # obtain fit & noise threshold
-        slope, _, ymax, ymin, noise, x_short, rollmean, rollstd = self.quantify(kind, noise_threshold=noise_threshold,  band_conf=band_conf, methods=methods, stats=stats, window=window)
-
-        # find "best" method
-        maxslope = np.max([slope[m] for m in methods])
+        if detection_threshold:
+            # obtain fit & noise threshold
+            noise, slope, rmse, ytop, ybot, y1side, x_short, rollmean, rollstd\
+                = self.quantify(kind, detection_threshold, band_conf=band_conf,
+                                methods=methods, rollwindow=rollwindow)
+            # find "best" method
+            maxslope = np.max([slope[m] for m in methods])
 
         # process
         fig, ax = plt.subplots(1)
         for m in methods:
-            # construct noise line, best fit line and confidence band around it
-            noise_line = [noise[m]] * len(self.hinj)
-            bestfit_line = slope[m] * self.hinj
-            topband_line = slope[m] * self.hinj + (ymax[m][1]-slope[m] * ymax[m][0])
-            botband_line = slope[m] * self.hinj + (ymin[m][1]-slope[m] * ymin[m][0])
-
             # plot
             if not hide_data:
                 ax.plot(self.hinj, y[m], g.plotcolor[m]+'+', label=m)
 
+            #extra features
+            switch = band_conf and (not bestonly or slope[m] == maxslope)
 
-
-            if aux in ['all', 'full', 'simple', 'medium']:
+            if detection_threshold and switch:
                 # plot noise line
-                ax.plot(self.hinj, bestfit_line, color=g.plotcolor[m])
+                noise_line = [noise[m]] * self.ninst
+                ax.plot(self.hinj, noise_line, color=g.plotcolor[m])
 
-                if aux in ['all', 'full']:
-                    # plot band lines
-                    ax.plot(self.hinj, noise_line, color=g.plotcolor[m], alpha=alpha)
-                    ax.plot(self.hinj, topband_line,  color=g.plotcolor[m], alpha=alpha)
-                    ax.plot(self.hinj, botband_line,  color=g.plotcolor[m], alpha=alpha)
+            if band and switch:
+                # plot band lines
+                bestfit_line = slope[m] * self.hinj
+                topband_line = slope[m] * self.hinj + (ytop[m][1]-slope[m] *
+                                                       ytop[m][0])
+                botband_line = slope[m] * self.hinj + (ybot[m][1]-slope[m] *
+                                                       ybot[m][0])
+                ax.plot(self.hinj, bestfit_line, color=g.plotcolor[m],
+                        alpha=alpha)
+                ax.plot(self.hinj, topband_line,  color=g.plotcolor[m],
+                        alpha=alpha)
+                ax.plot(self.hinj, botband_line,  color=g.plotcolor[m],
+                        alpha=alpha)
 
-                    if shade:
-                        # shade confidence band
-                        ax.fill_between(self.hinj, botband_line, topband_line, color=g.plotcolor[m], alpha=alpha/10, where=self.hinj>0) # note the where argument is necessary to close polygon
+                if shade:
+                    # shade confidence band
+                    ax.fill_between(self.hinj, botband_line, topband_line,
+                                    color=g.plotcolor[m], alpha=alpha/10,
+                                    where=self.hinj > 0)
+                    # note the where argument is necessary to close polygon
 
-                    if stats:
-                        ax.plot(x_short[m], rollmean[m], stats_color, linewidth=2)
-                        ax.plot(x_short[m], rollmean[m] + rollstd[m], stats_color)
-                        ax.plot(x_short[m], rollmean[m] - rollstd[m], stats_color)
+            if rollcolor and switch:
+                ax.plot(x_short[m], rollmean[m], rollcolor,
+                        linewidth=2)
+                ax.plot(x_short[m], rollmean[m] + rollstd[m],
+                        rollcolor)
+                ax.plot(x_short[m], rollmean[m] - rollstd[m],
+                        rollcolor)
 
-                        if shade: ax.fill_between(x_short[m], rollmean[m]-rollstd[m], rollmean[m]+rollstd[m], color=stats_color, alpha=.3)
+                if shade:
+                    ax.fill_between(x_short[m], rollmean[m]-rollstd[m],
+                                    rollmean[m] + rollstd[m],
+                                    color=rollcolor, alpha=.3)
 
-                elif aux in ['simple', 'medium']:
-
-                    # just plot the loudest noise threshold
-                    if slope[m]==maxslope:
-                        # plot noise line
-                        ax.plot(self.hinj, noise_line, g.plotcolor[m], alpha=alpha)
-
-                        if stats:
-                            ax.plot(x_short[m], rollmean[m], stats_color, linewidth=2)
-                            ax.plot(x_short[m], rollmean[m] + rollstd[m], stats_color)
-                            ax.plot(x_short[m], rollmean[m] - rollstd[m], stats_color)
-
-                            if shade: ax.fill_between(x_short[m], rollmean[m]-rollstd[m], rollmean[m]+rollstd[m], color=stats_color, alpha=.3)
-
-                        if aux == 'medium':
-                            # plot band lines
-                            ax.plot(self.hinj, topband_line,  g.plotcolor[m], alpha=alpha)
-                            ax.plot(self.hinj, botband_line,  g.plotcolor[m], alpha=alpha)
-
-                            if shade:
-                                # shade confidence band
-                                ax.fill_between(self.hinj, botband_line, topband_line, color=g.plotcolor[m], alpha=alpha/10, where=self.hinj>0)
-
-            if slope[m]==maxslope: #BUG HERE!
+            if detection_threshold and slope[m] == maxslope: #BUG HERE!
                 # set axes limits
-                ax.set_xlim(0., scale * max(self.hinj))
-                if setylim: ax.set_ylim(0., scale * np.around(y[m].max(), 1)) # without the around the axes disapear when Sid
+                ax.set_xlim(xlim or (0., scale * max(self.hinj)))
+                ax.set_ylim(ylim or (0., scale * np.around(y[m].max(), 1)))
 
         # add labels indicating noise threshold and band confidence
-        if aux in ['all', 'full', 'simple', 'medium']:
-            ax.text(.02, .7, 'Noise threshold: ' + str(noise_threshold), fontsize=10, transform=ax.transAxes)
-
-            if aux != 'simple':
-                ax.text(.02, .65, 'Band confidence: ' + str(band_conf), fontsize=10, transform=ax.transAxes)
-
+        if detection_threshold:
+            ax.text(.02, .7, 'Detection threshold: ' + str(detection_threshold),
+                    fontsize=10, transform=ax.transAxes)
+        if band_conf:
+            ax.text(.02, .65, 'Band confidence: ' + str(band_conf),
+                    fontsize=10, transform=ax.transAxes)
         # style
         ax.set_xlabel('$h_{inj}$')
         ax.set_ylabel(kindname)
-
-        if legend: ax.legend(numpoints=1, loc=2)
-
-        if title: ax.set_title(self.injkind+self.pdif+' injections on '+ self.det+self.run+' data for '+self.psr)
-
+        if legend:
+            ax.legend(numpoints=1, loc=2)
+        if title:
+            ax.set_title('%s%s injections on %s %s data for %s'
+                         % (self.injkind,self.pdif,self.det,self.run,self.psr))
         # check destination directory exists
         try:
             os.makedirs(path)
             self.log.debug('Plot directory created.')
-        except:
+        except OSError:
             self.log.debug('Plot directory already exists.')
-
         # save
-        filename = 'injsrch_'+self.det+self.run+'_'+self.injkind+self.pdif+'_'+self.psr+'_'+kind
-        fig.savefig(path + filename + extra_name + '.' + filetype, bbox_inches='tight')
+        filename = 'injsrch_' + self.det + self.run + '_' + self.injkind +\
+                   self.pdif + '_' + self.psr + '_' + kind
+        p = path + filename + extra_name + '.' + filetype
+        fig.savefig(p, bbox_inches='tight')
         plt.close(fig)
+        print 'Figure saved: %r.' % p
 
-
-    def plot_p(self, kind, methods=[], nbins=100, star=None, starsize=6, starcolor='y', fit=True, title=True, legend=True, legendloc=3, xlim=False, ylim=(1e-4,1), path='scratch/plots/', extra_name='', filetype='png', manyfiles=False):
-
-        if methods==[]: methods = self.search_methods
+    def plot_p(self, kind, methods=None, nbins=100, star=None, starsize=6,
+               starcolor='y', fit=True, title=True, legend=True, legendloc=3,
+               xlim=False, ylim=(1e-4,1), path=g.paths['plots'], extra_name='',
+               filetype='png', hidedata=False, manyfiles=False):
 
         self.log.info('Plotting 1-CDF')
+        methods = methods or self.search_methods
 
         # obtain data
-        y, kindname = self.pickseries(kind)
-
+        d, kindname = self.pickseries(kind)
         if not manyfiles:
             fig, ax = plt.subplots(1)
-            namelist = ''
+            plotname = ''
 
         # process
         for m in methods:
-
             # p-value of falsepositives (y)
-            x, y, pfit = g.pvalue(y[m][self.hinj==0], nbins)
-
+            x, y, pfit = g.pvalue(d[m][self.hinj == 0], nbins)
             # plot
             if manyfiles:
                 fig, ax = plt.subplots(1)
-                namelist = m
+                plotname = m
+            if not hidedata:
+                ax.plot(x, y, g.plotcolor[m]+'+', label=m)
+            if fit:
+                ax.plot(x, pfit(x), g.plotcolor[m], label=m+' fit')
 
-            ax.plot(x, y, g.plotcolor[m]+'+', label=m)
-
-            if fit: ax.plot(x, pfit(x), g.plotcolor[m], label = m + ' fit')
-
-            # format plots only if writing to many files or if all the plots were already added to the figure
-            if manyfiles or (not manyfiles and m==methods[-1]):
-
+            # format plots only if writing to many files or if all the plots
+            # were already added to the figure
+            if manyfiles or m == methods[-1]:
                 # plot any extra points if they were provided
                 if isinstance(star, dict):
                     # assuming a dictionary indexed by method was provided
-                    # elements of dictionary should be a list/array significances/hrecs
-                    for m in methods:
-                        ax.plot(star[m][0], 0.1, starcolor + '*', markersize=starsize)
-
+                    # elements of dictionary should be a list/array
+                    # significances/hrecs
+                    s = star[m][0]
+                    ax.plot(s, 0.1, starcolor + '*', markersize=starsize)
                 elif isinstance(star, list) or isinstance(star, np.ndarray):
                     # assuming a list of significances was provided
                     for s in star:
                         ax.plot(s, 0.1, starcolor + '*', markersize=starsize)
-
-                elif isinstance(star, float) or isinstance(star, int):
+                elif isinstance(star, (int, float)):
                     ax.plot(star, 0.1, starcolor + '*', markersize=starsize)
 
                 # style
-
                 ax.set_yscale('log')
-
                 ax.set_xlabel(kindname)
                 ax.set_ylabel('1-CDF')
-
-                if xlim: ax.set_xlim(xlim)
-                ax.set_ylim(ylim)
-
-                if legend: ax.legend(numpoints=1, loc=legendloc)
-
+                if xlim:
+                    ax.set_xlim(xlim)
+                if ylim:
+                    ax.set_ylim(ylim)
+                if legend:
+                    ax.legend(numpoints=1, loc=legendloc)
                 if title:
-                    ax.set_title(self.injkind+self.pdif+' injections on '+ self.det+self.run+' data for '+self.psr)
+                    ax.set_title(self.injkind + self.pdif + ' ' +
+                                 'injections on ' + self.det + ' ' + self.run
+                                 + ' data for ' + self.psr)
 
-                # check destination directory exists
                 try:
                     os.makedirs(path)
                     self.log.debug('Plot directory created.')
-                except:
+                except OSError:
                     self.log.debug('Plot directory already exists.')
-
                 # save
-                filename = 'pvalue_'+self.det+self.run+'_'+self.injkind+self.pdif+'_'+self.psr+'_'+kind
-                saveto = path + filename + extra_name + namelist +'.' + filetype
+                filename = 'pvalue_' + self.det + self.run + '_' +\
+                           self.injkind + self.pdif + '_' + self.psr + '_'\
+                           + kind
+                saveto = '%s%s%s%s.%s'\
+                         % (path, filename, extra_name, plotname, filetype)
 
                 fig.savefig(saveto, bbox_inches='tight')
-
                 plt.close(fig)
-
-                self.log.info('Plot saved in ' + saveto)
+                print 'Plot saved: %r' % saveto
 
         # close all plots just in case
         plt.close('all')
 
-    def plot_hs(self, methods=[], stats=True, stats_color='y', window=2e-26, title=True, xlim=False, ylim=False, hide_data=False, shade=False, legend=False, legendloc=4, path='scratch/plots/', filetype='png',  extra_name='',  manyfiles=True):
-        '''
-        Plots 'kind' (hrec/srec) vs hinj for methods listed in 'methods'.
-        '''
+    def plot_hs(self, methods=None, rollcolor=None, rollwindow=2e-26,
+                title=True, xlim=None, ylim=None, hide_data=False,
+                shade=False, legend=False, legendloc=4, path=g.paths['plots'],
+                filetype='png',  extra_name='',  manyfiles=True):
+        """Plots 'kind' (hrec/srec) vs hinj for methods listed in 'methods'.
+        """
 
-        if methods==[]: methods = self.search_methods
+        methods = methods or self.search_methods
 
         self.log.info('Plotting clean s vs h.')
-
         if not manyfiles:
             fig, ax = plt.subplots(1)
             plotname = ''
 
         for m in methods:
-
             ## 1. Plot clean background data
             self.log.debug('Obtaining data.')
-
             # 1a. gather data
-            x = self.hrec[m][self.hinj==0]
-            y = self.srec[m][self.hinj==0]
-
+            x = self.hrec[m][self.hinj == 0]
+            y = self.srec[m][self.hinj == 0]
             # 1b. plot data
             if manyfiles:
                 fig, ax = plt.subplots(1)
                 plotname = '_search' + m
-
-            if not hide_data: ax.plot(x, y, g.plotcolor[m]+'+', label=m)
+            if not hide_data:
+                ax.plot(x, y, g.plotcolor[m]+'+', label=m)
 
             ## 2. Get rolling statistics
-
-            if stats:
+            if rollcolor:
                 self.log.debug('Cumputing rolling statistics.')
-
-                # splitt data into h-bins of width window
-                xsegments, ysegments = g.bindata(x, y, window)
-
-                # take rolling mean of y (i.e. the mean of each segment)
+                # split data into h-bins of width rollwindow
+                xsegments, ysegments = g.bindata(x, y, rollwindow)
+                # take rolling mean and std (i.e. the mean of each segment)
                 # (the if condition checks segment not empty)
-                rollmean = np.array([ys.mean() for ys in ysegments if any(ys)]).flatten()
-
-                # take rolling std of y (i.e. the std of each segment)
-                rollstd = np.array([ys.std() for ys in ysegments if any(ys)]).flatten()
-
+                rollmean = np.array([ys.mean() for ys in ysegments
+                                     if any(ys)]).flatten()
+                rollstd = np.array([ys.std() for ys in ysegments
+                                    if any(ys)]).flatten()
                 # get avg x location to plot
-                x_short = np.array([(xs[0] + xs[-1])/2. for xs in xsegments if any(xs)]).flatten()
-
+                x_short = np.array([(xs[0] + xs[-1])/2. for xs in xsegments
+                                    if any(xs)]).flatten()
                 # plot
-                ax.plot(x_short, rollmean, stats_color, linewidth=2)
-                ax.plot(x_short, rollmean + rollstd, stats_color)
-                ax.plot(x_short, rollmean - rollstd, stats_color)
+                ax.plot(x_short, rollmean, rollcolor, linewidth=2)
+                ax.plot(x_short, rollmean + rollstd, rollcolor)
+                ax.plot(x_short, rollmean - rollstd, rollcolor)
 
                 if shade:
-                    ax.fill_between(x_short, rollmean - rollstd, rollmean + rollstd, color=stats_color, alpha=.3)
+                    ax.fill_between(x_short, rollmean - rollstd,
+                                    rollmean + rollstd, color=rollcolor,
+                                    alpha=.3)
 
-            if manyfiles or (not manyfiles and m==methods[-1]):
+            if manyfiles or m == methods[-1]:
                 ## 4. Style
-
                 ax.set_xlabel('$h_{rec}$')
-                ax.set_ylabel('Significance')
-
-                if xlim: ax.set_xlim(xlim)
-                if ylim: ax.set_ylim(ylim)
-
-                if legend: ax.legend(numpoints=1, loc=legendloc)
-
+                ax.set_ylabel('s')
+                if xlim:
+                    ax.set_xlim(xlim)
+                if ylim:
+                    ax.set_ylim(ylim)
+                if legend:
+                    ax.legend(numpoints=1, loc=legendloc)
                 if title:
-                    ax.set_title(self.injkind+self.pdif+' injections on '+ self.det+self.run+' data for '+self.psr)
+                    ax.set_title('%s%s injections on %s %s data for %s'
+                                 % (self.injkind, self.pdif, self.det,
+                                    self.run, self.psr))
 
                 ## 5. Save
-
                 try:
                     os.makedirs(path)
                     self.log.debug('Plot directory created.')
-                except:
+                except OSError:
                     self.log.debug('Plot directory already exists.')
 
-                filename = 'hs_'+self.det+self.run+'_'+self.injkind+self.pdif+'_'+self.psr
-                saveto = path + filename + extra_name + plotname +'.' + filetype
-
+                filename = 'hs_' + self.det + self.run + '_' + self.injkind\
+                           + self.pdif + '_' + self.psr
+                saveto = '%s%s%s%s.%s'\
+                         % (path, filename, extra_name, plotname, filetype)
                 fig.savefig(saveto, bbox_inches='tight')
-
                 plt.close(fig)
-
-                self.log.info('Plot saved in ' + saveto)
-
-        # close all plots in case there was
+                print 'Plot saved: %r' % saveto
+        # just in case, close all plots
         plt.close('all')
-
 
 
 class ResultsMP(object):
@@ -766,168 +711,125 @@ class ResultsMP(object):
         self.run = run
         self.injkind = injkind
         self.pdif = pdif
-        self.noise_threshold = 0
-        # (0 indicates stats haven't been taken yet)
-
+        self.detection_threshold = None
+        self.extra_name = ''
+        self.psrlist = []
+        self._psrs = []
+        self._results = OrderedDict()
+        self.failed = []
+        # initialize h/s_slope/rmse/noise[m] = []
+        for kind in ['h', 's']:
+            for stat in ['slope', 'rmse', 'noise']:
+                setattr(self, kind + '_' + stat, OrderedDict())
+                for m in g.SEARCHMETHODS:
+                    getattr(self, kind + '_' + stat)[m] = []
+        # initialize hmin
+        self.hmin = OrderedDict()
+        for m in g.SEARCHMETHODS:
+            self.hmin[m] = []
     #--------------------------------------------------------------------------
     # IO operations
 
-    def load(self, path=None, extra_name='', listID='all', verbose=False):
-        '''
-        Load PSR results for all pulsars in list.
-        Saves results objects to dictionary 'self.results'.
-        '''
-
+    def load(self, path=None, extra_name=None, listID='all', verbose=False):
+        """Load PSR results for all pulsars in list. Saves results objects to
+        dictionary 'self.results'.
+        """
         print 'Loading PSR results.'
 
         ### SETUP ###
-
+        self.extra_name = extra_name or self.extra_name
         # Determine source file path:
         #   if a path was provided, use it;
         #   if not, create Cluster object and use its public d
         p = path or g.Cluster().public_dir
-
-        self.extra_name = extra_name
-
         # Load PSR lists
-
         psrlist = g.read_psrlist(name=listID, det=self.det, run=self.run)
         badpsrs = g.read_psrlist(name='bad')
-
         goodpsrs = set(psrlist) - set(badpsrs)
 
         ### PROCESS ###
-
-        self.failed  = []
-        self.results = {}
-
         for psr in goodpsrs:
             try:
-                # create results object
-                r = Results(self.det, self.run, psr, self.injkind, self.pdif, extra_name=extra_name)
-                # load results
+                r = Results(self.det, self.run, psr, self.injkind, self.pdif,
+                            extra_name=self.extra_name)
                 r.load(path=p)
-
-                self.results[psr] = r
-                # note that if there's an error loading, PSR object is NOT added to list
-
-            except:
+                self._results[psr] = r
+                # note that if there's an error loading, PSR object is NOT
+                # added to list
+            except IOError:
                 print 'Warning: Unable to load ' + psr + ' results.'
-                if verbose: print sys.exc_info()
-
+                if verbose:
+                    print sys.exc_info()
                 self.failed += [psr]
 
-        self.psrlist = list( goodpsrs - set(self.failed) )
+        self.psrlist = list(goodpsrs - set(self.failed))
 
-    #-----------------------------------------------------------------------------
+    #--------------------------------------------------------------------------
     # Statistics
 
-    def get_stats(self, noise_threshold=.99, band_conf=.95, verbose=False):
-        '''
-        Take all efficiency statistics for all PSRs loaded.
-        '''
+    def get_stats(self, noise_threshold=.99, det_conf=.95, band_conf=.95,
+                  verbose=False):
+        """Take all efficiency statistics for all PSRs loaded.
+        """
 
         print 'Computing result statistics.'
-
         ### SETUP ###
-
-        self.noise_threshold = noise_threshold
-
-        # create stat containers
-
-        for kind in ['h', 's']:
-            for stat in ['slope', 'rmse', 'noise']:
-                setattr(self, kind + '_' + stat, {})
-
-        self.hmin = {}
-
-        # (purposedly verbose to be compatible with python 2.6.6)
-        for m in g.SEARCHMETHODS:
-            self.hmin[m]    = []
-
-            self.h_slope[m] = []
-            self.h_rmse[m]  = []
-            self.h_noise[m] = []
-
-            self.s_slope[m] = []
-            self.s_rmse[m]  = []
-            self.s_noise[m] = []
-
-        self.psrs = []
-
-        # load
-
+        self.detection_threshold = noise_threshold
         for psr in self.psrlist:
             try:
                 # obtain results object
-                r = self.results[psr]
-
-                # get hrec noise and slope
-                hslope, hrmse, _, _, hnoise, _, _, _ = r.quantify('h', noise_threshold=noise_threshold, band_conf=band_conf)
-
-                # get srec noise and slope
-                sslope, srmse, _, _, snoise, _, _, _ = r.quantify('s', noise_threshold=noise_threshold, band_conf=band_conf)
-
+                r = self._results[psr]
+                # get s/hrec noise and slope
+                hslope, hrmse, _, _, hnoise, _, _, _ = \
+                    r.quantify('h', detection_threshold=noise_threshold,
+                               band_conf=band_conf)
+                sslope, srmse, _, _, snoise, _, _, _ = \
+                    r.quantify('s', detection_threshold=noise_threshold,
+                               band_conf=band_conf)
                 # get min h detected
-                hmin = r.min_h_det(confidence=noise_threshold)
-
-                # save
+                hmin = r.min_h_det(noise_threshold, confidence=det_conf)
+                # append corresponding values to h/s_slope/rmse/noise[m]
                 for m in r.search_methods:
-                    self.h_slope[m] += [hslope[m]]
-                    self.h_rmse[m]  += [hrmse[m]]
-                    self.h_noise[m] += [hnoise[m]]
-
-                    self.s_slope[m] += [sslope[m]]
-                    self.s_rmse[m]  += [srmse[m]]
-                    self.s_noise[m] += [snoise[m]]
-
+                    for stat in ['slope', 'rmse', 'noise']:
+                        eval('h_' + stat + ')[m].append(h'+stat + '[m])')
+                        eval('s_' + stat + ')[m].append(s'+stat + '[m])')
                     self.hmin[m] += [hmin[m]]
-
                 # get PSR data
-                self.psrs += [g.Pulsar(psr)]
-
+                self._psrs.append(g.Pulsar(psr))
             except:
                 print 'Warning: unable to get stats from ' + psr + ' results.'
                 if verbose: print sys.exc_info()
-                self.failed += [psr]
+                self.failed.append(psr)
 
-#    def load_psrs(self, force=0):
-
-#        if 'psrs' not in d(self) or force:
-#            self.psrs = [g.Pulsar(psr) for psr in self.psrlist]
-
-#        else:
-#            print 'Pulsars already loaded. Use "force" option to reload.'
-
-    def sortby(self, target='psrlist', by='hmin', methods=None, noise_threshold=None):
-        '''
+    def sortby(self, target, by, methods=None, noise_threshold=None):
+        """
         Returns instance of list of name 'target' sorted by 'by'.
-        'target' can be 'psrlist', 'fgw' (=2*FR0) or the name of a PSR parameter (e.g. 'RAS')
-        '''
-
-        ## SETUP
-
-        nt = noise_threshold or self.noise_threshold
-
+        'target' can be 'psrlist', 'fgw' (=2*FR0) or the name of a PSR
+        parameter (e.g. 'RAS')
+        """
+        nt = noise_threshold or self.detection_threshold
         # check stats are loaded and noise thresholds agree
-        if (nt==0 or nt!=self.noise_threshold): self.get_stats()
-
-        srchmethods = methods or self.hmin.keys()
+        if nt == 0 or nt != self.detection_threshold:
+            self.get_stats(noise_threshold=nt)
+        methods = methods or self.hmin.keys()
 
         # parse name of list to be sorted
         if target == 'psrlist':
             y = self.psrlist
         elif 'gw' in target:
-            y = 2 * np.array([psr.param['FR0'] for psr in self.psrs]).astype('float')
+            # assume fgw requested
+            ylist = [psr.param['FR0'] for psr in self._psrs]
+            y = 2 * np.array(ylist).astype('float')
         else:
-            y = np.array([psr.param[target] for psr in self.psrs]).astype('float')
+            ylist = [psr.param[target] for psr in self._psrs]
+            y = np.array(ylist).astype('float')
 
         # parse name of list to be sorted BY
         x_dict = getattr(self, by)
 
         ## PROCESS
         y_sort = {}
-        for m in srchmethods:
+        for m in methods:
             x = self.hmin[m]
             y_sort[m] = [yi for (xi,yi) in sorted(zip(x,y))]
 
@@ -947,9 +849,9 @@ class ResultsMP(object):
             setattr(self, attr, {})
             for m in methods: getattr(self, attr)[m] = []
 
-        for psr, result in self.results.iteritems():
+        for psr, result in self._results.iteritems():
             ob = {}
-            ob['h_ob'], ob['s_ob'], ob['p_ob'], _, ob['h_conf'] = result.openbox(methods=methods, noise_threshold=noise_threshold, band_conf=band_conf)
+            ob['h_ob'], ob['s_ob'], ob['p_ob'], _, ob['h_conf'] = result.openbox(methods=methods, det_thrsh=noise_threshold, band_conf=band_conf)
 
             for attr in ['h_ob', 's_ob', 'p_ob', 'h_conf']:
                 for m in methods:
@@ -1022,19 +924,19 @@ class ResultsMP(object):
                 yl = '$s$'
 
             if kind[2:] == 'slope':
-                t += ' best fit slope at ' + str(self.noise_threshold) + ' detection confidence'
+                t += ' best fit slope at ' + str(self.detection_threshold) + ' detection confidence'
                 ylabel = 'Slope (' + yl + ' vs. $h_{inj}$)'
 
             elif kind[2:] == 'rmse':
-                t += ' best fit RMSE at ' + str(self.noise_threshold) + ' detection confidence'
+                t += ' best fit RMSE at ' + str(self.detection_threshold) + ' detection confidence'
                 ylabel = 'RMSE (' + yl + ' vs. $h_{inj}$)'
 
             elif kind[2:] == 'noise':
-                t += ' of noise threshold at ' + str(self.noise_threshold) + ' detection confidence'
+                t += ' of noise threshold at ' + str(self.detection_threshold) + ' detection confidence'
                 ylabel = yl
 
             else:
-                t = 'Lowest injection strength detected at ' + str(self.noise_threshold) + ' confidence'
+                t = 'Lowest injection strength detected at ' + str(self.detection_threshold) + ' confidence'
                 ylabel = '$h_{min}$'
 
             ax.set_ylabel(ylabel)
