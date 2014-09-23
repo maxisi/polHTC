@@ -943,7 +943,7 @@ def read_psrlist(name='', det=False, run=False):
             log.error(message, exc_info=True)
 
     # -- Return bad PSRs
-    elif 'bad' in name:
+    elif isinstance(name, basestring) and 'bad' in name:
         log.info('Returning list of bad PSRs.')
         badpsrs = []
         try:
@@ -964,7 +964,8 @@ def read_psrlist(name='', det=False, run=False):
             log.info('Taking list #' + str(name))
             # Assume requested PSRs are those in the list named
             # psrlist_det_run_listID.txt
-            p = paths['psrlist'] + '_' + det + '_' + run + '_' + name + '.txt'
+            p = paths['psrlist'] + '_' + det + '_' + run + '_' + str(name) +\
+                '.txt'
 
         except ValueError:
             # Assume 'name' is already a composed list name

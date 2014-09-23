@@ -238,7 +238,7 @@ class Results(object):
         # return dictionary of thresholds
         return detection_threshold
 
-    def quantify(self, kind, detection_threshold, methods=None, band_conf=None,
+    def quantify(self, kind, det_thrsh, methods=None, band_conf=None,
                  det_conf=None, rollwindow=None):
         """
         Performs a linear fit ignoring values of hinj=0 and those under
@@ -259,14 +259,12 @@ class Results(object):
         noise: `float`
             result of get_detection_threshold()
         """
-
-        self.log.info('Performing linear fit of ' + str(kind) + ' data.')
+        self.log.info('Performing linear fit of %s data.' % kind)
         methods = methods or self.search_methods
         # obtain data
         d, _ = self.pickseries(kind)
         # obtain noise levels
-        noise = self.get_detection_threshold(kind, detection_threshold,
-                                             methods=methods)
+        noise = self.get_detection_threshold(kind, det_thrsh, methods=methods)
         # get linear fit
         slope = {}
         rmse = {}
@@ -355,7 +353,7 @@ class Results(object):
         return noise, slope, rmse, ymax, ymin, y1side, x_short, rollmean,\
                rollstd
 
-    def min_h_det(self, detection_threshold, confidence=.95):
+    def min_h_det(self, det_thrsh, confidence=.95):
         """Returns strength of smallest detected injection, computed using the
         significance curve and the corresponding detection.
 
@@ -366,7 +364,7 @@ class Results(object):
         self.log.info('Obtaining min h det.')
         # obtain significance noise threshold and best--fit line slope
         noise, slope, _, _, _, y1side, _, _, _ =\
-            self.quantify('s', detection_threshold, band_conf=confidence)
+            self.quantify('s', det_thrsh, det_conf=confidence)
 
         if confidence == 0:
             for m in self.search_methods:
@@ -404,7 +402,7 @@ class Results(object):
         hmin = self.min_h_det(det_thrsh, det_conf)
 
         _, slope, _, ymax, ymin, _, _, _, _ =\
-            self.quantify('s', detection_threshold=det_thrsh,
+            self.quantify('s', det_thrsh=det_thrsh,
                           band_conf=band_conf, methods=methods)
 
         h_ob = {}
