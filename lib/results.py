@@ -131,10 +131,16 @@ class Results(object):
         self.search_methods = list(search_methods)
 
     def export(self, path=None, verbose=None):
-        """
-        Exports results to hdf5 file. If no destination path is provided, takes
-        cluster  public access folder as destination. This defaults to pwd when
-        cluster is not identified.
+        """Exports results to HDf5 file.
+
+        Arguments
+        ---------
+        path: `str` [optional]
+            If no destination path is provided, takes cluster  public access
+            folder as destination. This defaults to pwd when cluster is not
+            identified.
+        verbose: `boolean`
+            Determines whether to print error message details.
         """
 
         self.log.info('Exporting results.')
@@ -154,17 +160,19 @@ class Results(object):
                 # grp.create_dataset('arec', data=self.arec[m])
 
     def load(self, path=None):
-        """
-        Loads results from hdf5 file. If no origin path is provided, takes
-        cluster public access folder as destination. This defaults to pwd when
-        cluster is not identified.
+        """Loads results from HDf5 file.
+
+        Arguments
+        ---------
+        path: `str` [optional]
+            If no destination path is provided, takes cluster  public access
+            folder as destination. This defaults to pwd when cluster is not
+            identified.
         """
         self.log.info('Loading results.')
-
         # Determine origin destination.
         path = path or g.Cluster().public_dir
         export_path = path + self.paths['export']
-
         try:
             with h5py.File(export_path, 'r') as f:
                 # load injected h
@@ -180,44 +188,49 @@ class Results(object):
             self.log.error(message, exc_info=self.verbose)
             return
 
-    def pickseries(self, kind):
+    def pickseries(self, kind, verbose=False):
         """
         Returns already-loaded recovered data of 'kind', making sure it exists.
         (Small snippet of code use multiple times below.)
+
+        Arguments
+        ---------
+        kind: `basestring`
+            Recovered parameter h or significance s.
         """
-
-        try:
-            if kind in ['s', 'srec', 'sig']:
-                y = self.srec
-                name = '$s$'
-            elif kind in ['h', 'hrec', 'h0']:
-                y = self.hrec
-                name = '$h_{rec}$'
-            else:
-                self.log.error('Did not recognize value "' + str(kind) + '".', exc_info=True)
-                return
-            return y, name
-
-        except:
-            self.log.error('No data. Try loading results with .load()', exc_info=True)
+        if kind in ['s', 'srec', 'sig']:
+            y = self.srec
+            name = '$s$'
+        elif kind in ['h', 'hrec', 'h0']:
+            y = self.hrec
+            name = '$h_{rec}$'
+        else:
+            self.log.error('Did not recognize value "' + str(kind) + '".',
+                           exc_info=verbose)
             return
+        return y, name
 
     #--------------------------------------------------------------------------
     # Statistics
 
     def get_detection_threshold(self, kind, threshold, methods=None):
         """
-        Returns the value of hrec/srec which is above a threshold (def 99%)
-        of the noise only instantiations.
+        Returns the value of hrec/srec which is above a threshold of the noise
+        only instantiations.
+
+        Arguments
+        ---------
+        kind: `str`
+            Recovered parameter h or significance s.
+        threshold: `float`
+            Detection threshold. 
 
         This percentage can be adapted by providing a different
         'threshold' value.
         Takes one argument that indicates whether the hrec or srec stat is
         computed.
         """
-
         methods = methods or self.search_methods
-
         d, _ = self.pickseries(kind)
 
         detection_threshold = {}
@@ -362,7 +375,6 @@ class Results(object):
         The significance threshold is translated into a strength by means
         of the fit.
         """
-
         self.log.info('Obtaining min h det.')
         # obtain significance noise threshold and best--fit line slope
         noise, slope, _, _, _, y1side, _, _, _ =\
@@ -849,17 +861,14 @@ class ResultsMP(object):
         """Opens boxes for all PSRs in list and saves results.
         """
         print 'Opening boxes for all PSRs.'
-
         for attr in ['h_ob', 's_ob', 'p_ob', 'h_conf']:
             for m in methods:
                 getattr(self, attr)[m] = []
-
         for psr, r in self._results.iteritems():
             ob = {}
             ob['h_ob'], ob['s_ob'], ob['p_ob'], _, ob['h_conf'] =\
                 r.openbox(methods=methods, det_thrsh=det_thrsh,
                           det_conf=det_conf, band_conf=band_conf)
-
             for attr in ['h_ob', 's_ob', 'p_ob', 'h_conf']:
                 for m in methods:
                     getattr(self, attr)[m].append(ob[attr][m])
@@ -877,16 +886,13 @@ class ResultsMP(object):
         methods = methods or [self.injkind]
         # check if statistics are loaded
         if det_thrsh != self.detection_threshold:
-            self.get_stats(det_thrsh=det_thrsh, det_conf=det_conf,
-                           band_conf=band_conf)
+            self.get_stats(det_thrsh=det_thrsh, det_conf=det_conf)
         # obtain x-axis values
         if 'gw' in psrparam:
             # plot GW frequency, not rotational frequency
-            x = 2 * np.array([psr.param['FR0'] for psr
-                              in self._psrs]).astype('float')
+            x = 2 * np.array([psr.param['FR0'] for psr in self._psrs])
         else:
-            x = np.array([psr.param[psrparam] for psr
-                          in self._psrs]).astype('float')
+            x = np.array([psr.param[psrparam] for psr in self._psrs])
 
         if statkinds == 'all':
             kinds = ['h_slope', 'h_rmse', 'h_noise', 's_slope', 's_rmse',
@@ -939,11 +945,11 @@ class ResultsMP(object):
                      'confidence' % (det_thrsh, det_conf)
                 ylabel = 'RMSE (' + yl + ' vs. $h_{inj}$)'
             elif kind[2:] == 'noise':
-                t += ' of noise threshold with %.2f detection threshold at %.2f ' \
-                     'confidence' % (det_thrsh, det_conf)
+                t += ' of noise threshold with %.2f detection threshold at ' \
+                     '%.2f confidence' % (det_thrsh, det_conf)
                 ylabel = yl
             else:
-                t = 'Lowest injection strength detected above %.2f detection ' \
+                t = 'Lowest injection strength detected above %.2f detection '\
                     'threshold at %.2f confidence' % (det_thrsh, det_conf)
                 ylabel = '$h_{min}$'
 
@@ -967,15 +973,16 @@ class ResultsMP(object):
             print 'Plot saved: ' + path + self.extra_name + filename + '.' +\
                   filetype
 
-    def plot_ob(self, statkinds, psrparam='fgw', extra_name='', scale=1., methods=None, path='scratch/plots/', filetype='pdf', log=False, title=True, legend=True, legend_loc='lower right', xlim=None, grid=True):
+    def plot_ob(self, statkinds, psrparam='fgw', extra_name='', scale=1.,
+                methods=None, path='scratch/plots/', filetype='pdf', log=False,
+                title=True, legend=True, legend_loc='lower right', xlim=None,
+                grid=True):
         """ Produces plot of ob indicator (h_ob, s_ob, p_ob) vs a PSR parameter
         (e.g. FR0, DEC, 'RAS').
         """
-
-        # check if OB results already loaded
         try:
-            [self.h_ob[methods[m]] for m in methods]
-        except:
+            [self.h_ob[m] for m in methods]
+        except KeyError:
             self.openboxes(methods=methods)
 
         # parse x-axis name
