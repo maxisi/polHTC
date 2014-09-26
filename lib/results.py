@@ -223,7 +223,7 @@ class Results(object):
         kind: `str`
             Recovered parameter h or significance s.
         threshold: `float`
-            Detection threshold. 
+            Detection threshold.
 
         This percentage can be adapted by providing a different
         'threshold' value.
@@ -294,6 +294,10 @@ class Results(object):
             # pick false postives above noise threshold
             x = self.hinj[(self.hinj != 0) & (d[m] > noise[m])]
             y = d[m][(self.hinj != 0) & (d[m] > noise[m])]
+            # if not enough datapoints above noise to fit, raise error
+            if len(y) < 2:
+                self.log.error('Not enough datapoints above noise.')
+                return
             # put vectors in proper shape for lstsq function
             x_vertical = np.reshape(x, (len(x), 1))
             y_vertical = np.reshape(y, (len(y), 1))
@@ -314,7 +318,7 @@ class Results(object):
             if det_conf:
                 # Get one sided confidence limit
                 # (point to the left of b_c% of all points)
-                oneside_id = int(np.floor((1-band_conf) * len(deviations)))
+                oneside_id = int(np.floor((1-det_conf) * len(deviations)))
                 y1side[m] = [(yi, yr) for (dev, yi, yr) in
                              sorted(zip(deviations, x, y))][oneside_id]
 
@@ -378,7 +382,7 @@ class Results(object):
         self.log.info('Obtaining min h det.')
         # obtain significance noise threshold and best--fit line slope
         noise, slope, _, _, _, y1side, _, _, _ =\
-            self.quantify('s', detection_threshold, band_conf=confidence)
+            self.quantify('s', detection_threshold, det_conf=confidence)
 
         if confidence == 0:
             for m in self.search_methods:
@@ -795,9 +799,9 @@ class ResultsMP(object):
                 r = self._results[psr]
                 # get s/hrec noise and slope
                 hnoise, hslope, hrmse, _, _, _, _, _, _ = \
-                    r.quantify('h', det_thrsh=det_thrsh)
+                    r.quantify('h', det_thrsh)
                 snoise, sslope, srmse, _, _, _, _, _, _ = \
-                    r.quantify('s', det_thrsh=det_thrsh)
+                    r.quantify('s', det_thrsh)
                 # get min h detected
                 hmin = r.min_h_det(det_thrsh, confidence=det_conf)
                 # append corresponding values to h/s_slope/rmse/noise[m]
@@ -888,11 +892,14 @@ class ResultsMP(object):
         if det_thrsh != self.detection_threshold:
             self.get_stats(det_thrsh=det_thrsh, det_conf=det_conf)
         # obtain x-axis values
+        # NOTE: astype(float) needed in case data was saved as string
         if 'gw' in psrparam:
             # plot GW frequency, not rotational frequency
-            x = 2 * np.array([psr.param['FR0'] for psr in self._psrs])
+            x = 2 * np.array([psr.param['FR0']
+                              for psr in self._psrs]).astype(float)
         else:
-            x = np.array([psr.param[psrparam] for psr in self._psrs])
+            x = np.array([psr.param[psrparam]
+                          for psr in self._psrs]).astype(float)
 
         if statkinds == 'all':
             kinds = ['h_slope', 'h_rmse', 'h_noise', 's_slope', 's_rmse',
@@ -937,21 +944,19 @@ class ResultsMP(object):
                 yl = '$s$'
 
             if kind[2:] == 'slope':
-                t += ' best fit slope with %.2f detection threshold at %.2f ' \
-                     'confidence' % (det_thrsh, det_conf)
+                t += ' best fit slope'
                 ylabel = 'Slope (' + yl + ' vs. $h_{inj}$)'
             elif kind[2:] == 'rmse':
-                t += ' best fit RMSE with %.2f detection threshold at %.2f ' \
-                     'confidence' % (det_thrsh, det_conf)
+                t += ' best fit RMSE'
                 ylabel = 'RMSE (' + yl + ' vs. $h_{inj}$)'
             elif kind[2:] == 'noise':
-                t += ' of noise threshold with %.2f detection threshold at ' \
-                     '%.2f confidence' % (det_thrsh, det_conf)
+                t += ' of noise threshold'
                 ylabel = yl
             else:
-                t = 'Lowest injection strength detected above %.2f detection '\
-                    'threshold at %.2f confidence' % (det_thrsh, det_conf)
+                t = 'Lowest injection strength detected'
                 ylabel = '$h_{min}$'
+            t += '\nwith %.3f detection threshold at %.3f confidence'\
+                 % (det_thrsh, det_conf)
 
             ax.set_ylabel(ylabel)
             if title:
@@ -988,9 +993,11 @@ class ResultsMP(object):
         # parse x-axis name
         if 'gw' in psrparam:
             # plot GW frequency, not rotational frequency
-            x = 2 * np.array([psr.param['FR0'] for psr in self.psrs]).astype('float')
+            x = 2 * np.array([psr.param['FR0']
+                              for psr in self._psrs]).astype(float)
         else:
-            x = np.array([psr.param[psrparam] for psr in self.psrs]).astype('float')
+            x = np.array([psr.param[psrparam]
+                          for psr in self._psrs]).astype(float)
 
         # parse y-axis name
         if statkinds=='all':

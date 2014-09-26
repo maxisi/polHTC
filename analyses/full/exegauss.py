@@ -20,22 +20,20 @@ process_name, psr, det, run, injkind, pdif, ninstSTR, ninjSTR = sys.argv
 ninst = int(ninstSTR)
 ninj = int(ninjSTR)
 
+sys.path.append(os.path.expanduser('~') + '/polHTC/')
+sys.path.append(os.getcwd())
+
 from lib import general as g
-g.setuplog('fullGauss_%(det)s%(run)s_%(psr)s_%(injkind)s%(pdif)s' % locals()) # argument added to log filename
+g.setuplog('fullGauss_%(det)s%(run)s_%(psr)s_%(injkind)s%(pdif)s' % locals())
 from lib import results as res
 
 # setup log
 log = logging.getLogger('InjSrch Prep')
 
-log.info('Preparing inj-search for PSR %(psr)s on %(det)s %(run)s data with %(injkind)s %(pdif)s injections.' % locals())
-log.info('Performing ' + str(ninj) + ' injections on ' + str(ninst) + ' instantiations.')
-
-
-## ANALYSIS PARAMETERS
-hinjrange=[1.0E-27, 1.0E-23] # injection strengths IMP! MIGHT NEED TO BE TUNED!
-
-if 'J0534+2200' in psr:
-    hinjrange=[1.0E-27, 1.0E-24]
+log.info('Preparing inj-search for PSR %(psr)s on %(det)s %(run)s data with'
+         ' %(injkind)s %(pdif)s injections.' % locals())
+log.info('Performing ' + str(ninj) + ' injections on ' + str(ninst) +
+         ' instantiations.')
 
 ## CHECK FINEHET DATA EXISTS AND EXTRACT TIME SERIES
 pair = g.Pair(psr, det)
@@ -44,6 +42,13 @@ pair.det.load_vectors(pair.time, filename=psr)
 
 # obtain overall standard deviation of data (will be used to create Gaussian noise)
 datastd   = np.std(pair.data)
+
+## ANALYSIS PARAMETERS
+# frequencies for re-heterodynes
+frange = [1.0e-7, 1.0e-5]
+# injection strengths proportional to overall noise magnitude
+hinj_magnitude = np.ceil(np.log10(abs(max(pair.data)))) - 3
+hinjrange = [1.0E-27, 10**hinj_magnitude]
 
 ## GET SEARCH AND INJECTION RANDOM PARAMETERS
 def params(src, hinjrange, ninj, ninst, log):
