@@ -130,7 +130,7 @@ for n in range(ninst):
     # unpack results
     results.hinj.append(hinj)
     for m in g.SEARCHMETHODS:
-        results.hrec[m].append(2 * results_n[m]['h'])
+        results.hrec[m].append(results_n[m]['h'])
         results.srec[m].append(results_n[m]['s'])
         results.arec[m].append(results_n[m]['a'])
 

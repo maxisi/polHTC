@@ -531,8 +531,8 @@ class Pair(object):
             # results:
             a = np.dot(VtW, Utb.T)
 
-            # strength:
-            h = np.linalg.norm(a)
+            # strength [factor of two following MP (2.12)]:
+            h = 2 * np.linalg.norm(a)
 
             # significance:
             s = np.sqrt(abs(np.dot(a.conj(), np.linalg.solve(cov, a))))

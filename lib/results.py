@@ -67,6 +67,13 @@ class Results(object):
             self.srec[m] = []
             self.arec[m] = []
 
+        self.hob = {}  # ob strength
+        self.sob = {}  # ob significance
+        for m in self.search_methods:
+            self.hob[m] = None
+            self.sob[m] = None
+
+
     #--------------------------------------------------------------------------
     # IO operations
 
@@ -296,8 +303,7 @@ class Results(object):
             y = d[m][(self.hinj != 0) & (d[m] > noise[m])]
             # if not enough datapoints above noise to fit, raise error
             if len(y) < 2:
-                self.log.error('Not enough datapoints above noise.')
-                return
+                raise RuntimeError('Not enough datapoints above noise.')
             # put vectors in proper shape for lstsq function
             x_vertical = np.reshape(x, (len(x), 1))
             y_vertical = np.reshape(y, (len(y), 1))
@@ -397,61 +403,63 @@ class Results(object):
     #--------------------------------------------------------------------------
     # Open box
 
-    def openbox(self, methods=None, det_thrsh=.999, det_conf=.95,
-                p_nbins=100, p_fitorder=3, band_conf=.95):
+    def openbox(self, methods=None, det_thrsh=None, det_conf=.95,
+                p_nbins=100, p_fitorder=3, band_conf=None):
 
         methods = methods or [self.injkind, 'Sid']
 
         self.log.info('Opening box.')
         # try to load search results from file; otherwise, search
-        for m in methods:
-            try:
-                filename = 'ob_%s%s_%s_%s' % (self.det, self.run, self.psr, m)
-                with open(g.paths['ob'] + filename + '.p', 'rb') as f:
-                    results_ob = pickle.load(f)
-                self.log.debug('OB results loaded.')
-            except IOError:
-                self.pair = self.pair or g.Pair(self.psr, self.det)
-                if self.pair.data is None:
-                    self.pair.load_finehet(self.run, load_vectors=True)
-                results_ob = self.pair.search(methods=methods, save=True)
-
-        self.log.debug('Obtaining stats.')
-        hmin = self.min_h_det(det_thrsh, det_conf)
-
-        _, slope, _, ymax, ymin, _, _, _, _ =\
-            self.quantify('s', detection_threshold=det_thrsh,
-                          band_conf=band_conf, methods=methods)
-
         h_ob = {}
         s_ob = {}
+        for m in methods:
+            if self.hob[m] is None or self.sob[m] is None:
+                try:
+                    filename = 'ob_%s%s_%s_%s' \
+                               % (self.det, self.run, self.psr, m)
+                    with open(g.paths['ob'] + filename + '.p', 'rb') as f:
+                        results_ob = pickle.load(f)
+                    self.log.debug('OB results loaded.')
+                except IOError:
+                    self.pair = self.pair or g.Pair(self.psr, self.det)
+                    if self.pair.data is None:
+                        self.pair.load_finehet(self.run, load_vectors=True)
+                    results_ob = self.pair.search(methods=methods, save=True)
+                self.hob[m] = results_ob[m]['h']
+                self.sob[m] = results_ob[m]['s']
+            h_ob[m] = self.hob[m]
+            s_ob[m] = self.sob[m]
+        if det_thrsh:
+            hmin = self.min_h_det(det_thrsh, det_conf)
+        if band_conf:
+            _, slope, _, ymax, ymin, _, _, _, _ =\
+                self.quantify('s', detection_threshold=det_thrsh,
+                              band_conf=band_conf, methods=methods)
+        p_ob = {}
         conf_int = {}
         hmin_dist = {}
-        p_ob = {}
         for m in methods:
-            # Open box (ob) values
-            h_ob[m] = results_ob[m]['h']
-            s_ob[m] = results_ob[m]['s']
-            # Background (bk) values
-            s_bk = self.srec[m][self.hinj==0]
+            if p_fitorder:
+                self.log.debug('Fitting p-value curve.')
+                s_bk = self.srec[m][self.hinj == 0] # Background (bk) values
+                s_pfit = g.pvalue(s_bk, p_nbins, fitorder=p_fitorder)[2]
+                p_ob[m] = s_pfit(s_ob[m])
 
-            self.log.debug('Forming confidence interval.')
-            # get fit value
-            h_ob_fit = s_ob[m] / slope[m]
-            # get confidence limits
-            nbot = (ymin[m][1]- slope[m] * ymin[m][0])
-            h_ob_max = (h_ob_fit - nbot) / slope[m]
-            ntop = (ymax[m][1]- slope[m] * ymax[m][0])
-            h_ob_min = (h_ob_fit - ntop) / slope[m]
-            # pack
-            conf_int[m] = [float(h_ob_min), float(h_ob_fit), float(h_ob_max)]
-
-            self.log.debug('Comparing to h_min.')
-            hmin_dist[m] = (h_ob[m] - hmin[m]) / hmin[m]
-
-            self.log.debug('Fitting p-value curve.')
-            s_pfit = g.pvalue(s_bk, p_nbins, fitorder=p_fitorder)[2]
-            p_ob[m] = s_pfit(s_ob[m])
+            if band_conf:
+                self.log.debug('Forming confidence interval.')
+                # get fit value
+                h_ob_fit = s_ob[m] / slope[m]
+                # get confidence limits
+                nbot = ymin[m][1] - slope[m] * ymin[m][0]
+                h_ob_max = (s_ob[m] - nbot) / slope[m]
+                ntop = ymax[m][1] - slope[m] * ymax[m][0]
+                h_ob_min = (s_ob[m] - ntop) / slope[m]
+                # pack
+                conf_int[m] = (float(h_ob_min), float(h_ob_fit),
+                               float(h_ob_max))
+            if det_thrsh:
+                self.log.debug('Comparing to h_min.')
+                hmin_dist[m] = (h_ob[m] - hmin[m]) / hmin[m]
 
         return h_ob, s_ob, p_ob, hmin_dist, conf_int
 
@@ -725,30 +733,24 @@ class Results(object):
 
 
 class ResultsMP(object):
-    def __init__(self, injkind, det='H1', run='S5', pdif='p'):
+    def __init__(self, injkind, det='H1', run='S5', pdif='p', path=None):
         self.det = det
         self.run = run
         self.injkind = injkind
         self.pdif = pdif
-        self.detection_threshold = None
         self.extra_name = ''
         self.psrlist = []
         self._psrs = []
         self._results = OrderedDict()
         self.failed = []
-        # initialize h/s_slope/rmse/noise[m] = []
-        for kind in ['h', 's']:
-            for stat in ['slope', 'rmse', 'noise']:
-                setattr(self, kind + '_' + stat, OrderedDict())
-                for m in g.SEARCHMETHODS:
-                    getattr(self, kind + '_' + stat)[m] = []
-        # initialize hmin
-        self.hmin = OrderedDict()
-        for m in g.SEARCHMETHODS:
-            self.hmin[m] = []
-        # initialize h/s/p_ob
-        for attr in ['h_ob', 's_ob', 'p_ob', 'h_conf']:
-            setattr(self, attr, OrderedDict())
+        self._statkinds = ['hmin', 's_slope', 'h_slope', 's_noise',
+                           'h_noise', 's_rmse', 'h_rmse']
+        if path is not None:
+            self.load(path=path)
+
+    def _loadpsrs(self):
+        for psr in self.psrlist:
+            self._psrs.append(g.Pulsar(psr))
 
     #--------------------------------------------------------------------------
     # IO operations
@@ -767,7 +769,6 @@ class ResultsMP(object):
         psrlist = g.read_psrlist(name=listid, det=self.det, run=self.run)
         badpsrs = g.read_psrlist(name='bad')
         goodpsrs = set(psrlist) - set(badpsrs)
-
         ### PROCESS ###
         for psr in goodpsrs:
             try:
@@ -782,55 +783,71 @@ class ResultsMP(object):
                 if verbose:
                     print sys.exc_info()
                 self.failed += [psr]
-
         self.psrlist = list(goodpsrs - set(self.failed))
+        self._loadpsrs()
 
     #--------------------------------------------------------------------------
     # Statistics
-    def get_stats(self, det_thrsh=.999, det_conf=.95, verbose=False):
+    def getstat(self, kindstat, det_thrsh=.999, det_conf=.95, verbose=False):
         """Take all efficiency statistics for all PSRs loaded.
         """
-        print 'Computing result statistics.'
-        ### SETUP ###
-        self.detection_threshold = det_thrsh
-        for psr in self.psrlist:
-            try:
-                # obtain results object
-                r = self._results[psr]
-                # get s/hrec noise and slope
-                hnoise, hslope, hrmse, _, _, _, _, _, _ = \
-                    r.quantify('h', det_thrsh)
-                snoise, sslope, srmse, _, _, _, _, _, _ = \
-                    r.quantify('s', det_thrsh)
-                # get min h detected
-                hmin = r.min_h_det(det_thrsh, confidence=det_conf)
-                # append corresponding values to h/s_slope/rmse/noise[m]
-                for m in r.search_methods:
-                    for stat in ['slope', 'rmse', 'noise']:
-                        eval('self.h_' + stat + '[m].append(h'+stat + '[m])')
-                        eval('self.s_' + stat + '[m].append(s'+stat + '[m])')
-                    self.hmin[m].append(hmin[m])
-                # get PSR data
-                self._psrs.append(g.Pulsar(psr))
-            except:
-                print 'Warning: unable to get stats from ' + psr + ' results.'
-                if verbose:
-                    print sys.exc_info()
-                self.failed.append(psr)
+        # values in case of failure
+        default = {'noise': np.Inf, 'slope': None, 'rmse': np.Inf}
+        # process
+        output = {}
+        for m in g.SEARCHMETHODS:
+            output[m] = []
+        if kindstat in ['hmin', 'h_min', 'minh']:
+            for psr in self.psrlist:
+                try:
+                    r = self._results[psr]
+                    hmin_psr = r.min_h_det(det_thrsh, confidence=det_conf)
+                    for m in r.search_methods:
+                        output[m].append(hmin_psr[m])
+                except RuntimeError:
+                    self.failed.append(psr)
+                    for m in output.keys():
+                        output[m].append(np.Inf)
+                    print 'WARNING: bad statistics for PSR %s.' % psr
+                    if verbose:
+                        print sys.exc_info()
+            for m in g.SEARCHMETHODS:
+                output[m] = np.array(output[m])
+        else:
+            kind, statname = kindstat.split('_')
+            for psr in self.psrlist:
+                try:
+                    r = self._results[psr]
+                    stats = r.quantify(kind, det_thrsh)[0:3]
+                    statsdict = {
+                        'noise': stats[0],
+                        'slope': stats[1],
+                        'rmse': stats[2]
+                    }
+                    for m in r.search_methods:
+                        output[m].append(statsdict[statname][m])
+                except RuntimeError:
+                    self.failed.append(psr)
+                    for m in output.keys():
+                        output[m].append(default[statname])
+                    print 'WARNING: bad statistics for PSR %s.' % psr
+                    if verbose:
+                        print sys.exc_info()
+            for m in g.SEARCHMETHODS:
+                output[m] = np.array(output[m])
+        return output
 
-    def sortby(self, target, by, methods=None, det_thrsh=.999, det_conf=.95,
-               band_conf=.95,):
+    def sortby(self, target, by, methods=None, det_thrsh=.999, det_conf=.95):
         """Returns instance of list of name 'target' sorted by 'by'.
         'target' can be 'psrlist', 'fgw' (=2*FR0) or the name of a PSR
         parameter (e.g. 'RAS')
         """
-        methods = methods or self.hmin.keys()
-        # check stats are loaded and noise thresholds agree
-        if det_thrsh != self.detection_threshold:
-            self.get_stats(det_thrsh=det_thrsh, det_conf=det_conf)
+        methods = methods or g.SEARCHMETHODS
         # parse name of list to be sorted
         if target == 'psrlist':
             y = self.psrlist
+        elif target == 'psrs':
+            y = self._psrs
         elif 'gw' in target:
             # assume fgw requested
             ylist = [psr.param['FR0'] for psr in self._psrs]
@@ -839,43 +856,71 @@ class ResultsMP(object):
             ylist = [psr.param[target] for psr in self._psrs]
             y = np.array(ylist).astype('float')
         # parse name of list to be sorted BY
-        if by in dir(self):
-            x = getattr(self, by)
+        if by in self._statkinds:
+            x = self.getstat(by, det_thrsh=det_thrsh, det_conf=det_conf)
         else:
             try:
                 x = [psr.param[by] for psr in self._psrs]
             except KeyError:
-                print 'Unsupported `by` argument: %r' % by
+                print 'ERROR: unsupported `by` argument: %r' % by
                 return
         ## PROCESS
         if isinstance(x, dict):
             y_sort = {}
             for m in methods:
-                y_sort[m] = np.array([yi for (xi, yi)
-                                      in sorted(zip(x[m], y))]).astype('float')
+                y_sort[m] = np.array([yi for (xi, yi) in sorted(zip(x[m], y))])
         else:
-            y_sort = np.array([yi for (xi, yi)
-                               in sorted(zip(x, y))]).astype('float')
+            y_sort = np.array([yi for (xi, yi) in sorted(zip(x, y))])
         return y_sort
+
+    def getpsrparam(self, paramname):
+        paramlist = []
+        for psr in self._psrs:
+            paramlist.append(psr.param[paramname])
+        return np.array(paramlist)
 
     #--------------------------------------------------------------------------
     # Open boxes
-    def openboxes(self, methods=g.SEARCHMETHODS, det_thrsh=.999, det_conf=.95,
-                  band_conf=.95):
+    def openboxes(self, methods=g.SEARCHMETHODS, det_thrsh=None, det_conf=.95,
+                  band_conf=None, p_fitorder=None):
         """Opens boxes for all PSRs in list and saves results.
         """
         print 'Opening boxes for all PSRs.'
-        for attr in ['h_ob', 's_ob', 'p_ob', 'h_conf']:
-            for m in methods:
-                getattr(self, attr)[m] = []
+        h_ob = {}
+        s_ob = {}
+        p_ob = {}
+        h_conf = {}
+        for m in methods:
+            h_ob[m] = []
+            s_ob[m] = []
+            p_ob[m] = []
+            h_conf[m] = []
         for psr, r in self._results.iteritems():
-            ob = {}
-            ob['h_ob'], ob['s_ob'], ob['p_ob'], _, ob['h_conf'] =\
-                r.openbox(methods=methods, det_thrsh=det_thrsh,
-                          det_conf=det_conf, band_conf=band_conf)
-            for attr in ['h_ob', 's_ob', 'p_ob', 'h_conf']:
+            try:
+                h_ob_psr, s_ob_psr, p_ob_psr, _, h_conf_psr =\
+                    r.openbox(methods=methods, det_thrsh=det_thrsh,
+                              det_conf=det_conf, band_conf=band_conf,
+                              p_fitorder=p_fitorder)
                 for m in methods:
-                    getattr(self, attr)[m].append(ob[attr][m])
+                    h_ob[m].append(h_ob_psr[m])
+                    s_ob[m].append(s_ob_psr[m])
+                    if p_fitorder:
+                        p_ob[m].append(p_ob_psr[m])
+                    if band_conf:
+                        h_conf[m].append(h_conf_psr[m])
+            except RuntimeError:
+                print 'WARNING: bad statistics for PSR %s.' % psr
+                for m in methods:
+                    h_ob[m].append(0)
+                    s_ob[m].append(0)
+                    p_ob[m].append(1)
+                    h_conf[m].append((0, 0, 0))
+        for m in methods:
+            h_ob[m] = np.array(h_ob[m])
+            s_ob[m] = np.array(s_ob[m])
+            p_ob[m] = np.array(p_ob[m])
+            h_conf[m] = np.array(h_conf[m])
+        return h_ob, s_ob, p_ob, h_conf
 
     #--------------------------------------------------------------------------
     # Plots
@@ -888,9 +933,6 @@ class ResultsMP(object):
         parameter (e.g. FR0, DEC, 'RAS').
         """
         methods = methods or [self.injkind]
-        # check if statistics are loaded
-        if det_thrsh != self.detection_threshold:
-            self.get_stats(det_thrsh=det_thrsh, det_conf=det_conf)
         # obtain x-axis values
         # NOTE: astype(float) needed in case data was saved as string
         if 'gw' in psrparam:
@@ -915,7 +957,7 @@ class ResultsMP(object):
         for kind in kinds:
             print 'Plotting %s vs. PSR %s' % (kind, psrparam)
             # obtain y-axis values
-            y = getattr(self, kind)
+            y = self.getstat(kind, det_thrsh=det_thrsh, det_conf=det_conf)
 
             # create new figure for each stat kind
             fig, ax = plt.subplots(1)
@@ -978,18 +1020,15 @@ class ResultsMP(object):
             print 'Plot saved: ' + path + self.extra_name + filename + '.' +\
                   filetype
 
-    def plot_ob(self, statkinds, psrparam='fgw', extra_name='', scale=1.,
-                methods=None, path='scratch/plots/', filetype='pdf', log=False,
-                title=True, legend=True, legend_loc='lower right', xlim=None,
-                grid=True):
+    def plot_ob(self, psrparam, statkinds, det_thrsh=None, det_conf=None,
+                band_conf=None, p_fitorder=None, methods=None,
+                path=g.paths['plots'], filetype='pdf', log=False, title=True,
+                legend=True, legend_loc='lower right', xlim=None, grid=True,
+                fill=False):
         """ Produces plot of ob indicator (h_ob, s_ob, p_ob) vs a PSR parameter
         (e.g. FR0, DEC, 'RAS').
         """
-        try:
-            [self.h_ob[m] for m in methods]
-        except KeyError:
-            self.openboxes(methods=methods)
-
+        methods = methods or g.SEARCHMETHODS
         # parse x-axis name
         if 'gw' in psrparam:
             # plot GW frequency, not rotational frequency
@@ -998,75 +1037,87 @@ class ResultsMP(object):
         else:
             x = np.array([psr.param[psrparam]
                           for psr in self._psrs]).astype(float)
-
         # parse y-axis name
-        if statkinds=='all':
+        if statkinds == 'all':
             kinds = ['h_ob', 's_ob', 'p_ob', 'h_conf']
-
         elif isinstance(statkinds, str):
             kinds = [statkinds]
-
         elif isinstance(statkinds, list):
             kinds = statkinds
-
         else:
             print 'ERROR: unrecognized statkind "'+str(statkinds)+'".'
+            return
+        # open boxes
+        if 'p_ob' in kinds:
+            det_thrsh = det_thrsh or .999
+            det_conf = det_conf or .95
+            band_conf = band_conf or .95
+            p_fitorder = p_fitorder or 2
+        elif 'h_conf' in kinds:
+            det_thrsh = det_thrsh or .999
+            det_conf = det_conf or .95
+            band_conf = band_conf or .95
 
+        ob = self.openboxes(det_thrsh=det_thrsh, det_conf=det_conf,
+                            band_conf=band_conf, p_fitorder=p_fitorder)
+        ob_dict = {'h_ob': ob[0], 's_ob': ob[1],
+                   'p_ob': ob[2], 'h_conf': ob[3]}
         # process
         for kind in kinds:
-
             print 'Plotting ' + kind + ' vs. PSR ' + psrparam
-
             # obtain y-axis values
-            y = getattr(self, kind)
-
+            y = ob_dict[kind]
             # create new figure for each stat kind
             fig, ax = plt.subplots(1)
-
             # plot all methods on same axes
             for m in methods:
-                if kind=='h_conf':
-                    plt.plot(x, y[m][:][0], g.plotcolor[m]+'+') # h_min
-                    plt.plot(x, y[m][:][1], g.plotcolor[m]+'+', label=m, linewidth=2) # h_fit
-                    plt.plot(x, y[m][:][2], g.plotcolor[m]+'+') # h_max
+                if kind == 'h_conf':
+                    xs = sorted(x)
+                    ys = np.array([yi for (xi, yi) in sorted(zip(x, y[m]))])
+                    plt.plot(xs, ys[:, 0], g.plotcolor[m], linestyle=':')
+                    plt.plot(xs, ys[:, 1], g.plotcolor[m],
+                             label=m, linewidth=1)
+                    plt.plot(xs, ys[:, 2], g.plotcolor[m], linestyle=':')
+                    if fill:
+                        plt.fill_between(xs, ys[:, 0], ys[:, 2],
+                                         color=g.plotcolor[m], alpha=.03)
                 else:
                     plt.plot(x, y[m], g.plotcolor[m]+'+', label=m)
-
             # Style
-            if legend: plt.legend(loc=legend_loc, numpoints=1)
-
-            if log: ax.set_yscale('log')
-
+            if legend:
+                plt.legend(loc=legend_loc, numpoints=1)
+            if log:
+                ax.set_yscale('log')
             if 'gw' in psrparam:
                 ax.set_xlabel('GW Frequency [Hz]')
             else:
                 ax.set_xlabel(psrparam)
-
             # parse kind
-            if kind=='h_ob':
+            if kind == 'h_ob':
                 ylabel = '$h_{rec}$'
                 t = 'Recovered strength'
-            elif kind=='s_ob':
+            elif kind == 's_ob':
                 ylabel = '$s$'
                 t = 'Recovered significance'
-            elif kind=='p_ob':
+            elif kind == 'p_ob':
                 ylabel = '$p$'
                 t = 'Detection $p$-value'
-            elif kind=='h_conf':
+            elif kind == 'h_conf':
                 ylabel = '$h_{rec}$'
                 t = 'Recovered strength with confidence'
-
             ax.set_ylabel(ylabel)
-
-            if title: ax.set_title('Open boxes for ' + self.det + ' ' + self.run + ' data ' + self.extra_name + '\n' + t)
-
-            if xlim: ax.set_xlim(xlim[0], xlim[1])
-
-            if grid: ax.grid()
-
+            if title:
+                ax.set_title('Open boxes for ' + self.det + ' ' + self.run +
+                             ' data ' + self.extra_name + '\n' + t)
+            if xlim:
+                ax.set_xlim(xlim[0], xlim[1])
+            if grid:
+                ax.grid()
             # save
-            filename = 'mpOB_' + self.det + self.run + '_' + self.injkind + self.pdif + '_' + kind
-            plt.savefig(path + self.extra_name + filename + '.' + filetype, bbox_inches='tight')
+            filename = 'mpOB_' + self.det + self.run + '_' + self.injkind +\
+                       self.pdif + '_' + kind
+            plt.savefig(path + self.extra_name + filename + '.' + filetype,
+                        bbox_inches='tight')
             plt.close()
-
-            print 'Plot saved to ' + path + self.extra_name + filename + '.' + filetype
+            print 'Plot saved: ' + path + self.extra_name + filename + '.' +\
+                  filetype

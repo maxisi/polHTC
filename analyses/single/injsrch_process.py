@@ -80,7 +80,7 @@ results_n = pair.search(data=inst, pol=pair.psr.param['POL'])
 results = {}
 for m in g.SEARCHMETHODS:
     results[m] = {
-        'h': 2 * results_n[m]['h'],
+        'h': results_n[m]['h'],
         's': results_n[m]['s'],
         'a': results_n[m]['a']
     }
