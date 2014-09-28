@@ -9,7 +9,7 @@ logs/
 subs/
 trash/
 */plots/*
-
+.idea/
 *.swp
 .DS_Store
 *~
