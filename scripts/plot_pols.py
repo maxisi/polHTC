@@ -19,7 +19,7 @@ processname, kind = sys.argv
 psr = 'J0534+2200'
 detname = 'H1'
 
-plots_dir = 'scratch/plots/'
+plots_dir = '/Users/maxisi/Dropbox/LIGO/papers/polMethods/plots/patterns/'#g.paths['plots']
 
 days=1
 
@@ -43,13 +43,13 @@ tick_locs = np.linspace(t[0], t[-1], 5)
 tick_name = ['00:00', '06:00', '12:00', '18:00', '24:00']
 
 if 'all' in kind:
-    plots_dir += 'pols/'
+    #plots_dir += 'pols/'
 
     for p in g.pols.keys():
         plt.plot(t, signal(p, pol=src.param['POL']), label='$' + g.pol_sym[p] + '$')
 
         if kind == 'all':
-            plt.title(g.detnames(detname) + ' response to ' + g.pols[p] + ' signals from ' + psr)
+            #plt.title(g.detnames(detname) + ' response to ' + g.pols[p] + ' signals from ' + psr)
 
             plt.ylim(-1,1)
             plt.xlim(t[0], t[-1])
@@ -60,6 +60,9 @@ if 'all' in kind:
             plt.xlabel('UTC Time (h)')
 
             plt.xticks(tick_locs, tick_name)
+
+            matplotlib.rc('font', size=14)
+            matplotlib.rc('axes', labelsize=20)
 
             plt.savefig('%(plots_dir)spol_%(p)s_%(detname)s_%(psr)s.pdf' % locals(), bbox_inches='tight')
             plt.close()
@@ -79,7 +82,7 @@ if 'all' in kind:
 
         plt.xticks(tick_locs, tick_name)
 
-        plt.savefig('%(plots_dir)spol_all_%(detname)s_%(psr)s.pdf' % locals(), bbox_inches='tight')
+        plt.savefig('%(plots_dir)spol_all_%(detname)s_%(psr)s.pdf' % locals())#, bbox_inches='tight')
         plt.close()
 
 elif kind in g.pols.keys():
@@ -139,7 +142,7 @@ elif kind in ['GRp', 'GRm', 'GR0', 'G4vp', 'G4vm', 'G4v0']:
 
     # Format plot
 
-    plt.title(g.detnames(detname) + ' response to ' + kind + ' signals from ' + psr)
+    # plt.title(g.detnames(detname) + ' response to ' + kind + ' signals from ' + psr)
 
     plt.plot(t, sig.real, 'b', label='Re')
     plt.plot(t, sig.imag, 'r', label='Im')
@@ -150,9 +153,9 @@ elif kind in ['GRp', 'GRm', 'GR0', 'G4vp', 'G4vm', 'G4v0']:
 
     plt.grid(b=True, axis='y')
 
-    plt.legend(numpoints=1, loc='lower left')
+    plt.legend(numpoints=1, loc='lower right')
 
-    plt.ylabel('$A_{' + tmpkind + '}$')
+    plt.ylabel('$\Lambda$ (' + tmpkind + ')')
     plt.xlabel('UTC Time (h)')
 
     plt.xticks(tick_locs, tick_name)

@@ -12,7 +12,7 @@ Loops over instantiations and saves results.
 """
 
 # unpack
-process_name, psr, det, run, injkind, pdif, ninstSTR, ninjSTR = sys.argv
+process_name, psr, det, run, injkind, ninstSTR, ninjSTR = sys.argv
 
 #note: arguments are taken as strings: need to convert to numerical values.
 ninst = int(ninstSTR)
@@ -22,14 +22,14 @@ sys.path.append(os.path.expanduser('~') + '/polHTC/')
 sys.path.append(os.getcwd())
 
 from lib import general as g
-g.setuplog('full_%(det)s%(run)s_%(psr)s_%(injkind)s%(pdif)s' % locals())
+g.setuplog('full_%(det)s%(run)s_%(psr)s_%(injkind)s' % locals())
 from lib import results as res
 
 # setup log
 log = logging.getLogger('InjSrch Prep')
 
 log.info('Preparing inj-search for PSR %(psr)s on %(det)s %(run)s data with'
-         ' %(injkind)s %(pdif)s injections.' % locals())
+         ' %(injkind)s injections.' % locals())
 log.info('Performing ' + str(ninj) + ' injections on ' + str(ninst) +
          ' instantiations.')
 
@@ -82,17 +82,23 @@ hinj_lst[injLocations] = injections
 # create ninj random values for pol and inc:
 random.seed(2)
 
-pols = [random.uniform(pol_range[0], pol_range[1]) for i in range(ninj)]
+pols = [random.uniform(pol_range[0], pol_range[1]) for ip in range(ninj)]
 # empty vector (most instantiations won't have injections):
 polinj_lst = np.zeros(ninst)
 # injection strength index (indicates hinj_lst for each inst):
 polinj_lst[injLocations] = pols
 
-incs = [random.uniform(inc_range[0], inc_range[1]) for i in range(ninj)]
+incs = [random.uniform(inc_range[0], inc_range[1]) for ii in range(ninj)]
 # empty vector (most instantiations won't have injections):
-incinj_lst = np.zeros(ninst)
+inc_lst = np.zeros(ninst)
 # injection strength index (indicates hinj_lst for each inst):
-incinj_lst[injLocations] = incs
+inc_lst[injLocations] = incs
+
+ph0s = [random.uniform(0, 2*np.pi) for ip0 in range(ninj)]
+# empty vector (most instantiations won't have injections):
+ph0_lst = np.zeros(ninst)
+# injection strength index (indicates hinj_lst for each inst):
+ph0_lst[injLocations] = ph0s
 
 
 ###############################################################################
@@ -100,7 +106,7 @@ incinj_lst[injLocations] = incs
 ## PRELUDE
 
 # setup results
-results = res.Results(det, run, psr, injkind, pdif)
+results = res.Results(det, run, psr, injkind)
 results.hinj = []
 
 
@@ -109,8 +115,9 @@ for n in range(ninst):
     freq = freq_lst[n]
 
     hinj = hinj_lst[n]
-    polinj = polinj_lst[n]
-    incinj = incinj_lst[n]
+    pol = polinj_lst[n]
+    inc = inc_lst[n]
+    ph0 = ph0_lst[n]
 
     ## RE-HETERODYNE
     log.info('Reheterodyne.')
@@ -120,10 +127,9 @@ for n in range(ninst):
     # inject if needed
     if hinj != 0:
         log.info('Injecting.')
-        inst += (hinj/2.) * pair.signal(injkind, pdif, polinj, incinj)
-        # note factor of 1/2, see MP (2.12)
-        h = [hinj * ap(incinj, pdif) for _, ap in
-             pair.Signal.templates[injkind].iteritems()]
+        inst += hinj * pair.signal(injkind, pol, inc, ph0)
+        # assuming already rescaled by 1/2
+        h = [hinj * ap(inc, ph0) for ap in pair.Signal.templates[injkind]]
         hinj = np.linalg.norm(h)
     # search
     results_n = pair.search(data=inst, pol=pair.psr.param['POL'])

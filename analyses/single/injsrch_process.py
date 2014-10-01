@@ -70,8 +70,8 @@ inst = g.het(freq, pair.data, pair.time)
 # inject if needed
 if hinj != 0:
     log.info('Injecting.')
-    inst += (hinj/2.) * pair.signal(injkind, pdif, polinj, incinj)
-    # note factor of 1/2, see MP (2.12)
+    inst += hinj * pair.signal(injkind, pdif, polinj, incinj)
+    # assuming already rescaled by 1/2
 
 # search
 results_n = pair.search(data=inst, pol=pair.psr.param['POL'])

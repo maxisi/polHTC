@@ -432,22 +432,22 @@ class Pair(object):
 
         return np.array(self.sigma)
 
-    def signal(self, kind, pdif, pol, inc):
+    def signal(self, kind, pol, inc, phi0=0):
         """ Returns simulated signal. Loads detector vectors if necessary.
 
         :param kind: signal kind, e.g. 'GR' or 'G4v'.
-        :param pdif: phase diffrence between components, 'p', 'm' or 0.
+        :param phi0: overall signal phase.
         :param pol: source polarization angle.
         :param inc: source inclination angle.
         :return: sig: simulated signal time series.
         """
-        self.log.info('Creating ' + kind + pdif + ' signal.')
+        self.log.info('Creating ' + kind + ' signal.')
 
         if self.Signal is None:
             self.Signal = Signal.from_objects(self.det,self.psr,time=self.time)
         signal = self.Signal
 
-        sig = signal(kind, pol=pol, inc=inc, pdif=pdif)
+        sig = signal(kind, pol=pol, inc=inc, phi0=phi0)
 
         return sig
 
@@ -469,16 +469,16 @@ class Pair(object):
             ]
         else:
             # Build design matrix
-            # NOTE: THERE'S NO SCALING OF h AT THIS STAGE!
 
             signal = self.Signal or Signal.from_objects(self.det, self.psr,
                                                         time=self.time)
 
             dm = []
-            for A, a in signal.templates[kind].iteritems():
+            for A in signal.templates[kind].keys():
                 dm += [A(psi=pol) + 0j]
 
-        return np.array(dm)
+        # factor of two following MP (2.12)
+        return np.array(dm)/2.
 
     def search(self, data=None, methods=SEARCHMETHODS, pol=None, save=False):
 
@@ -490,7 +490,7 @@ class Pair(object):
             self.log.info('Searching for signals in %s %s %s time-series.'
                           % (self.psr.name, self.det.name, self.run))
 
-        if pol is None:
+        if pol is None: # write this way to allow for pol=0
             pol = self.psr.param['POL']
 
         # check vectors
@@ -531,8 +531,11 @@ class Pair(object):
             # results:
             a = np.dot(VtW, Utb.T)
 
-            # strength [factor of two following MP (2.12)]:
-            h = 2 * np.linalg.norm(a)
+            # strength (factor of 2 accounted for in DM):
+            h = np.linalg.norm(a)
+            # when heterodyning, the signal is split into two, and so is the
+            # power (strength). Therefore, whatever power we see here, is half
+            # the original power, hence the factor of 2.
 
             # significance:
             s = np.sqrt(abs(np.dot(a.conj(), np.linalg.solve(cov, a))))
@@ -549,7 +552,7 @@ class Pair(object):
                                self.psr.name + '_' + m
                     with open(paths['ob'] + filename + '.p', 'wb') as f:
                         pickle.dump(results, f)
-                except:
+                except IOError:
                     self.log.error('Unable to save OB results', exc_info=True)
 
         return results
@@ -574,20 +577,23 @@ class Signal(object):
         # (n = norm, p = phase)
         self.templates = {
             'GR': {
-                self.pl: lambda i, pd: (1. + np.cos(i) ** 2) / 2. + 0j,
-                self.cr: lambda i, pd: np.cos(i) * np.exp(1j * pcat[pd])
+                self.pl: lambda i, phi0: (1/2.) * (1. + np.cos(i) ** 2) *
+                                         np.exp(1j * phi0),
+                self.cr: lambda i, phi0: np.cos(i) * np.exp(1j * (-np.pi/2. +
+                                                                  phi0))
             },
             'G4v': {
-                self.xz: lambda i, pd: np.sin(i) + 0j,
-                self.yz: lambda i, pd: np.sin(i) * math.cos(i) *
-                                       np.exp(1j * pcat[pd])
+                self.xz: lambda i, phi0: np.sin(i) * np.exp(1j * (-np.pi/2. +
+                                                                  phi0)),
+                self.yz: lambda i, phi0: np.sin(i) * math.cos(i) *
+                                         np.exp(1j * phi0)
             },
             'AP': {
-                self.pl: lambda i, pd: 1. + 0j,
-                self.cr: lambda i, pd: 1. + 0j,
-                self.xz: lambda i, pd: 1. + 0j,
-                self.yz: lambda i, pd: 1. + 0j,
-                self.br: lambda i, pd: 1. + 0j
+                self.pl: lambda *args: 1. + 0j,
+                self.cr: lambda *args: 1. + 0j,
+                self.xz: lambda *args: 1. + 0j,
+                self.yz: lambda *args: 1. + 0j,
+                self.br: lambda *args: 1. + 0j
             }
         }
 
@@ -622,16 +628,18 @@ class Signal(object):
 
         return cls()
 
-    def __call__(self, kind, pol=0, inc=None, pdif='p'):
-        """
-        Returns signal of knd
+    def __call__(self, kind, pol=0, inc=None, phi0=0):
+        """Returns signal of kind or a single polarization.
+
+        If GR, G4v, divides by two, following MP (2.12)
         :param kind: kind of signal: 'GR', 'G4v', 'AP' or a single polarization
         :param pol: [optional] polarization angle; default: 0.
         :param inc: [optional] incliation angle; default: kind-dependent.
-        :param pdif: [optional] phase difference; default: 'p'.
+        :param phi0: [optional] overall phase; default: 0.
         :return: signal
         """
         if kind in self.templates.keys():
+            # if no inclination is given, assume the optimal orientation:
             if kind == 'G4v':
                 inc = inc or np.pi/2
             else:
@@ -639,7 +647,7 @@ class Signal(object):
             # Build signal
             signal = np.zeros(len(self.dx)) + 1j * np.zeros(len(self.dx))
             for A, a in self.templates[kind].iteritems():
-                signal += a(inc, pdif) * (A(psi=pol) + 0j)
+                signal += (1/2) * a(inc, phi0) * (A(psi=pol) + 0j)
 
         elif kind in ['pl', 'cr', 'xz', 'yz', 'br', 'lo']:
             signal = getattr(self, kind)(psi=pol)
@@ -1060,14 +1068,14 @@ paths = {
 }
 
 
-def analysis_path(det, run, psr, kind, pdif):
-    analysis = 'injsrch_' + det + run + '_' + psr + '_' + kind + pdif
+def analysis_path(det, run, psr, kind):
+    analysis = 'injsrch_' + det + run + '_' + psr + '_' + kind
     pathname = 'tmp/injsrch/' + det + '/' + run + '/' + analysis
     return pathname
 
 
-def submit_path(det, run, psr, kind, pdif, name='injsrch'):
-    p = paths['subs'] + '%(name)s_%(det)s%(run)s_%(psr)s_%(kind)s%(pdif)s.sub'\
+def submit_path(det, run, psr, kind, name='injsrch'):
+    p = paths['subs'] + '%(name)s_%(det)s%(run)s_%(psr)s_%(kind)s.sub'\
                         % locals()
     return p
 

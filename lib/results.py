@@ -21,7 +21,7 @@ g.setuplog('results')
 
 
 class Results(object):
-    def __init__(self, det, run, psr, kind, pdif, methods=g.SEARCHMETHODS,
+    def __init__(self, det, run, psr, kind, methods=g.SEARCHMETHODS,
                  extra_name='', verbose=False):
 
         self.log = logging.getLogger('results.'+kind+'.'+psr)
@@ -32,7 +32,6 @@ class Results(object):
         self.run = run
         self.psr = psr
         self.injkind = kind
-        self.pdif = pdif
         self.pair = None
 
         # Defining local srchmethods to avoid relying on lib.general.
@@ -48,9 +47,9 @@ class Results(object):
                              % methods)
 
         self.paths = {
-            'analysis': g.analysis_path(det, run, psr, kind, pdif),
+            'analysis': g.analysis_path(det, run, psr, kind),
             'export': extra_name + 'results_' + det + run + '_' + psr + '_' +
-                      kind + pdif + '.hdf5'
+                      kind + '.hdf5'
         }
 
         self.hinj = None
@@ -73,15 +72,15 @@ class Results(object):
             self.hob[m] = None
             self.sob[m] = None
 
-
     #--------------------------------------------------------------------------
     # IO operations
-
     def collect(self):
-        """
-        Collects results from multiple files in analysis_path/results as
+        """Collects results from multiple files in analysis_path/results as
         produced by submitting several injsrch_process jobs to Condor.
         NOT USED BY NEWEST VERSION.
+
+        Note that "single" analyses do not rescale h when saving, so that is
+        done here
         """
 
         self.log.info('Collecting results.')
@@ -98,8 +97,7 @@ class Results(object):
         # rescale hinj (note h_effective is independent of psi)
         hinj_new = []
         for h, i in zip(hinj, incinj):
-            h = [h * ap(i, self.pdif) for _, ap in
-                 g.Signal().templates[self.injkind].iteritems()]
+            h = [h * ap(i, 0) for ap in g.Signal().templates[self.injkind]]
             hinj_new.append(np.linalg.norm(h))
 
         self.hinj = np.array(hinj_new)
@@ -554,8 +552,8 @@ class Results(object):
         if legend:
             ax.legend(numpoints=1, loc=2)
         if title:
-            ax.set_title('%s%s injections on %s %s data for %s'
-                         % (self.injkind,self.pdif,self.det,self.run,self.psr))
+            ax.set_title('%s injections on %s %s data for %s'
+                         % (self.injkind,self.det,self.run,self.psr))
         # check destination directory exists
         try:
             os.makedirs(path)
@@ -564,7 +562,7 @@ class Results(object):
             self.log.debug('Plot directory already exists.')
         # save
         filename = 'injsrch_' + self.det + self.run + '_' + self.injkind +\
-                   self.pdif + '_' + self.psr + '_' + kind
+                '_' + self.psr + '_' + kind
         p = path + filename + extra_name + '.' + filetype
         fig.savefig(p, bbox_inches='tight')
         plt.close(fig)
@@ -625,7 +623,7 @@ class Results(object):
                 if legend:
                     ax.legend(numpoints=1, loc=legendloc)
                 if title:
-                    ax.set_title(self.injkind + self.pdif + ' ' +
+                    ax.set_title(self.injkind + ' ' +
                                  'injections on ' + self.det + ' ' + self.run
                                  + ' data for ' + self.psr)
 
@@ -636,7 +634,7 @@ class Results(object):
                     self.log.debug('Plot directory already exists.')
                 # save
                 filename = 'pvalue_' + self.det + self.run + '_' +\
-                           self.injkind + self.pdif + '_' + self.psr + '_'\
+                           self.injkind + '_' + self.psr + '_'\
                            + kind
                 saveto = '%s%s%s%s.%s'\
                          % (path, filename, extra_name, plotname, filetype)
@@ -710,8 +708,8 @@ class Results(object):
                 if legend:
                     ax.legend(numpoints=1, loc=legendloc)
                 if title:
-                    ax.set_title('%s%s injections on %s %s data for %s'
-                                 % (self.injkind, self.pdif, self.det,
+                    ax.set_title('%s injections on %s %s data for %s'
+                                 % (self.injkind, self.det,
                                     self.run, self.psr))
 
                 ## 5. Save
@@ -722,9 +720,9 @@ class Results(object):
                     self.log.debug('Plot directory already exists.')
 
                 filename = 'hs_' + self.det + self.run + '_' + self.injkind\
-                           + self.pdif + '_' + self.psr
-                saveto = '%s%s%s%s.%s'\
-                         % (path, filename, extra_name, plotname, filetype)
+                           + '_' + self.psr
+                saveto = '%s%s%s.%s'\
+                         % (path, filename, extra_name, filetype)
                 fig.savefig(saveto, bbox_inches='tight')
                 plt.close(fig)
                 print 'Plot saved: %r' % saveto
@@ -733,11 +731,10 @@ class Results(object):
 
 
 class ResultsMP(object):
-    def __init__(self, injkind, det='H1', run='S5', pdif='p', path=None):
+    def __init__(self, injkind, det='H1', run='S5', path=None):
         self.det = det
         self.run = run
         self.injkind = injkind
-        self.pdif = pdif
         self.extra_name = ''
         self.psrlist = []
         self._psrs = []
@@ -772,7 +769,7 @@ class ResultsMP(object):
         ### PROCESS ###
         for psr in goodpsrs:
             try:
-                r = Results(self.det, self.run, psr, self.injkind, self.pdif,
+                r = Results(self.det, self.run, psr, self.injkind,
                             extra_name=self.extra_name)
                 r.load(path=p)
                 self._results[psr] = r
@@ -1002,8 +999,8 @@ class ResultsMP(object):
 
             ax.set_ylabel(ylabel)
             if title:
-                tt = '%s%s injections on %s %s %s data\n%s'\
-                     % (self.injkind, self.pdif, self.det, self.run,
+                tt = '%s injections on %s %s %s data\n%s'\
+                     % (self.injkind, self.det, self.run,
                         self.extra_name, t)
                 ax.set_title(tt)
             if xlim:
@@ -1013,7 +1010,7 @@ class ResultsMP(object):
 
             # save
             filename = 'mp_' + self.det + self.run + '_' + self.injkind +\
-                       self.pdif + '_' + kind
+                       + '_' + kind
             plt.savefig(path + self.extra_name + filename + '.' + filetype,
                         bbox_inches='tight')
             plt.close()
@@ -1115,7 +1112,7 @@ class ResultsMP(object):
                 ax.grid()
             # save
             filename = 'mpOB_' + self.det + self.run + '_' + self.injkind +\
-                       self.pdif + '_' + kind
+                       + '_' + kind
             plt.savefig(path + self.extra_name + filename + '.' + filetype,
                         bbox_inches='tight')
             plt.close()
