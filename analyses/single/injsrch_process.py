@@ -26,12 +26,12 @@ n           instantiation index: int in (0, ninst-1)
 ## PRELUDE
 
 # unpack
-process_name, psr, det, run, injkind, pdif, nSTR = sys.argv
+process_name, psr, det, run, injkind, nSTR = sys.argv
 
 # note: arguments are taken as strings: need to convert to numerical values.
 n = int(nSTR)
 
-pathname = g.analysis_path(det, run, psr, injkind, pdif)
+pathname = g.analysis_path(det, run, psr, injkind)
 
 # setup log
 g.setuplog('p' + nSTR, logpath=pathname+'/logs/')
@@ -47,8 +47,9 @@ try:
         freq = f['srch/freq'][n]
 
         hinj = f['inj/h'][n]
-        polinj = f['inj/pol'][n]
-        incinj = f['inj/inc'][n]
+        pol = f['inj/pol'][n]
+        inc = f['inj/inc'][n]
+        ph0 = f['inj/ph0'][n]
 except:
     raise IOError('FATAL: did not find injsrch info in: ' + pathname)
 
@@ -70,7 +71,7 @@ inst = g.het(freq, pair.data, pair.time)
 # inject if needed
 if hinj != 0:
     log.info('Injecting.')
-    inst += hinj * pair.signal(injkind, pdif, polinj, incinj)
+    inst += hinj * pair.signal(injkind, pol, inc, phi0=ph0)
     # assuming already rescaled by 1/2
 
 # search

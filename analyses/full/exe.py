@@ -65,8 +65,6 @@ inc_range = [
     pair.psr.param['INC'] + pair.psr.param['INC error']
     ]
 
-# phi0_range = [0., np.pi/2]
-
 ## INJECTION LOCATIONS AND PARAMETERS
 log.info('Preparing injection strengths in range: ' + str(hinjrange))
 
@@ -127,7 +125,7 @@ for n in range(ninst):
     # inject if needed
     if hinj != 0:
         log.info('Injecting.')
-        inst += hinj * pair.signal(injkind, pol, inc, ph0)
+        inst += hinj * pair.signal(injkind, pol, inc, phi0=ph0)
         # assuming already rescaled by 1/2
         h = [hinj * ap(inc, ph0) for ap in pair.Signal.templates[injkind]]
         hinj = np.linalg.norm(h)

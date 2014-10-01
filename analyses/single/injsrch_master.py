@@ -45,21 +45,21 @@ log.info(
 log.info('Performing ' + str(ninj) + ' injections on ' + str(
     ninst) + ' instantiations.')
 
+## CHECK FINEHET DATA EXISTS AND EXTRACT TIME SERIES
+pair = g.Pair(psr, det)
+pair.load_finehet(run, check_vectors=True)
 
 ## ANALYSIS PARAMETERS
 # frequencies for re-heterodynes
 frange = [1.0e-7, 1.0e-5]
-# injection strengths IMP: MIGHT NEED TO BE TUNED!
-hinjrange = [1.0E-27, 1.0E-24]
-if 'J1701-3006C' == psr:
-    hinjrange = [1.0E-27, 1.0E-25]
-elif psr == "J1748-2446J":
-    hinjrange = [1.0E-27, 1.0E-23]
+# injection strengths proportional to overall noise magnitude
+hinj_magnitude = np.ceil(np.log10(abs(max(pair.data)))) - 3
+hinjrange = [1.0E-27, 10**hinj_magnitude]
 
 ## STRUCTURE
 log.info('Creating file structure.')
 
-pathname = g.analysis_path(det, run, psr, kind, pdif)
+pathname = g.analysis_path(det, run, psr, kind)
 
 for d in g.localpaths:
     try:
@@ -88,14 +88,9 @@ with open(pathname + '/id.txt', 'w') as f:
         f.write(line + '\n')
     f.write(
         '\n###\nREFERENCE: PSR, pulsar name; det, detector name; run, data run'
-        ' (S5, S6); kind, kind of injection (GR, G4v); pdif, phase difference'
+        ' (S5, S6); kind, kind of injection (GR, G4v);'
         ' between injection components (p, m, 0); ninst, number of background'
         ' instantiations; ninj, number of injections.')
-
-
-## CHECK FINEHET DATA EXISTS AND EXTRACT TIME SERIES
-psrdet = g.Pair(psr, det)
-psrdet.load_finehet(run, check_vectors=True)
 
 
 ## RE-HETERODYNES
@@ -107,7 +102,7 @@ freq = np.linspace(frange[0], frange[1], ninst)
 ## SEARCH PARAMETERS
 log.info('Preparing search parameters.')
 
-src = psrdet.psr
+src = pair.psr
 
 pol_range = [
     src.param['POL'] - src.param['POL error'],
@@ -118,8 +113,6 @@ inc_range = [
     src.param['INC'] - src.param['INC error'],
     src.param['INC'] + src.param['INC error']
 ]
-
-# phi0_range = [0., np.pi/2]
 
 
 ## INJECTION LOCATIONS AND PARAMETERS
@@ -141,15 +134,21 @@ random.seed(2)
 
 pols = [random.uniform(pol_range[0], pol_range[1]) for n in range(ninj)]
 # empty vector (most instantiations won't have injections):
-polinj = np.zeros(ninst)
+pol = np.zeros(ninst)
 # injection strength index (indicates hinj for each inst):
-polinj[injLocations] = pols
+pol[injLocations] = pols
 
 incs = [random.uniform(inc_range[0], inc_range[1]) for n in range(ninj)]
 # empty vector (most instantiations won't have injections):
-incinj = np.zeros(ninst)
+inc = np.zeros(ninst)
 # injection strength index (indicates hinj for each inst):
-incinj[injLocations] = incs
+inc[injLocations] = incs
+
+ph0s = [random.uniform(0, 2*np.pi) for ip0 in range(ninj)]
+# empty vector (most instantiations won't have injections):
+ph0 = np.zeros(ninst)
+# injection strength index (indicates hinj_lst for each inst):
+ph0[injLocations] = ph0s
 
 
 ## SAVE ARRAYS
@@ -165,8 +164,9 @@ try:
     inj_grp = f.create_group('inj')
 
     inj_grp.create_dataset('h', data=hinj)
-    inj_grp.create_dataset('pol', data=polinj)
-    inj_grp.create_dataset('inc', data=incinj)
+    inj_grp.create_dataset('pol', data=pol)
+    inj_grp.create_dataset('inc', data=inc)
+    inj_grp.create_dataset('ph0', data=ph0)
 
     f.close()
 except:

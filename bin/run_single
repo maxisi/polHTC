@@ -7,17 +7,15 @@ RUN="S5"
 PSR="J0534+2200"
 KIND="GR"
 
-PDIF="p"
-
 # Check options provided:
 
-while getopts "d:r:p:k:" flag; do 
+while getopts "d:r:p:k:" flag; do
 case "$flag" in
-	d) DET=$OPTARG;; 
-	r) RUN=$OPTARG;; 
-	p) PSR=$OPTARG;; 
-	k) KIND=$OPTARG;; 
-esac 
+	d) DET=$OPTARG;;
+	r) RUN=$OPTARG;;
+	p) PSR=$OPTARG;;
+	k) KIND=$OPTARG;;
+esac
 done
 
 NINST=${@:$OPTIND:1}
@@ -25,7 +23,7 @@ NINJ=${@:$OPTIND+1:1}
 
 # Create submit file
 
-arg=("$PSR" "$DET" "$RUN" "$KIND" "$PDIF" "$NINST" "$NINJ")
+arg=("$PSR" "$DET" "$RUN" "$KIND" "$NINST" "$NINJ")
 
 ./analyses/single/injsrch_master.py "${arg[@]}"
 
@@ -34,15 +32,13 @@ arg=("$PSR" "$DET" "$RUN" "$KIND" "$PDIF" "$NINST" "$NINJ")
 echo "Analyzing "$NINST" instantiations with "$NINJ" injections. Parameters:"
 echo -e "\tPulsar:\t"$PSR""
 echo -e "\tData:\t"$DET" "$RUN""
-echo -e "\tInj:\t"$KIND" "$PDIF""
+echo -e "\tInj:\t"$KIND""
 
-while true; do 
-	read -p "Submit?" yn 
-	case $yn in  
-		[Yy]* ) condor_submit tmp/htc/injsrch_"$DET""$RUN"_"$PSR"_"$KIND""$PDIF".sub; break;;
-		* ) exit;; 
-	esac 
+while true; do
+	read -p "Submit?" yn
+	case $yn in
+		[Yy]* ) condor_submit tmp/htc/injsrch_"$DET""$RUN"_"$PSR"_"$KIND".sub; break;;
+		* ) exit;;
+	esac
 done
-
-# condor_submit subs/injsrch_"$DET""$RUN"_"$PSR"_"$KIND""$PDIF".sub;;
 
