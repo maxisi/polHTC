@@ -647,7 +647,7 @@ class Signal(object):
             # Build signal
             signal = np.zeros(len(self.dx)) + 1j * np.zeros(len(self.dx))
             for A, a in self.templates[kind].iteritems():
-                signal += (.5) * a(inc, phi0) * (A(psi=pol) + 0j)
+                signal += 0.5 * a(inc, phi0) * (A(psi=pol) + 0j)
 
         elif kind in ['pl', 'cr', 'xz', 'yz', 'br', 'lo']:
             signal = getattr(self, kind)(psi=pol)
