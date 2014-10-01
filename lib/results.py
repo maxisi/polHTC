@@ -97,7 +97,8 @@ class Results(object):
         # rescale hinj (note h_effective is independent of psi)
         hinj_new = []
         for h, i in zip(hinj, incinj):
-            h = [h * ap(i, 0) for ap in g.Signal().templates[self.injkind]]
+            h = [h * ap(i, 0) for _, ap in
+	    g.Signal().templates[self.injkind].iteritems()]
             hinj_new.append(np.linalg.norm(h))
 
         self.hinj = np.array(hinj_new)

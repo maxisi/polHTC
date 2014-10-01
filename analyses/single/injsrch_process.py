@@ -19,7 +19,6 @@ psr         pulsar name code
 det         detector name
 run         detector run name (S5, S6)
 injkind     kind of injection (GR, G4v)
-pdif        phase difference between injection components (p, m, 0)
 n           instantiation index: int in (0, ninst-1)
 """
 

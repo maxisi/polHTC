@@ -21,13 +21,12 @@ psr         pulsar name code
 det         detector name
 run         detector run name (S5, S6)
 kind     kind of injection (GR, G4v)
-pdif        phase difference between injection components (p, m, 0)
 ninst       number of background instantiations
 ninj        number of injections
 '''
 
 # unpack
-process_name, psr, det, run, kind, pdif, ninstSTR, ninjSTR = sys.argv
+process_name, psr, det, run, kind, ninstSTR, ninjSTR = sys.argv
 
 # note: arguments are taken as strings: need to convert to numerical values.
 ninst = int(ninstSTR)
@@ -35,13 +34,13 @@ ninj = int(ninjSTR)
 
 # setup log
 g.setuplog(
-    'master_%(det)s%(run)s_%(psr)s_%(kind)s%(pdif)s' % locals())
+    'master_%(det)s%(run)s_%(psr)s_%(kind)s' % locals())
 
 log = logging.getLogger('InjSrch Prep')
 
 log.info(
     'Preparing inj-search for PSR %(psr)s on %(det)s %(run)s data with'
-    '%(kind)s %(pdif)s injections.' % locals())
+    '%(kind)s injections.' % locals())
 log.info('Performing ' + str(ninj) + ' injections on ' + str(
     ninst) + ' instantiations.')
 
@@ -198,7 +197,7 @@ try:
         '/injsrch_process.py',
 
         'initialdir = ' + project_dir + '/',
-        'arguments = "%(psr)s %(det)s %(run)s %(kind)s %(pdif)s $(Process)"'
+        'arguments = "%(psr)s %(det)s %(run)s %(kind)s $(Process)"'
         % locals(),
         'Output = ' + scratch_dir + 'injsrch-$(Process).out',
         'Error = ' + scratch_dir + 'injsrch-$(Process).err',
@@ -207,7 +206,7 @@ try:
         'Queue ' + ninstSTR
     ]
 
-    with open(g.submit_path(det, run, psr, kind, pdif), 'w') as f:
+    with open(g.submit_path(det, run, psr, kind), 'w') as f:
         for l in subfile_lines: f.write(l + '\n')
 except:
     log.error('Unable to write submit file!', exc_info=True)

@@ -7,17 +7,17 @@ from lib import results as res
 Collect results of single PSR analysis and export to public directory.
 '''
 
-processname, det, run, psr, kind, pdif = sys.argv
+processname, det, run, psr, kind = sys.argv
 
 # setup log
-#g.setuplog('results_%(det)s%(run)s_%(psr)s_%(kind)s%(pdif)s' % locals() )
+#g.setuplog('results_%(det)s%(run)s_%(psr)s_%(kind)s' % locals() )
 #log = logging.getLogger('Results')
 
 
 ## SETUP
 
 # Create results object
-r = res.Results(det, run, psr, kind, pdif)
+r = res.Results(det, run, psr, kind)
 
 # Collect results
 r.collect()
@@ -26,5 +26,5 @@ r.collect()
 r.export()
 
 print 'Results for %s %s %s with %s %s injections exported to:' \
-      % (det, run, psr, kind, pdif)
+      % (det, run, psr, kind)
 print r.paths['export']
