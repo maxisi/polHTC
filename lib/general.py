@@ -472,10 +472,7 @@ class Pair(object):
             signal = self.Signal or Signal.from_objects(self.det, self.psr,
                                                         time=self.time)
             if inc is not None and kind != 'AP':
-                dm = np.zeros(len(signal.dx)) + 1j * np.zeros(len(signal.dx))
-                for A, a in signal.templates[kind].iteritems():
-                    dm += a(inc, 0) * (A(psi=pol) + 0j)
-                dm = [dm]
+                dm = [2. * signal(kind, pol=pol, inc=inc)]
             else:
                 dm = []
                 for A in signal.templates[kind].keys():
@@ -486,6 +483,9 @@ class Pair(object):
 
     def search(self, data=None, methods=SEARCHMETHODS, pol=None, inc=None,
                save=False):
+
+        def herm(x):
+            return x.T.conj()
 
         if data is None:
             self.log.info('Opening box for %s %s %s.'
@@ -525,14 +525,14 @@ class Pair(object):
             # .linalg.svd.html)
 
             # define covariance matrix
-            cov = np.dot(np.dot(V.T, W ** 2),V)
+            cov = np.dot(np.dot(herm(V), W ** 2), V)
             # see 'Covariance' page in Polarizations tab of LIGO 2013 Notebook
 
-            VtW = np.dot(V.T, W)
-            Utb = np.dot(U.T, b)
+            VtW = np.dot(herm(V), W)
+            Utb = np.dot(herm(U), b)
 
             # results:
-            a = np.dot(VtW, Utb.T)
+            a = np.dot(VtW, herm(Utb))
 
             # strength (factor of 2 accounted for in DM):
             h = np.linalg.norm(a)
