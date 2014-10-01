@@ -472,7 +472,10 @@ class Pair(object):
             signal = self.Signal or Signal.from_objects(self.det, self.psr,
                                                         time=self.time)
             if inc is not None and kind != 'AP':
-                dm = [2. * signal(kind, pol=pol, inc=inc)]
+                dm = np.zeros(len(signal.dx)) + 1j * np.zeros(len(signal.dx))
+                for A, a in signal.templates[kind].iteritems():
+                    dm += a(inc, 0) * (A(psi=pol) + 0j)
+                dm = [dm]
             else:
                 dm = []
                 for A in signal.templates[kind].keys():
@@ -507,7 +510,7 @@ class Pair(object):
             self.log.info('Searching: ' + m)
 
             # obtain design matrix and divide by standard deviation
-	    A = self.design_matrix(m, pol=pol, inc=inc) / std
+            A = self.design_matrix(m, pol=pol, inc=inc) / std
             # note that dm will be complex-valued, but the imaginary part is 0.
             # this is useful later when dotting with b
 
@@ -554,7 +557,6 @@ class Pair(object):
                         pickle.dump(results, f)
                 except IOError:
                     self.log.error('Unable to save OB results', exc_info=True)
-
         return results
 
 
