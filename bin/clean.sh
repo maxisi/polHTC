@@ -1,6 +1,7 @@
 #!/bin/bash
 
 rm tmp/htc/*
+rm -r tmp/injsrch/*
 rm logs/*
 rm /usr1/max.isi/*
 # rm tmp/vectors/*

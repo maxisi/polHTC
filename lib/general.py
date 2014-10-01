@@ -577,7 +577,7 @@ class Signal(object):
         # (n = norm, p = phase)
         self.templates = {
             'GR': {
-                self.pl: lambda i, phi0: (1/2.) * (1. + np.cos(i) ** 2) *
+                self.pl: lambda i, phi0: 0.5 * (1. + np.cos(i) ** 2) *
                                          np.exp(1j * phi0),
                 self.cr: lambda i, phi0: np.cos(i) * np.exp(1j * (-np.pi/2. +
                                                                   phi0))
@@ -647,7 +647,7 @@ class Signal(object):
             # Build signal
             signal = np.zeros(len(self.dx)) + 1j * np.zeros(len(self.dx))
             for A, a in self.templates[kind].iteritems():
-                signal += (1/2) * a(inc, phi0) * (A(psi=pol) + 0j)
+                signal += (.5) * a(inc, phi0) * (A(psi=pol) + 0j)
 
         elif kind in ['pl', 'cr', 'xz', 'yz', 'br', 'lo']:
             signal = getattr(self, kind)(psi=pol)
