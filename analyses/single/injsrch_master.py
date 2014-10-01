@@ -53,6 +53,8 @@ frange = [1.0e-7, 1.0e-5]
 hinjrange = [1.0E-27, 1.0E-24]
 if 'J1701-3006C' == psr:
     hinjrange = [1.0E-27, 1.0E-25]
+elif psr == "J1748-2446J":
+    hinjrange = [1.0E-27, 1.0E-23]
 
 ## STRUCTURE
 log.info('Creating file structure.')
