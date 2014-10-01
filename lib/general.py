@@ -507,7 +507,7 @@ class Pair(object):
             self.log.info('Searching: ' + m)
 
             # obtain design matrix and divide by standard deviation
-            A = self.design_matrix(m, pol, inc=inc) / std
+	    A = self.design_matrix(m, pol=pol, inc=inc) / std
             # note that dm will be complex-valued, but the imaginary part is 0.
             # this is useful later when dotting with b
 
