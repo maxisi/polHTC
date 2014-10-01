@@ -74,7 +74,8 @@ if hinj != 0:
     # assuming already rescaled by 1/2
 
 # search
-results_n = pair.search(data=inst, pol=pair.psr.param['POL'])
+results_n = pair.search(data=inst, inc=pair.psr.param['INC'] or None)
+# inc=... was added so that if INC is not the default (0), the search is locked
 
 # unpack results
 results = {}

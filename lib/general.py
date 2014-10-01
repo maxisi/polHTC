@@ -517,7 +517,7 @@ class Pair(object):
             # define data vector
             b = data / std
 
-            # perform SVD decomposition
+            # perform SVD decomposition (note Transpose, NOT hermitian)
             U, s, V = np.linalg.svd(A.T, full_matrices=False)
             W = np.diag(1. / s)
             # Note that np.linalg.svd returns Vt, not V. in NR notation
