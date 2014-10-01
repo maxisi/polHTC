@@ -451,7 +451,7 @@ class Pair(object):
 
         return sig
 
-    def design_matrix(self, kind, pol=0):
+    def design_matrix(self, kind, pol=0, inc=None):
         """ Returns design matrix for template `kind`.
 
         :param kind: template type ('GR', 'G4v', 'Sid' or 'AP')
@@ -469,18 +469,20 @@ class Pair(object):
             ]
         else:
             # Build design matrix
-
             signal = self.Signal or Signal.from_objects(self.det, self.psr,
                                                         time=self.time)
-
-            dm = []
-            for A in signal.templates[kind].keys():
-                dm += [A(psi=pol) + 0j]
+            if inc is not None and kind != 'AP':
+                dm = [2. * signal(kind, pol=pol, inc=inc)]
+            else:
+                dm = []
+                for A in signal.templates[kind].keys():
+                    dm += [A(psi=pol) + 0j]
 
         # factor of two following MP (2.12)
         return np.array(dm)/2.
 
-    def search(self, data=None, methods=SEARCHMETHODS, pol=None, save=False):
+    def search(self, data=None, methods=SEARCHMETHODS, pol=None, inc=None,
+               save=False):
 
         if data is None:
             self.log.info('Opening box for %s %s %s.'
@@ -489,10 +491,8 @@ class Pair(object):
         elif isinstance(data, (np.ndarray, list)):
             self.log.info('Searching for signals in %s %s %s time-series.'
                           % (self.psr.name, self.det.name, self.run))
-
-        if pol is None: # write this way to allow for pol=0
+        if pol is None:  # write this way to allow for pol=0
             pol = self.psr.param['POL']
-
         # check vectors
         if not self.det.check_vectors(self.time, filename=self.psr.name):
             self.det.create_vectors(self.time, filename=self.psr.name)
@@ -507,7 +507,7 @@ class Pair(object):
             self.log.info('Searching: ' + m)
 
             # obtain design matrix and divide by standard deviation
-            A = self.design_matrix(m, pol) / std
+            A = self.design_matrix(m, pol, inc=inc) / std
             # note that dm will be complex-valued, but the imaginary part is 0.
             # this is useful later when dotting with b
 

@@ -74,7 +74,7 @@ if hinj != 0:
     # assuming already rescaled by 1/2
 
 # search
-results_n = pair.search(data=inst, pol=pair.psr.param['POL'])
+results_n = pair.search(data=inst, pol=pair.psr.param['POL'], inc=inc)
 
 # unpack results
 results = {}
