@@ -84,9 +84,9 @@ random.seed(2)
 
 pols = [random.uniform(pol_range[0], pol_range[1]) for ip in range(ninj)]
 # empty vector (most instantiations won't have injections):
-polinj_lst = np.zeros(ninst)
+pol_lst = np.zeros(ninst)
 # injection strength index (indicates hinj_lst for each inst):
-polinj_lst[injLocations] = pols
+pol_lst[injLocations] = pols
 
 incs = [random.uniform(inc_range[0], inc_range[1]) for ii in range(ninj)]
 # empty vector (most instantiations won't have injections):
@@ -115,7 +115,7 @@ for n in range(ninst):
     freq = freq_lst[n]
 
     hinj = hinj_lst[n]
-    pol = polinj_lst[n]
+    pol = pol_lst[n]
     inc = inc_lst[n]
     ph0 = ph0_lst[n]
 
