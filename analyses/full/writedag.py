@@ -8,8 +8,8 @@ sys.path.append(os.getcwd())
 from lib import general as g
 
 """
-Writes DAG file for a complete MANY-PSR analysis; namely, injecting GR, G4v on PSRs from
-the pulsar list.
+Writes DAG file for a complete MANY-PSR analysis; namely, injecting GR, G4v on
+PSRs from the pulsar list.
 """
 
 ###############################################################################
@@ -62,13 +62,13 @@ cluster = g.Cluster()
 
 # define scratch space
 scratch_dir = cluster.scratch_dir + analysis_name +\
-              '_$(psr)_$(det)$(run)_$(injkind)$(pdif)s'
+              '_$(psr)_$(det)$(run)_$(injkind)'
 
 subfile_lines = [
     'Universe = Vanilla',
     'Executable = ' + project_dir + analysis_folder + 'exe' + name + '.py',
     'initialdir = ' + project_dir + '/',
-    'arguments = "$(psr) $(det) $(run) $(injkind) $(pdif) $(ninst) $(ninj)"',
+    'arguments = "$(psr) $(det) $(run) $(injkind) $(ninst) $(ninj)"',
     'Output = ' + scratch_dir + '.out',
     'Error = ' + scratch_dir + '.err',
     'Log = ' + scratch_dir + '.log',
@@ -85,31 +85,30 @@ with open(subname, 'w') as f:
 
 with open(dagname, 'w') as f:
     # Write initial comment:
-    f.write('# %(det)s %(run)s %(psrIN)s %(ninstSTR)s %(ninjSTR)s\n\n' % locals() )
+    f.write('# %(det)s %(run)s %(psrIN)s %(ninstSTR)s %(ninjSTR)s\n\n'
+            % locals())
     # Point to configuration file with DAGman variables:
-    f.write('CONFIG '+ config + '\n\n')
+    f.write('CONFIG ' + config + '\n\n')
 
     for psr in goodpsrs:
             for injkind in ['GR', 'G4v']:
-                for pdif in ['p']:  # ,'m']:
-                    jobname = injkind + pdif + '_' + psr
+                jobname = injkind + '_' + psr
 
-                    txt_lines = [
-                        '# ' + psr + ' ' + injkind + pdif + '\n',
-                        'JOB ' + jobname + ' ' + project_dir + '/' + subname,
-                        'VARS %(jobname)s psr="%(psr)s"' % locals(),
-                        'VARS %(jobname)s det="%(det)s"' % locals(),
-                        'VARS %(jobname)s run="%(run)s"' % locals(),
-                        'VARS %(jobname)s injkind="%(injkind)s"' % locals(),
-                        'VARS %(jobname)s pdif="%(pdif)s"' % locals(),
-                        'VARS %(jobname)s ninst="%(ninstSTR)s"' % locals(),
-                        'VARS %(jobname)s ninj="%(ninjSTR)s"' % locals(),
-                        'RETRY %(jobname)s 3' % locals(),  # retry job 3 times
-                        '\n'
-                    ]
+                txt_lines = [
+                    '# ' + psr + ' ' + injkind + '\n',
+                    'JOB ' + jobname + ' ' + project_dir + '/' + subname,
+                    'VARS %(jobname)s psr="%(psr)s"' % locals(),
+                    'VARS %(jobname)s det="%(det)s"' % locals(),
+                    'VARS %(jobname)s run="%(run)s"' % locals(),
+                    'VARS %(jobname)s injkind="%(injkind)s"' % locals(),
+                    'VARS %(jobname)s ninst="%(ninstSTR)s"' % locals(),
+                    'VARS %(jobname)s ninj="%(ninjSTR)s"' % locals(),
+                    'RETRY %(jobname)s 3' % locals(),  # retry job 3 times
+                    '\n'
+                ]
 
-                    for l in txt_lines:
-                        f.write(l + '\n')
+                for l in txt_lines:
+                    f.write(l + '\n')
 
 
 # Configure Dagman to not limit the number of times a node is put on hold
