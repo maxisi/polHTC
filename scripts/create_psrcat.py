@@ -1,11 +1,15 @@
 #! /usr/bin/env python
 
 import logging
-from datetime import datetime
+import sys
+import os
 from bs4 import BeautifulSoup
 from urllib2 import urlopen
 import cPickle as pickle
 import numpy as np
+
+sys.path.append(os.path.expanduser('~') + '/polHTC/')
+sys.path.append(os.getcwd())
 
 from lib import general as g
 
@@ -32,7 +36,7 @@ try:
     f.close()
 except IOError:
     log.error('Could not open psrlist text in: config/psrlist.txt', exec_info=True)
-    
+
 
 log.info('Building PSR catalogue.')
 
@@ -75,35 +79,35 @@ def getcat(psrs):
             else:
                 psrcat[a[1]] = {g.paramNames[n] : a[n] for n in np.arange(2,len(a))}
             # the array starts from 2 to exclude the list number of the pulsar and its name
-            
+
     return psrcat, badpsr
-    
+
 # loop over pulsars to avoid long URLs
 print('PSRs: ')
 psrcat = {}
 badpsr = []
 for psr in psrs:
     single_psrcat, single_bad = getcat([psr])
-    
+
     badpsr += single_bad
-    
+
     for psrname, psrparam in single_psrcat.iteritems():
         print(psrname + ', ')
         psrcat[psrname] = psrparam
-print('\n')       
+print('\n')
 log.debug('Reformatting RAS and DEC into decimals.')
 
 for psr, paramdict in psrcat.iteritems(): # for each PSR
     for paramName, paramData in paramdict.iteritems(): # for each parameter
         # replace value with result of formatting function for parameter
         psrcat[psr][paramName] = g.paramFormat[paramName](paramData)
-        
+
 # About parameters (http://www.atnf.csiro.au/research/pulsar/psrcat/psrcat_help.html):
 # Name:        Pulsar name.  The B name if exists, otherwise the J name.
 # JName:       Pulsar name based on J2000 coordinates
-# RAJ:         Right ascension (J2000) (hh:mm:ss.s) 
+# RAJ:         Right ascension (J2000) (hh:mm:ss.s)
 # DecJ:        Declination (J2000) (+dd:mm:ss)
-        
+
 log.debug('Adding extra parameters.')
 
 # try to open file with extra parameters
@@ -122,7 +126,7 @@ try:
                     psrcat[extraParamList[0]][g.extraParamNames[n]] = float(extraParamList[n])
 except IOError:
     log.warning('No extra PSR info found in: ' + g.paths['extrapsrparam'], exc_info=True)
-    
+
 # if there was no extra information, fill missing parameters with standard values
 for psr in [src for src in psrs if src not in psrsExtra]: # for PSR in list for which there's no extra info
     if psr not in badpsr:

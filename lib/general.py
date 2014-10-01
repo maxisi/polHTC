@@ -913,9 +913,9 @@ extraParamNames = [None, 'POL', 'POL error', 'INC', 'INC error']
 
 extraParamStandard = {
     'POL': 0,
-    'POL error': np.pi / 4,
+    'POL error': np.pi / 2,
     'INC': 0,
-    'INC error': np.pi / 4
+    'INC error': np.pi
 }
 
 # formatting guide
