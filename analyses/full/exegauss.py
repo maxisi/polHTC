@@ -109,7 +109,7 @@ ph0_lst[injLocations] = ph0s
 ## PRELUDE
 
 # setup results
-results = res.Results(det, run, psr, injkind, pdif, extra_name='gauss')
+results = res.Results(det, run, psr, injkind, pdif, prefix='gauss')
 results.hinj = hinj_lst
 
 # setup random seed

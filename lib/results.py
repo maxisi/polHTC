@@ -22,7 +22,7 @@ g.setuplog('results')
 
 class Results(object):
     def __init__(self, det, run, psr, kind, methods=g.SEARCHMETHODS,
-                 extra_name='', verbose=False):
+                 prefix='', suffix='', verbose=False):
 
         self.log = logging.getLogger('results.'+kind+'.'+psr)
 
@@ -48,8 +48,8 @@ class Results(object):
 
         self.paths = {
             'analysis': g.analysis_path(det, run, psr, kind),
-            'export': extra_name + 'results_' + det + run + '_' + psr + '_' +
-                      kind + '.hdf5'
+            'export': prefix + 'results_' + det + run + '_' + psr + '_' +
+                      kind + suffix + '.hdf5'
         }
 
         self.hinj = None
@@ -179,20 +179,15 @@ class Results(object):
         # Determine origin destination.
         path = path or g.Cluster().public_dir
         export_path = path + self.paths['export']
-        try:
-            with h5py.File(export_path, 'r') as f:
-                # load injected h
-                self.hinj = f['hinj'][:]
-                self.ninst = len(self.hinj)
-                self.ninj = len(self.hinj[self.hinj>0])
-                # load recovered h and s
-                for m in self.search_methods:
-                    self.hrec[m] = f[m + '/hrec'][:]
-                    self.srec[m] = f[m + '/srec'][:]
-        except:
-            message = 'Unable to load collected results from: ' + export_path
-            self.log.error(message, exc_info=self.verbose)
-            return
+        with h5py.File(export_path, 'r') as f:
+            # load injected h
+            self.hinj = f['hinj'][:]
+            self.ninst = len(self.hinj)
+            self.ninj = len(self.hinj[self.hinj > 0])
+            # load recovered h and s
+            for m in self.search_methods:
+                self.hrec[m] = f[m + '/hrec'][:]
+                self.srec[m] = f[m + '/srec'][:]
 
     def pickseries(self, kind, verbose=False):
         """
@@ -465,11 +460,11 @@ class Results(object):
     #--------------------------------------------------------------------------
     # Plots
 
-    def plot(self, kind, aux='simple', detection_threshold=.999, band_conf=.95,
+    def plot(self, kind, det_thrsh=.999, band_conf=.95, det_conf=None,
              methods=None, title=True, filetype='png', alpha=.3, shade=True,
              scale=1., hide_data=False, legend=True, xlim=None, ylim=None,
              rollwindow=2e-26, rollcolor=None, band=True, bestonly=False,
-             extra_name='', path=g.paths['plots']):
+             suffix='', path=g.paths['plots']):
         """Plots 'kind' (hrec/srec) vs hinj for methods listed in 'methods'.
         """
 
@@ -478,11 +473,12 @@ class Results(object):
         self.log.info('Plotting.')
         # obtain data
         y, kindname = self.pickseries(kind)
-        if detection_threshold:
+        if det_thrsh:
             # obtain fit & noise threshold
             noise, slope, rmse, ytop, ybot, y1side, x_short, rollmean, rollstd\
-                = self.quantify(kind, detection_threshold, band_conf=band_conf,
-                                methods=methods, rollwindow=rollwindow)
+                = self.quantify(kind, det_thrsh, det_conf=det_conf,
+                                band_conf=band_conf, methods=methods,
+                                rollwindow=rollwindow)
             # find "best" method
             maxslope = np.max([slope[m] for m in methods])
 
@@ -496,17 +492,23 @@ class Results(object):
             #extra features
             switch = band_conf and (not bestonly or slope[m] == maxslope)
 
-            if detection_threshold and switch:
+            if det_thrsh and switch:
                 # plot noise line
                 noise_line = [noise[m]] * self.ninst
                 ax.plot(self.hinj, noise_line, color=g.plotcolor[m])
 
+            if det_conf and switch:
+                det_line = slope[m] * self.hinj + (y1side[m][1] - slope[m] *
+                                                   y1side[m][0])
+                ax.plot(self.hinj, det_line, color=g.plotcolor[m],
+                        linestyle='--')
+
             if band and switch:
                 # plot band lines
                 bestfit_line = slope[m] * self.hinj
-                topband_line = slope[m] * self.hinj + (ytop[m][1]-slope[m] *
+                topband_line = slope[m] * self.hinj + (ytop[m][1] - slope[m] *
                                                        ytop[m][0])
-                botband_line = slope[m] * self.hinj + (ybot[m][1]-slope[m] *
+                botband_line = slope[m] * self.hinj + (ybot[m][1] - slope[m] *
                                                        ybot[m][0])
                 ax.plot(self.hinj, bestfit_line, color=g.plotcolor[m],
                         alpha=alpha)
@@ -535,14 +537,14 @@ class Results(object):
                                     rollmean[m] + rollstd[m],
                                     color=rollcolor, alpha=.3)
 
-            if detection_threshold and slope[m] == maxslope: #BUG HERE!
+            if det_thrsh and slope[m] == maxslope:  # BUG HERE!
                 # set axes limits
                 ax.set_xlim(xlim or (0., scale * max(self.hinj)))
                 ax.set_ylim(ylim or (0., scale * np.around(y[m].max(), 1)))
 
         # add labels indicating noise threshold and band confidence
-        if detection_threshold:
-            ax.text(.02, .7, 'Detection threshold: ' + str(detection_threshold),
+        if det_thrsh:
+            ax.text(.02, .7, 'Detection threshold: ' + str(det_thrsh),
                     fontsize=10, transform=ax.transAxes)
         if band_conf:
             ax.text(.02, .65, 'Band confidence: ' + str(band_conf),
@@ -554,7 +556,7 @@ class Results(object):
             ax.legend(numpoints=1, loc=2)
         if title:
             ax.set_title('%s injections on %s %s data for %s'
-                         % (self.injkind,self.det,self.run,self.psr))
+                         % (self.injkind, self.det, self.run, self.psr))
         # check destination directory exists
         try:
             os.makedirs(path)
@@ -564,14 +566,14 @@ class Results(object):
         # save
         filename = 'injsrch_' + self.det + self.run + '_' + self.injkind +\
                 '_' + self.psr + '_' + kind
-        p = path + filename + extra_name + '.' + filetype
+        p = path + filename + suffix + '.' + filetype
         fig.savefig(p, bbox_inches='tight')
         plt.close(fig)
         print 'Figure saved: %r.' % p
 
     def plot_p(self, kind, methods=None, nbins=100, star=None, starsize=6,
                starcolor='y', fit=True, title=True, legend=True, legendloc=3,
-               xlim=False, ylim=(1e-4,1), path=g.paths['plots'], extra_name='',
+               xlim=False, ylim=(1e-4,1), path=g.paths['plots'], suffix='',
                filetype='png', hidedata=False, manyfiles=False):
 
         self.log.info('Plotting 1-CDF')
@@ -581,7 +583,7 @@ class Results(object):
         d, kindname = self.pickseries(kind)
         if not manyfiles:
             fig, ax = plt.subplots(1)
-            plotname = ''
+            extra_suffix = ''
 
         # process
         for m in methods:
@@ -590,7 +592,7 @@ class Results(object):
             # plot
             if manyfiles:
                 fig, ax = plt.subplots(1)
-                plotname = m
+                extra_suffix = m
             if not hidedata:
                 ax.plot(x, y, g.plotcolor[m]+'+', label=m)
             if fit:
@@ -638,7 +640,7 @@ class Results(object):
                            self.injkind + '_' + self.psr + '_'\
                            + kind
                 saveto = '%s%s%s%s.%s'\
-                         % (path, filename, extra_name, plotname, filetype)
+                         % (path, filename, suffix, extra_suffix, filetype)
 
                 fig.savefig(saveto, bbox_inches='tight')
                 plt.close(fig)
@@ -650,7 +652,7 @@ class Results(object):
     def plot_hs(self, methods=None, rollcolor=None, rollwindow=2e-26,
                 title=True, xlim=None, ylim=None, hide_data=False,
                 shade=False, legend=False, legendloc=4, path=g.paths['plots'],
-                filetype='png',  extra_name='',  manyfiles=True):
+                filetype='png',  suffix='',  manyfiles=True):
         """Plots 'kind' (hrec/srec) vs hinj for methods listed in 'methods'.
         """
 
@@ -723,7 +725,7 @@ class Results(object):
                 filename = 'hs_' + self.det + self.run + '_' + self.injkind\
                            + '_' + self.psr
                 saveto = '%s%s%s.%s'\
-                         % (path, filename, extra_name, filetype)
+                         % (path, filename, suffix, filetype)
                 fig.savefig(saveto, bbox_inches='tight')
                 plt.close(fig)
                 print 'Plot saved: %r' % saveto
@@ -736,7 +738,7 @@ class ResultsMP(object):
         self.det = det
         self.run = run
         self.injkind = injkind
-        self.extra_name = ''
+        self.prefix = ''
         self.psrlist = []
         self._psrs = []
         self._results = OrderedDict()
@@ -752,13 +754,14 @@ class ResultsMP(object):
 
     #--------------------------------------------------------------------------
     # IO operations
-    def load(self, path=None, extra_name=None, listid='all', verbose=False):
+    def load(self, path=None, prefix=None, suffix='',
+             listid='all', verbose=False):
         """Load PSR results for all pulsars in list. Saves results objects to
         dictionary 'self.results'.
         """
         print 'Loading PSR results.'
         ### SETUP ###
-        self.extra_name = extra_name or self.extra_name
+        self.prefix = prefix or self.prefix
         # Determine source file path:
         #   if a path was provided, use it;
         #   if not, create Cluster object and use its public d
@@ -771,16 +774,16 @@ class ResultsMP(object):
         for psr in goodpsrs:
             try:
                 r = Results(self.det, self.run, psr, self.injkind,
-                            extra_name=self.extra_name)
+                            prefix=self.prefix, suffix=suffix)
                 r.load(path=p)
                 self._results[psr] = r
                 # note that if there's an error loading, PSR object is NOT
                 # added to list
             except IOError:
+                self.failed.append(psr)
                 print 'Warning: Unable to load ' + psr + ' results.'
                 if verbose:
                     print sys.exc_info()
-                self.failed += [psr]
         self.psrlist = list(goodpsrs - set(self.failed))
         self._loadpsrs()
 
@@ -923,10 +926,9 @@ class ResultsMP(object):
     #--------------------------------------------------------------------------
     # Plots
     def plot(self, psrparam, statkinds, det_thrsh=.999, det_conf=.95,
-             band_conf=.95, extra_name='', scale=1., methods=None,
-             path=g.paths['plots'], filetype='pdf', log=False,
-             title=True, legend=True, legend_loc='lower right', xlim=None,
-             grid=True):
+             suffix='', methods=None, path=g.paths['plots'], filetype='pdf',
+             logy=False, title=True, legend=True, legend_loc='lower right',
+             logx=False, xlim=None, ylim=None, grid=True):
         """Produces plot of efficiency indicator (noise, min-hrec) vs a PSR
         parameter (e.g. FR0, DEC, 'RAS').
         """
@@ -966,8 +968,10 @@ class ResultsMP(object):
             # Style
             if legend:
                 plt.legend(loc=legend_loc, numpoints=1)
-            if log and kind != 's_noise':
+            if logy and kind != 's_noise':
                 ax.set_yscale('log')
+            if logx:
+                ax.set_xscale('log')
             # (logscale if requested and if not sig noise threshold)
             # (allows for better formatting with 'all')
             if 'gw' in psrparam:
@@ -1002,21 +1006,23 @@ class ResultsMP(object):
             if title:
                 tt = '%s injections on %s %s %s data\n%s'\
                      % (self.injkind, self.det, self.run,
-                        self.extra_name, t)
+                        self.prefix, t)
                 ax.set_title(tt)
             if xlim:
                 ax.set_xlim(xlim[0], xlim[1])
+            if ylim:
+                ax.set_ylim(ylim[0], ylim[1])
             if grid:
                 ax.grid()
 
             # save
             filename = 'mp_' + self.det + self.run + '_' + self.injkind +\
-                       + '_' + kind
-            plt.savefig(path + self.extra_name + filename + '.' + filetype,
+                       suffix + '_' + kind
+            plt.savefig(path + self.prefix + filename + '.' + filetype,
                         bbox_inches='tight')
             plt.close()
-            print 'Plot saved: ' + path + self.extra_name + filename + '.' +\
-                  filetype
+            print 'Plot saved: ' + path + self.prefix + filename + suffix + \
+                  '.' + filetype
 
     def plot_ob(self, psrparam, statkinds, det_thrsh=None, det_conf=None,
                 band_conf=None, p_fitorder=None, methods=None,
@@ -1106,7 +1112,7 @@ class ResultsMP(object):
             ax.set_ylabel(ylabel)
             if title:
                 ax.set_title('Open boxes for ' + self.det + ' ' + self.run +
-                             ' data ' + self.extra_name + '\n' + t)
+                             ' data ' + self.prefix + '\n' + t)
             if xlim:
                 ax.set_xlim(xlim[0], xlim[1])
             if grid:
@@ -1114,8 +1120,8 @@ class ResultsMP(object):
             # save
             filename = 'mpOB_' + self.det + self.run + '_' + self.injkind +\
                        + '_' + kind
-            plt.savefig(path + self.extra_name + filename + '.' + filetype,
+            plt.savefig(path + self.prefix + filename + '.' + filetype,
                         bbox_inches='tight')
             plt.close()
-            print 'Plot saved: ' + path + self.extra_name + filename + '.' +\
+            print 'Plot saved: ' + path + self.prefix + filename + '.' +\
                   filetype

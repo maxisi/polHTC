@@ -1,4 +1,4 @@
-#! /usr/bin/env python 
+#! /usr/bin/env python
 
 from globs import results as r
 
@@ -17,15 +17,15 @@ if len(sys.argv)==2:
 else:
     extra_name = sys.argv[2]
 
-results_dir = '/home/misi/results/' + det + run + extra_name + '/' 
+results_dir = '/home/misi/results/' + det + run + extra_name + '/'
 
 # Define result objects and load from disk
 mpGR = r.ResultsMP('GR', det=det, run=run)
-mpGR.load(results_dir, extra_name=extra_name, verbose=True)
+mpGR.load(results_dir, prefix=extra_name, verbose=True)
 
 mpG4v = r.ResultsMP('G4v', det=det, run=run)
-mpG4v.load(results_dir, extra_name=extra_name)
+mpG4v.load(results_dir, prefix=extra_name)
 
 ### PLOT
-mpGR.plot(kind, log=True, title=False)
-mpG4v.plot(kind, log=True, title=False)
+mpGR.plot(kind, logy=True, title=False)
+mpG4v.plot(kind, logy=True, title=False)

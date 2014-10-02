@@ -63,7 +63,7 @@ pol_range = [
 inc_range = [
     pair.psr.param['INC'] - pair.psr.param['INC error'],
     pair.psr.param['INC'] + pair.psr.param['INC error']
-    ]
+]
 
 # phi0_range = [0., np.pi/2]
 

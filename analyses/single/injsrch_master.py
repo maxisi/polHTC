@@ -131,19 +131,19 @@ log.info('Preparing injection parameters.')
 # create ninj random values for pol and inc
 random.seed(2)
 
-pols = [random.uniform(pol_range[0], pol_range[1]) for n in range(ninj)]
+pols = [random.uniform(pol_range[0], pol_range[1]) for np in range(ninj)]
 # empty vector (most instantiations won't have injections):
 pol = np.zeros(ninst)
 # injection strength index (indicates hinj for each inst):
 pol[injLocations] = pols
 
-incs = [random.uniform(inc_range[0], inc_range[1]) for n in range(ninj)]
+incs = [random.uniform(inc_range[0], inc_range[1]) for ni in range(ninj)]
 # empty vector (most instantiations won't have injections):
 inc = np.zeros(ninst)
 # injection strength index (indicates hinj for each inst):
 inc[injLocations] = incs
 
-ph0s = [random.uniform(0, 2*np.pi) for ip0 in range(ninj)]
+ph0s = [random.uniform(0, 2*np.pi) for np0 in range(ninj)]
 # empty vector (most instantiations won't have injections):
 ph0 = np.zeros(ninst)
 # injection strength index (indicates hinj_lst for each inst):
@@ -153,27 +153,20 @@ ph0[injLocations] = ph0s
 ## SAVE ARRAYS
 log.info('Saving rehetereodyne, injection and search parameters')
 
-try:
-    f = h5py.File(pathname + '/info.hdf5', 'w')
+f = h5py.File(pathname + '/info.hdf5', 'w')
 
-    srch_grp = f.create_group('srch')
+srch_grp = f.create_group('srch')
 
-    srch_grp.create_dataset('freq', data=freq)
+srch_grp.create_dataset('freq', data=freq)
 
-    inj_grp = f.create_group('inj')
+inj_grp = f.create_group('inj')
 
-    inj_grp.create_dataset('h', data=hinj)
-    inj_grp.create_dataset('pol', data=pol)
-    inj_grp.create_dataset('inc', data=inc)
-    inj_grp.create_dataset('ph0', data=ph0)
+inj_grp.create_dataset('h', data=hinj)
+inj_grp.create_dataset('pol', data=pol)
+inj_grp.create_dataset('inc', data=inc)
+inj_grp.create_dataset('ph0', data=ph0)
 
-    f.close()
-except:
-    log.error(
-        'FATAL: could not save injsrch info in: ' + pathname + '/info.hdf5',
-        exc_info=True)
-    sys.exit()
-
+f.close()
 
 # WRITE SUBMIT FILE
 
@@ -207,6 +200,7 @@ try:
     ]
 
     with open(g.submit_path(det, run, psr, kind), 'w') as f:
-        for l in subfile_lines: f.write(l + '\n')
-except:
+        for l in subfile_lines:
+            f.write(l + '\n')
+except IOError:
     log.error('Unable to write submit file!', exc_info=True)
