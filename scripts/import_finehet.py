@@ -94,21 +94,26 @@ def imp(det, run, origin_path, destination_path):
 
 if run == 'S5':
 
-    origin_path = '/home/matthew/analyses/S5/V4/fine/' + det + '/total/'
+    origin_path = '/home/matthew/analyses/S5/V4/fine/%s/total/' % det
 
     imp(det, run, origin_path, destination_path)
+
+    # Data for some PSRs needs to be replaced with data from another directory
+    origin_path2 = '/home/matthew/analyses/S5/extra/results/data' + det
+    imp(det, run, origin_path2, destination_path)
 
 elif run in ['S6', 'VSR']:
 
     root_path = '/home/matthew/analyses/S6_all/results/'
     root_end = 'data%s/' % det
     o_paths = [
-                root_path + root_end,
-                root_path + 'J0534+2200/' + root_end,
-                root_path + 'J0537-6910/full/'+ root_end,
-                root_path + 'J2022+3842/'+ root_end,
-                ]
-    if run == 'VSR': o_paths += [root_path + 'J1833-1034/' + root_end]
+        root_path + root_end,
+        root_path + 'J0534+2200/' + root_end,
+        root_path + 'J0537-6910/full/' + root_end,
+        root_path + 'J2022+3842/' + root_end,
+    ]
+    if run == 'VSR':
+        o_paths += [root_path + 'J1833-1034/' + root_end]
 
     # Special cases (inco/indep):
     # J1952+3252
@@ -116,7 +121,8 @@ elif run in ['S6', 'VSR']:
     # J1813-1246
     # J0537-6910 (took full)
 
-    for p in o_paths: imp(det, run, p, destination_path)
+    for p in o_paths:
+        imp(det, run, p, destination_path)
 
 else:
     print 'Did not recognize "' + run + '" as a valid run'
