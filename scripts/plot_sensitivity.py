@@ -31,6 +31,7 @@ parser.add_argument("--marker", default='*')
 parser.add_argument("--markercolor")
 parser.add_argument("--markersize", default=10)
 parser.add_argument("--filetype", default='pdf')
+parser.add_argument("--legendloc", default='bottom right')
 
 args = parser.parse_args()
 run = args.run
@@ -108,7 +109,7 @@ matplotlib.rcParams.update(mplparams)
 fig = plt.figure(figsize=(14,10), dpi=300)
 
 plt.loglog(fs, sens, color=args.linecolor, linewidth=args.linewidth,
-           label='Expected: %s %r' % (det, run))
+           label='Expected: %s %s' % (det, run))
 
 plt.hold(True)
 
@@ -122,10 +123,10 @@ plt.ylim(1e-27, 1e-23)
 plt.xlabel(r'Gravitational-wave Frequency (Hz)', fontsize=20, fontweight=100)
 plt.ylabel(r'Strain Sensitivity', fontsize=20, fontweight=100)
 
-plt.legend(numpoints=1)
+plt.legend(numpoints=1, loc=args.legendloc)
 plt.setp(plt.gca().get_legend().get_texts(), fontsize='12')
 
-fig.subplots_adjust(left=0.18, bottom=0.15)
+#fig.subplots_adjust(left=0.18, bottom=0.15)
 
 fig.savefig(args.plotpath + 'senscurve_%s%s_%s.%s'
             % (det, run, kind, args.filetype))

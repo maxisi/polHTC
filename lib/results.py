@@ -10,7 +10,7 @@ import h5py
 
 
 # set up plotting backend
-#import matplotlib
+import matplotlib
 #matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 plt.rcParams['mathtext.fontset'] = "stix"
@@ -18,6 +18,19 @@ plt.rcParams['mathtext.fontset'] = "stix"
 from . import general as g
 
 g.setuplog('results')
+
+mplparams = {
+    'text.usetex': True,  # use LaTeX for all text
+    'axes.linewidth': 1,  # set axes linewidths to 0.5
+    'axes.grid': False,  # add a grid
+    #'axes.axisbelow': True,
+    #'grid.linestyle': '-',  # grid as solid lines not dashed
+    #'grid.color': 'gray',  # grid lines grey
+    #'grid.linewidth': 0.5,
+    'font.family': 'serif',
+    'font.size': 18
+}
+matplotlib.rcParams.update(mplparams)
 
 
 class Results(object):
@@ -204,7 +217,7 @@ class Results(object):
             name = '$s$'
         elif kind in ['h', 'hrec', 'h0']:
             y = self.hrec
-            name = '$h_{rec}$'
+            name = r'$h_{\rm rec}$'
         else:
             self.log.error('Did not recognize value "' + str(kind) + '".',
                            exc_info=verbose)
@@ -464,7 +477,7 @@ class Results(object):
              methods=None, title=True, filetype='png', alpha=.3, shade=True,
              scale=1., hide_data=False, legend=True, xlim=None, ylim=None,
              rollwindow=2e-26, rollcolor=None, band=True, bestonly=False,
-             suffix='', path=g.paths['plots']):
+             suffix='', path=g.paths['plots'], bbox='tight', legendfont=14):
         """Plots 'kind' (hrec/srec) vs hinj for methods listed in 'methods'.
         """
 
@@ -490,7 +503,7 @@ class Results(object):
                 ax.plot(self.hinj, y[m], g.plotcolor[m]+'+', label=m)
 
             #extra features
-            switch = band_conf and (not bestonly or slope[m] == maxslope)
+            switch = not bestonly or slope[m] == maxslope
 
             if det_thrsh and switch:
                 # plot noise line
@@ -503,28 +516,29 @@ class Results(object):
                 ax.plot(self.hinj, det_line, color=g.plotcolor[m],
                         linestyle='--')
 
-            if band and switch:
+            if band_conf is not None and band and switch:
                 # plot band lines
                 bestfit_line = slope[m] * self.hinj
-                topband_line = slope[m] * self.hinj + (ytop[m][1] - slope[m] *
-                                                       ytop[m][0])
-                botband_line = slope[m] * self.hinj + (ybot[m][1] - slope[m] *
-                                                       ybot[m][0])
                 ax.plot(self.hinj, bestfit_line, color=g.plotcolor[m],
                         alpha=alpha)
-                ax.plot(self.hinj, topband_line,  color=g.plotcolor[m],
-                        alpha=alpha)
-                ax.plot(self.hinj, botband_line,  color=g.plotcolor[m],
-                        alpha=alpha)
+                if band_conf:
+                    topband_line = slope[m] * self.hinj + \
+                                   (ytop[m][1] - slope[m] * ytop[m][0])
+                    botband_line = slope[m] * self.hinj +\
+                                   (ybot[m][1] - slope[m] * ybot[m][0])
+                    ax.plot(self.hinj, topband_line,  color=g.plotcolor[m],
+                            alpha=alpha)
+                    ax.plot(self.hinj, botband_line,  color=g.plotcolor[m],
+                            alpha=alpha)
 
-                if shade:
-                    # shade confidence band
-                    ax.fill_between(self.hinj, botband_line, topband_line,
-                                    color=g.plotcolor[m], alpha=alpha/10,
-                                    where=self.hinj > 0)
-                    # note the where argument is necessary to close polygon
+                    if shade:
+                        # shade confidence band
+                        ax.fill_between(self.hinj, botband_line, topband_line,
+                                        color=g.plotcolor[m], alpha=alpha/10,
+                                        where=self.hinj > 0)
+                        # note the where argument is necessary to close polygon
 
-            if rollcolor and switch:
+            if det_conf and rollcolor and switch:
                 ax.plot(x_short[m], rollmean[m], rollcolor,
                         linewidth=2)
                 ax.plot(x_short[m], rollmean[m] + rollstd[m],
@@ -550,10 +564,10 @@ class Results(object):
             ax.text(.02, .65, 'Band confidence: ' + str(band_conf),
                     fontsize=10, transform=ax.transAxes)
         # style
-        ax.set_xlabel('$h_{inj}$')
+        ax.set_xlabel(r'$h_{\rm inj}$')
         ax.set_ylabel(kindname)
         if legend:
-            ax.legend(numpoints=1, loc=2)
+            ax.legend(numpoints=1, loc=2, prop={'size': legendfont})
         if title:
             ax.set_title('%s injections on %s %s data for %s'
                          % (self.injkind, self.det, self.run, self.psr))
@@ -565,25 +579,25 @@ class Results(object):
             self.log.debug('Plot directory already exists.')
         # save
         filename = 'injsrch_' + self.det + self.run + '_' + self.injkind +\
-                '_' + self.psr + '_' + kind
+                   '_' + self.psr + '_' + kind
         p = path + filename + suffix + '.' + filetype
-        fig.savefig(p, bbox_inches='tight')
+        fig.savefig(p, bbox_inches=bbox)
         plt.close(fig)
         print 'Figure saved: %r.' % p
 
     def plot_p(self, kind, methods=None, nbins=100, star=None, starsize=6,
                starcolor='y', fit=True, title=True, legend=True, legendloc=3,
                xlim=False, ylim=(1e-4,1), path=g.paths['plots'], suffix='',
-               filetype='png', hidedata=False, manyfiles=False):
+               filetype='png', hidedata=False, manyfiles=False, grid=False):
 
         self.log.info('Plotting 1-CDF')
         methods = methods or self.search_methods
 
         # obtain data
         d, kindname = self.pickseries(kind)
+        suffix2 = ''
         if not manyfiles:
             fig, ax = plt.subplots(1)
-            extra_suffix = ''
 
         # process
         for m in methods:
@@ -592,7 +606,8 @@ class Results(object):
             # plot
             if manyfiles:
                 fig, ax = plt.subplots(1)
-                extra_suffix = m
+                suffix2 = m
+
             if not hidedata:
                 ax.plot(x, y, g.plotcolor[m]+'+', label=m)
             if fit:
@@ -630,6 +645,8 @@ class Results(object):
                                  'injections on ' + self.det + ' ' + self.run
                                  + ' data for ' + self.psr)
 
+                ax.grid(grid)
+
                 try:
                     os.makedirs(path)
                     self.log.debug('Plot directory created.')
@@ -640,7 +657,7 @@ class Results(object):
                            self.injkind + '_' + self.psr + '_'\
                            + kind
                 saveto = '%s%s%s%s.%s'\
-                         % (path, filename, suffix, extra_suffix, filetype)
+                         % (path, filename, suffix, suffix2, filetype)
 
                 fig.savefig(saveto, bbox_inches='tight')
                 plt.close(fig)
@@ -650,9 +667,9 @@ class Results(object):
         plt.close('all')
 
     def plot_hs(self, methods=None, rollcolor=None, rollwindow=2e-26,
-                title=True, xlim=None, ylim=None, hide_data=False,
+                title=True, xlim=None, ylim=None, hide_data=False, grid=False,
                 shade=False, legend=False, legendloc=4, path=g.paths['plots'],
-                filetype='png',  suffix='',  manyfiles=True):
+                filetype='png',  suffix='', manyfiles=True, bbox='tight'):
         """Plots 'kind' (hrec/srec) vs hinj for methods listed in 'methods'.
         """
 
@@ -702,7 +719,7 @@ class Results(object):
 
             if manyfiles or m == methods[-1]:
                 ## 4. Style
-                ax.set_xlabel('$h_{rec}$')
+                ax.set_xlabel(r'$h_{\rm rec}$')
                 ax.set_ylabel('s')
                 if xlim:
                     ax.set_xlim(xlim)
@@ -714,6 +731,7 @@ class Results(object):
                     ax.set_title('%s injections on %s %s data for %s'
                                  % (self.injkind, self.det,
                                     self.run, self.psr))
+                ax.grid(grid)
 
                 ## 5. Save
                 try:
@@ -724,9 +742,13 @@ class Results(object):
 
                 filename = 'hs_' + self.det + self.run + '_' + self.injkind\
                            + '_' + self.psr
-                saveto = '%s%s%s.%s'\
-                         % (path, filename, suffix, filetype)
-                fig.savefig(saveto, bbox_inches='tight')
+                if manyfiles:
+                    suffix2 = m
+                else:
+                    suffix2 = ''
+                saveto = '%s%s%s%s.%s'\
+                         % (path, filename, suffix, suffix2, filetype)
+                fig.savefig(saveto, bbox_inches=bbox)
                 plt.close(fig)
                 print 'Plot saved: %r' % saveto
         # just in case, close all plots
@@ -928,7 +950,7 @@ class ResultsMP(object):
     def plot(self, psrparam, statkinds, det_thrsh=.999, det_conf=.95,
              suffix='', methods=None, path=g.paths['plots'], filetype='pdf',
              logy=False, title=True, legend=True, legend_loc='lower right',
-             logx=False, xlim=None, ylim=None, grid=True):
+             logx=False, xlim=None, ylim=None, grid=True, bbox='tight'):
         """Produces plot of efficiency indicator (noise, min-hrec) vs a PSR
         parameter (e.g. FR0, DEC, 'RAS').
         """
@@ -982,23 +1004,23 @@ class ResultsMP(object):
             # parse kind
             if kind.startswith('h'):
                 t = 'Strength'
-                yl = '$h_{rec}$'
+                yl = r'$h_{\rm rec}$'
             elif kind.startswith('s'):
                 t = 'Significance'
                 yl = '$s$'
 
             if kind[2:] == 'slope':
                 t += ' best fit slope'
-                ylabel = 'Slope (' + yl + ' vs. $h_{inj}$)'
+                ylabel = 'Slope (' + yl + r' vs. $h_{\rm inj}$)'
             elif kind[2:] == 'rmse':
                 t += ' best fit RMSE'
-                ylabel = 'RMSE (' + yl + ' vs. $h_{inj}$)'
+                ylabel = 'RMSE (' + yl + r' vs. $h_{\rm inj}$)'
             elif kind[2:] == 'noise':
                 t += ' of noise threshold'
                 ylabel = yl
             else:
                 t = 'Lowest injection strength detected'
-                ylabel = '$h_{min}$'
+                ylabel = r'$h_{%.1f%%}$' % det_conf * 100.
             t += '\nwith %.3f detection threshold at %.3f confidence'\
                  % (det_thrsh, det_conf)
 
@@ -1019,7 +1041,7 @@ class ResultsMP(object):
             filename = 'mp_' + self.det + self.run + '_' + self.injkind +\
                        suffix + '_' + kind
             plt.savefig(path + self.prefix + filename + '.' + filetype,
-                        bbox_inches='tight')
+                        bbox_inches=bbox)
             plt.close()
             print 'Plot saved: ' + path + self.prefix + filename + suffix + \
                   '.' + filetype
@@ -1098,7 +1120,7 @@ class ResultsMP(object):
                 ax.set_xlabel(psrparam)
             # parse kind
             if kind == 'h_ob':
-                ylabel = '$h_{rec}$'
+                ylabel = r'$h_{\rm rec}$'
                 t = 'Recovered strength'
             elif kind == 's_ob':
                 ylabel = '$s$'
@@ -1107,8 +1129,11 @@ class ResultsMP(object):
                 ylabel = '$p$'
                 t = 'Detection $p$-value'
             elif kind == 'h_conf':
-                ylabel = '$h_{rec}$'
+                ylabel = r'$h_{\rm rec}$'
                 t = 'Recovered strength with confidence'
+            else:
+                print "WARNING: no label for kind %r" % kind
+                ylabel = ''
             ax.set_ylabel(ylabel)
             if title:
                 ax.set_title('Open boxes for ' + self.det + ' ' + self.run +
@@ -1119,7 +1144,7 @@ class ResultsMP(object):
                 ax.grid()
             # save
             filename = 'mpOB_' + self.det + self.run + '_' + self.injkind +\
-                       + '_' + kind
+                       '_' + kind
             plt.savefig(path + self.prefix + filename + '.' + filetype,
                         bbox_inches='tight')
             plt.close()
