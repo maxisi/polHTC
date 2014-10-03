@@ -16,7 +16,7 @@ process_name, det, run = sys.argv
 # CREATE DESTINATION DIRECTORIES
 # assuming main file structure exists, create subfolders for Data
 
-destination_path = 'globals/data/' + det + '/' + run + '/'
+destination_path = 'data/' + det + '/' + run + '/'
 
 try:
     os.makedirs(destination_path)
