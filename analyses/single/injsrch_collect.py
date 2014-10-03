@@ -25,6 +25,6 @@ r.collect()
 # Export results
 r.export()
 
-print 'Results for %s %s %s with %s %s injections exported to:' \
+print 'Results for %s %s with %s %s injections exported to:' \
       % (det, run, psr, kind)
 print r.paths['export']

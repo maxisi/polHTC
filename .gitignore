@@ -14,3 +14,4 @@ trash/
 .DS_Store
 *~
 *.py.swp
+results/*
