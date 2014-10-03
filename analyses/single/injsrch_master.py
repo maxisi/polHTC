@@ -131,7 +131,7 @@ log.info('Preparing injection parameters.')
 # create ninj random values for pol and inc
 random.seed(2)
 
-pols = [random.uniform(pol_range[0], pol_range[1]) for np in range(ninj)]
+pols = [random.uniform(pol_range[0], pol_range[1]) for n in range(ninj)]
 # empty vector (most instantiations won't have injections):
 pol = np.zeros(ninst)
 # injection strength index (indicates hinj for each inst):
