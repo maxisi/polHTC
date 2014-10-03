@@ -587,8 +587,9 @@ class Results(object):
 
     def plot_p(self, kind, methods=None, nbins=100, star=None, starsize=6,
                starcolor='y', fit=True, title=True, legend=True, legendloc=3,
-               xlim=False, ylim=(1e-4,1), path=g.paths['plots'], suffix='',
-               filetype='png', hidedata=False, manyfiles=False, grid=False):
+               legendfont=14, xlim=False, ylim=(1e-4,1), path=g.paths['plots'],
+               suffix='', filetype='png', hidedata=False, manyfiles=False,
+               grid=False):
 
         self.log.info('Plotting 1-CDF')
         methods = methods or self.search_methods
@@ -639,7 +640,8 @@ class Results(object):
                 if ylim:
                     ax.set_ylim(ylim)
                 if legend:
-                    ax.legend(numpoints=1, loc=legendloc)
+                    ax.legend(numpoints=1, loc=legendloc,
+                              prop={'size': legendfont})
                 if title:
                     ax.set_title(self.injkind + ' ' +
                                  'injections on ' + self.det + ' ' + self.run
@@ -950,7 +952,8 @@ class ResultsMP(object):
     def plot(self, psrparam, statkinds, det_thrsh=.999, det_conf=.95,
              suffix='', methods=None, path=g.paths['plots'], filetype='pdf',
              logy=False, title=True, legend=True, legend_loc='lower right',
-             logx=False, xlim=None, ylim=None, grid=True, bbox='tight'):
+             logx=False, xlim=None, ylim=None, grid=True, bbox='tight',
+             legendfont=14):
         """Produces plot of efficiency indicator (noise, min-hrec) vs a PSR
         parameter (e.g. FR0, DEC, 'RAS').
         """
@@ -989,7 +992,8 @@ class ResultsMP(object):
 
             # Style
             if legend:
-                plt.legend(loc=legend_loc, numpoints=1)
+                plt.legend(loc=legend_loc, numpoints=1,
+                           prop={'size': legendfont})
             if logy and kind != 's_noise':
                 ax.set_yscale('log')
             if logx:
@@ -1020,7 +1024,7 @@ class ResultsMP(object):
                 ylabel = yl
             else:
                 t = 'Lowest injection strength detected'
-                ylabel = r'$h_{%.1f%%}$' % det_conf * 100.
+                ylabel = r'$h_{\rm min} (%.1f\%%)$' % (det_conf * 100.)
             t += '\nwith %.3f detection threshold at %.3f confidence'\
                  % (det_thrsh, det_conf)
 

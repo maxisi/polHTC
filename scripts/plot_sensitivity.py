@@ -1,3 +1,5 @@
+#! /usr/bin/env python
+
 import sys
 import os
 import numpy as np
@@ -17,7 +19,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("injkind")
 parser.add_argument("-d", "--det", default='H1')
 parser.add_argument("-r", "--run", default='S5')
-parser.add_argument("-t", "--tmp")
+parser.add_argument("-t", "--tmp", nargs='+')
 parser.add_argument("-fl", "--flim", nargs='+', type=int, default=[10.1, 1500])
 parser.add_argument("-dp", "--datapath", default='/home/misi/results/H1S5/')
 parser.add_argument("-lp", "--linepath", default='/home/misi/Documents/'
@@ -27,11 +29,12 @@ parser.add_argument("--prefix", default='')
 parser.add_argument("--suffix", default='')
 parser.add_argument("--linecolor", default='c')
 parser.add_argument("--linewidth", default=1)
+parser.add_argument("--linealpha", default=1, type=float)
 parser.add_argument("--marker", default='*')
 parser.add_argument("--markercolor")
 parser.add_argument("--markersize", default=10)
 parser.add_argument("--filetype", default='pdf')
-parser.add_argument("--legendloc", default='bottom right')
+parser.add_argument("--legendloc", default='lower right')
 
 args = parser.parse_args()
 run = args.run
@@ -108,8 +111,8 @@ matplotlib.rcParams.update(mplparams)
 
 fig = plt.figure(figsize=(14,10), dpi=300)
 
-plt.loglog(fs, sens, color=args.linecolor, linewidth=args.linewidth,
-           label='Expected: %s %s' % (det, run))
+plt.loglog(fs, sens, color=args.linecolor, alpha=args.linealpha,
+           linewidth=args.linewidth, label='Expected: %s %s' % (det, run))
 
 plt.hold(True)
 
