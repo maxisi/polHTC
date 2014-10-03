@@ -933,24 +933,32 @@ paramFormat = {
 def read_psrlist(name='', det=False, run=False):
     setuplog('psrlist')
     log = logging.getLogger('psrlst')
-
     psrs = []
-
     ### Determine what list to open ###
-
     # -- Return all PSRs
     if name in ['', 'all']:
-        log.info('Returning all PSRs in list.')
-        p = paths['psrlist'] + '.txt'
-
-        try:
-            with open(p, 'r') as f:
-                for line in f.readlines():
-                    psrs += [line.strip()]  # (.strip() removes \n character)
-            return psrs
-        except:
-            message = 'Could not open psrlist text in: ' + p
-            log.error(message, exc_info=True)
+        if det and run:
+            log.info('Returning all PSRs in %s%s list.' % (det, run))
+            p = paths['psrlist'] + '_' + det + run + '.txt'
+            try:
+                with open(p, 'r') as f:
+                    for line in f.readlines():
+                        psrs += [line.strip()]  # (.strip() removes \n character)
+                return psrs
+            except:
+                message = 'Could not open psrlist text in: ' + p
+                log.error(message, exc_info=True)
+        else:
+            log.info('Returning all PSRs in list.')
+            p = paths['psrlist'] + '.txt'
+            try:
+                with open(p, 'r') as f:
+                    for line in f.readlines():
+                        psrs += [line.strip()]  # (.strip() removes \n character)
+                return psrs
+            except:
+                message = 'Could not open psrlist text in: ' + p
+                log.error(message, exc_info=True)
 
     # -- Return bad PSRs
     elif isinstance(name, basestring) and 'bad' in name:
