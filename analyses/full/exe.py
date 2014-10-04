@@ -43,7 +43,7 @@ pair.det.load_vectors(pair.time, filename=psr)
 # frequencies for re-heterodynes
 frange = [1.0e-7, 1.0e-5]
 # injection strengths proportional to overall noise magnitude
-hinj_magnitude = np.ceil(np.log10(abs(max(pair.data)))) - 2 # MAGNITUDE CHANGED
+hinj_magnitude = int(np.floor(np.log10(abs(np.std(pair.data)))) - 1)
 hinjrange = [1.0E-27, 10**hinj_magnitude]
 
 ## GET SEARCH AND INJECTION RANDOM PARAMETERS

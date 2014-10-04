@@ -4,6 +4,7 @@ import sys
 import os
 
 import numpy as np
+from scipy.interpolate import interp1d
 from collections import OrderedDict
 
 import h5py
@@ -1049,6 +1050,106 @@ class ResultsMP(object):
             plt.close()
             print 'Plot saved: ' + path + self.prefix + filename + suffix + \
                   '.' + filetype
+
+    def plot_ref(self,det_thrsh=.999, det_conf=.95, methods=None,
+                 linecolor='gray', linewidth=1, linealpha=.5,
+                 prefix='', suffix='', marker='*', markersize=10,
+                 markercolor=None, legendloc=4, ylim=(1e-27, 1e-23), xlim=(30, 1500),
+                 lp = '/home/misi/Documents/P1200104-v4/', filetype='pdf',
+                 path=g.paths['plots']):
+
+        methods = methods or [self.injkind, 'Sid']
+
+        # LOAD SENSITIVITY CURVES
+        if self.run == 'S5':
+            if self.det == 'H1':
+                ts = 527.*86400.
+                asd = np.loadtxt(lp + 'lho4k_070318_strain.txt', comments='%')
+            elif self.det == 'H2':
+                asd = np.loadtxt(lp + 'lho2k_070514_strain.txt', comments='%')
+                ts = 535.*86400.
+            elif self.det == 'L1':
+                ts = 405.*86400.
+                asd = np.loadtxt(lp + 'llo_060604_strain.txt', comments='%')
+            else:
+                print 'ERROR: invalid detector run combination: %r and %r'\
+                      % (self.det, self.run)
+                return
+        elif self.run == 'S6':
+            if self.det == 'H1':
+                ts = 238.*86400.
+                asd = np.loadtxt(lp + 'lho4k_15May2010_05hrs17min45secUTC'
+                                      '_strain.txt', comments='%')
+            elif self.det == 'L1':
+                ts = 225.*86400.
+                asd = np.loadtxt(lp + 'llo4k_31May2010_09hrs05min45secUTC'
+                                      '_strain.txt', comments='%')
+            else:
+                print 'ERROR: invalid detector run combination: %r and %r'\
+                      % (self.det, self.run)
+                return
+        else:
+            print "ERROR: %r injections are not supported." % self.run
+            return
+
+        # get a range of frequencies
+        fs = np.arange(xlim[0], xlim[1], 0.1)
+        # interpolate amplitude spectral densities to same freq range
+        intf = interp1d(asd[:, 0], asd[:, 1], kind='linear')
+        # convert to power spectra
+        sint = np.square(intf(fs))
+
+        # scale factor for sensitivity estimate (Dupuis 2005)
+        sf = 10.8
+        # get the harmonic mean of the S5 time weighted sensitivities
+        sens = sf * np.sqrt(sint/ts)  # ! MIGHT BE WRONG
+
+        freq = 2 * np.array([psr.param['FR0']
+                             for psr in self._psrs]).astype(float)
+        hmin = self.getstat('hmin')
+
+        # PLOT
+        # mplparams = {
+        #     'text.usetex': True,  # use LaTeX for all text
+        #     'axes.linewidth': 1,  # set axes linewidths to 0.5
+        #     'axes.grid': True,  # add a grid
+        #     'axes.axisbelow': True,
+        #     'grid.linestyle': '-',  # grid as solid lines not dashed
+        #     'grid.color': 'gray',  # grid lines grey
+        #     'grid.linewidth': 0.5,
+        #     'font.family': 'serif',
+        #     'font.size': 18
+        # }
+        matplotlib.rcParams.update(mplparams)
+
+        fig = plt.figure(figsize=(14, 10), dpi=300)
+
+        plt.loglog(fs, sens, color=linecolor, alpha=linealpha,
+                   linewidth=linewidth, label='Expected: %s %s'
+                                              % (self.det, self.run))
+        plt.hold(True)
+
+        for m in methods:
+            plt.loglog(freq, hmin[m], marker, label="%s template" % m,
+                       markersize=markersize,
+                       color=markercolor or g.plotcolor[m])
+
+        plt.xlim(xlim[0], xlim[1])
+        plt.ylim(ylim[0], ylim[1])
+        plt.xlabel(r'Gravitational-wave Frequency (Hz)', fontsize=20,
+                   fontweight=100)
+        plt.ylabel(r'Strain Sensitivity', fontsize=20, fontweight=100)
+
+        plt.legend(numpoints=1, loc=legendloc)
+
+        plt.setp(plt.gca().get_legend().get_texts(), fontsize='12')
+        #fig.subplots_adjust(left=0.18, bottom=0.15)
+        p = path + '%ssenscurve_%s%s_%s%s.%s' \
+                   % (self.det, self.run, self.injkind, filetype,
+                      prefix, suffix)
+        fig.savefig(p)
+        plt.close()
+        print "Plot saved: %r" % p
 
     def plot_ob(self, psrparam, statkinds, det_thrsh=None, det_conf=None,
                 band_conf=None, p_fitorder=None, methods=None,
