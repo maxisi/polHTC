@@ -20,12 +20,12 @@ globalpaths = (
 
 print 'Creating global file structure:'
 
-for dir in globalpaths:
+for d in globalpaths:
     try:
-        os.makedirs(dir)
-        print dir
+        os.makedirs(d)
+        print d
     except OSError:
-        print 'Error: "globals/%(d)s" already exists' % locals()
+        print 'Error: %r already exists' % d
 
 # (maybe next section can be moved to script that imports the data)
 
