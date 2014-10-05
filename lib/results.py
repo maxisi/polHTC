@@ -1051,12 +1051,12 @@ class ResultsMP(object):
             print 'Plot saved: ' + path + self.prefix + filename + suffix + \
                   '.' + filetype
 
-    def plot_ref(self,det_thrsh=.999, det_conf=.95, methods=None,
+    def plot_ref(self, det_thrsh=.999, det_conf=.95, methods=None,
                  linecolor='gray', linewidth=1, linealpha=.5,
                  prefix='', suffix='', marker='*', markersize=10,
-                 markercolor=None, legendloc=4, ylim=(1e-27, 1e-23), xlim=(30, 1500),
-                 lp = '/home/misi/Documents/P1200104-v4/', filetype='pdf',
-                 path=g.paths['plots']):
+                 markercolor=None, legendloc=4, ylim=(1e-27, 1e-23),
+                 xlim=(30, 1500), path=g.paths['plots'],
+                 lp = '/home/misi/Documents/P1200104-v4/', filetype='pdf'):
 
         methods = methods or [self.injkind, 'Sid']
 
@@ -1106,7 +1106,7 @@ class ResultsMP(object):
 
         freq = 2 * np.array([psr.param['FR0']
                              for psr in self._psrs]).astype(float)
-        hmin = self.getstat('hmin')
+        hmin = self.getstat('hmin', det_thrsh=det_thrsh, det_conf=det_conf)
 
         # PLOT
         # mplparams = {
@@ -1145,8 +1145,8 @@ class ResultsMP(object):
         plt.setp(plt.gca().get_legend().get_texts(), fontsize='12')
         #fig.subplots_adjust(left=0.18, bottom=0.15)
         p = path + '%ssenscurve_%s%s_%s%s.%s' \
-                   % (self.det, self.run, self.injkind, filetype,
-                      prefix, suffix)
+                   % (prefix, self.det, self.run, self.injkind, suffix,
+                      filetype)
         fig.savefig(p)
         plt.close()
         print "Plot saved: %r" % p

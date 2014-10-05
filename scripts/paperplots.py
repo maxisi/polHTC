@@ -56,4 +56,4 @@ for d in detectors:
     for run in runs:
         for injkind in injections:
             results = r.ResultsMP(injkind, det=d, run=run, path=p)
-            results.plot_ref()
+            results.plot_ref(filetype='png', det_conf=0)
