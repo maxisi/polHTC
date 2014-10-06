@@ -964,13 +964,29 @@ def read_psrlist(name='', det=False, run=False):
     elif isinstance(name, basestring) and 'bad' in name:
         log.info('Returning list of bad PSRs.')
         badpsrs = []
-        try:
-            with open(paths['badpsrs'], 'r') as f:
-                for line in f.readlines():
-                    badpsrs += [line.strip()]
-                    # (.strip() removes \n character)
-        except:
-            log.warning('No PSR exclusion list found')
+        if isinstance(run, basestring):
+            try:
+                with open(paths['badpsrs'].strip('.txt')+run+'.txt', 'r') as f:
+                    for line in f.readlines():
+                        badpsrs += [line.strip()]
+                        # (.strip() removes \n character)
+            except:
+                log.warning('No PSR %s exclusion list found' % run)
+                try:
+                    with open(paths['badpsrs'], 'r') as f:
+                        for line in f.readlines():
+                            badpsrs += [line.strip()]
+                            # (.strip() removes \n character)
+                except:
+                    log.warning('No PSR exclusion list found')
+        else:
+            try:
+                with open(paths['badpsrs'], 'r') as f:
+                    for line in f.readlines():
+                        badpsrs += [line.strip()]
+                        # (.strip() removes \n character)
+            except:
+                log.warning('No PSR exclusion list found')
 
         return badpsrs
 

@@ -28,11 +28,11 @@ p = '/home/misi/results/'
 # crab_gr.plot('s', methods=['GR'], title=False, legend=False, suffix='_ex')
 # crab_gr.plot('h', methods=['GR'], title=False, legend=False, suffix='_ex',
 #              ylim=(0, .9e-24))
-
-###############################################################################
-# CRAB RESULTS PLOTS
-
-# GR
+#
+# ###############################################################################
+# # CRAB RESULTS PLOTS
+#
+# # GR
 # crab_gr.plot('s', methods=['GR', 'Sid'], band_conf=0, title=False,
 #              suffix='_sid')
 # crab_gr.plot('s', methods=['GR', 'G4v'], band_conf=0, title=False,
@@ -45,15 +45,15 @@ p = '/home/misi/results/'
 #              suffix='_sid')
 # crab_g4v.plot('s', methods=['GR', 'G4v'], band_conf=0, title=False,
 #              suffix='_gr')
-#
+
 ###############################################################################
 # ALL PSRs RESULTS PLOTS
 detectors = ['H1']#, 'L1', 'H2']
-runs = ['S5', 'S6']
+runs = ['S6']
 injections = ['GR', 'G4v']
 
 for d in detectors:
     for run in runs:
         for injkind in injections:
             results = r.ResultsMP(injkind, det=d, run=run, path=p)
-            results.plot_ref(filetype='png')
+            results.plot_ref()

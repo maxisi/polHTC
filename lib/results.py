@@ -793,7 +793,7 @@ class ResultsMP(object):
         p = path or g.Cluster().public_dir
         # Load PSR lists
         psrlist = g.read_psrlist(name=listid, det=self.det, run=self.run)
-        badpsrs = g.read_psrlist(name='bad')
+        badpsrs = g.read_psrlist(name='bad', run=self.run)
         goodpsrs = set(psrlist) - set(badpsrs)
         ### PROCESS ###
         for psr in goodpsrs:
@@ -1138,7 +1138,9 @@ class ResultsMP(object):
         plt.ylim(ylim[0], ylim[1])
         plt.xlabel(r'Gravitational-wave Frequency (Hz)', fontsize=20,
                    fontweight=100)
-        plt.ylabel(r'Strain Sensitivity', fontsize=20, fontweight=100)
+        plt.ylabel(r'Strain Sensitivity %.2f (%i pulsars)' % (det_conf,
+                                                                len(freq)),
+                   fontsize=20, fontweight=100)
 
         plt.legend(numpoints=1, loc=legendloc)
 
