@@ -396,7 +396,7 @@ class Pair(object):
         t = self.time
 
         # find number of days which the data spans
-        ndays = int(np.ceil((t[-1] - t[0]) / SS))
+        ndays = int(np.ceil((t[-1] - t[0]) / (30 * 60)))
 
         # this will also be the number of bins over which the data will be
         # split
