@@ -14,7 +14,7 @@ USES GAUSSIAN NOISE. Loops over instantiations and saves results.
 '''
 
 # unpack
-process_name, psr, det, run, injkind, pdif, ninstSTR, ninjSTR = sys.argv
+process_name, psr, det, run, injkind, ninstSTR, ninjSTR = sys.argv
 
 #note: arguments are taken as strings: need to convert to numerical values.
 ninst = int(ninstSTR)
@@ -109,7 +109,7 @@ ph0_lst[injLocations] = ph0s
 ## PRELUDE
 
 # setup results
-results = res.Results(det, run, psr, injkind, pdif, prefix='gauss')
+results = res.Results(det, run, psr, injkind, prefix='gauss')
 results.hinj = hinj_lst
 
 # setup random seed
@@ -135,7 +135,7 @@ for n in range(ninst):
     # inject if needed
     if hinj != 0:
         log.info('Injecting.')
-        inst += hinj * pair.signal(injkind, pdif, polinj, incinj)
+        inst += hinj * pair.signal(injkind, polinj, incinj)
 
     # search
     results_n = pair.search(data=inst, pol=pair.psr.param['POL'])

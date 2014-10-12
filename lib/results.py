@@ -503,6 +503,15 @@ class Results(object):
             if not hide_data:
                 ax.plot(self.hinj, y[m], g.plotcolor[m]+'+', label=m)
 
+            if det_thrsh and slope[m] == maxslope:  # BUG HERE!
+                # set axes limits
+                ax.set_xlim(xlim or (0., scale * max(self.hinj)))
+                if kind == 'h':
+                    ylim = ylim or (0., np.max(self.hinj))
+                    plt.gca().set_ylim(ylim[0], ylim[1])
+                else:
+                    ax.set_ylim(ylim or (0., scale * np.around(y[m].max(), 1)))
+
             #extra features
             switch = not bestonly or slope[m] == maxslope
 
@@ -552,11 +561,6 @@ class Results(object):
                                     rollmean[m] + rollstd[m],
                                     color=rollcolor, alpha=.3)
 
-            if det_thrsh and slope[m] == maxslope:  # BUG HERE!
-                # set axes limits
-                ax.set_xlim(xlim or (0., scale * max(self.hinj)))
-                ax.set_ylim(ylim or (0., scale * np.around(y[m].max(), 1)))
-
         # add labels indicating noise threshold and band confidence
         if det_thrsh:
             ax.text(.02, .7, 'Detection threshold: ' + str(det_thrsh),
@@ -586,7 +590,7 @@ class Results(object):
         plt.close(fig)
         print 'Figure saved: %r.' % p
 
-    def plot_p(self, kind, methods=None, nbins=100, star=None, starsize=6,
+    def plot_p(self, kind, methods=None, nbins=100, star=None, starsize=10,
                starcolor='y', fit=True, title=True, legend=True, legendloc=3,
                legendfont=14, xlim=False, ylim=(1e-4,1), path=g.paths['plots'],
                suffix='', filetype='png', hidedata=False, manyfiles=False,
@@ -623,7 +627,7 @@ class Results(object):
                     # assuming a dictionary indexed by method was provided
                     # elements of dictionary should be a list/array
                     # significances/hrecs
-                    s = star[m][0]
+                    s = star[m]
                     ax.plot(s, 0.1, starcolor + '*', markersize=starsize)
                 elif isinstance(star, list) or isinstance(star, np.ndarray):
                     # assuming a list of significances was provided
@@ -893,11 +897,14 @@ class ResultsMP(object):
         ## PROCESS
         if isinstance(x, dict):
             y_sort = {}
+            x_sort = {}
             for m in methods:
                 y_sort[m] = np.array([yi for (xi, yi) in sorted(zip(x[m], y))])
+                x_sort[m] = sorted(x[m])
         else:
             y_sort = np.array([yi for (xi, yi) in sorted(zip(x, y))])
-        return y_sort
+            x_sort = sorted(x)
+        return y_sort, x_sort
 
     def getpsrparam(self, paramname):
         paramlist = []
@@ -989,7 +996,14 @@ class ResultsMP(object):
             fig, ax = plt.subplots(1)
             # plot all methods on same axes
             for m in methods:
-                plt.plot(x, y[m], g.plotcolor[m]+'+', label=m)
+                ax.plot(x, y[m], g.plotcolor[m]+'+', label=m)
+
+            if xlim:
+                ax.set_xlim(xlim[0], xlim[1])
+            if ylim:
+                ax.set_ylim(ylim[0], ylim[1])
+            if grid:
+                ax.grid()
 
             # Style
             if legend:
@@ -1035,12 +1049,6 @@ class ResultsMP(object):
                      % (self.injkind, self.det, self.run,
                         self.prefix, t)
                 ax.set_title(tt)
-            if xlim:
-                ax.set_xlim(xlim[0], xlim[1])
-            if ylim:
-                ax.set_ylim(ylim[0], ylim[1])
-            if grid:
-                ax.grid()
 
             # save
             filename = 'mp_' + self.det + self.run + '_' + self.injkind +\
@@ -1053,12 +1061,12 @@ class ResultsMP(object):
 
     def plot_ref(self, det_thrsh=.999, det_conf=.95, methods=None,
                  linecolor='gray', linewidth=1, linealpha=.5,
-                 prefix='', suffix='', marker='*', markersize=10,
+                 prefix='', suffix='', marker=None, markersize=10,
                  markercolor=None, legendloc=4, ylim=(1e-27, 1e-23),
                  xlim=(30, 1500), path=g.paths['plots'],
                  lp = '/home/misi/Documents/P1200104-v4/', filetype='pdf'):
 
-        methods = methods or [self.injkind, 'Sid']
+        methods = methods or ['Sid', self.injkind]
 
         # LOAD SENSITIVITY CURVES
         if self.run == 'S5':
@@ -1109,19 +1117,6 @@ class ResultsMP(object):
         hmin = self.getstat('hmin', det_thrsh=det_thrsh, det_conf=det_conf)
 
         # PLOT
-        # mplparams = {
-        #     'text.usetex': True,  # use LaTeX for all text
-        #     'axes.linewidth': 1,  # set axes linewidths to 0.5
-        #     'axes.grid': True,  # add a grid
-        #     'axes.axisbelow': True,
-        #     'grid.linestyle': '-',  # grid as solid lines not dashed
-        #     'grid.color': 'gray',  # grid lines grey
-        #     'grid.linewidth': 0.5,
-        #     'font.family': 'serif',
-        #     'font.size': 18
-        # }
-        matplotlib.rcParams.update(mplparams)
-
         fig = plt.figure(figsize=(14, 10), dpi=300)
 
         plt.loglog(fs, sens, color=linecolor, alpha=linealpha,
@@ -1130,8 +1125,8 @@ class ResultsMP(object):
         plt.hold(True)
 
         for m in methods:
-            plt.loglog(freq, hmin[m], marker, label="%s template" % m,
-                       markersize=markersize,
+            plt.loglog(freq, hmin[m], marker or g.plotmarker[m],
+                       label="%s template" % m, markersize=markersize,
                        color=markercolor or g.plotcolor[m])
 
         plt.xlim(xlim[0], xlim[1])
@@ -1139,7 +1134,7 @@ class ResultsMP(object):
         plt.xlabel(r'Gravitational-wave Frequency (Hz)', fontsize=20,
                    fontweight=100)
         plt.ylabel(r'Strain Sensitivity %.2f (%i pulsars)' % (det_conf,
-                                                                len(freq)),
+                                                              len(freq)),
                    fontsize=20, fontweight=100)
 
         plt.legend(numpoints=1, loc=legendloc)
@@ -1156,8 +1151,8 @@ class ResultsMP(object):
     def plot_ob(self, psrparam, statkinds, det_thrsh=None, det_conf=None,
                 band_conf=None, p_fitorder=None, methods=None,
                 path=g.paths['plots'], filetype='pdf', log=False, title=True,
-                legend=True, legend_loc='lower right', xlim=None, grid=True,
-                fill=False):
+                legend=True, legend_loc='lower right', xlim=None, ylim=None,
+                grid=True, fill=False):
         """ Produces plot of ob indicator (h_ob, s_ob, p_ob) vs a PSR parameter
         (e.g. FR0, DEC, 'RAS').
         """
@@ -1247,6 +1242,8 @@ class ResultsMP(object):
                              ' data ' + self.prefix + '\n' + t)
             if xlim:
                 ax.set_xlim(xlim[0], xlim[1])
+            if ylim:
+                ax.set_ylim(ylim[0], ylim[1])
             if grid:
                 ax.grid()
             # save
