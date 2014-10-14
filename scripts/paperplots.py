@@ -52,7 +52,7 @@ crab_g4v.load(path=p)
 #
 # ###############################################################################
 # # ALL PSRs RESULTS PLOTS
-detectors = ['H1']#, 'L1', 'H2']
+detectors = ['H1', 'L1']#, 'H2']
 runs = ['S5']#,'S6']
 injections = ['GR', 'G4v']
 mpbest = {}

@@ -1,8 +1,9 @@
-#! /usr/bin/env python 
+#! /usr/bin/env python
 
-from globs import general as g
+
 
 import sys
+import os
 import numpy as np
 import scipy.stats
 
@@ -10,6 +11,8 @@ import scipy.stats
 #matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
+sys.path.append(os.getcwd())
+from lib import general as g
 
 ### SETUP
 
@@ -19,7 +22,7 @@ psr = 'J0534+2200'
 det = 'H1'
 run = 'S5'
 
-plots_dir = 'scratch/plots/'
+plots_dir = 'tmp/plots/'
 
 # Load data
 p = g.Pair(psr, det)
@@ -33,7 +36,7 @@ d = p.data
 
 if type == 'data':
     # PLOT FINEHET DATA (RE)
-    
+
     plt.figure(figsize=(16,3), dpi=127)
     # Plot
     plt.plot(t, d.real)
@@ -53,25 +56,25 @@ if type == 'data':
 
 elif type in ['hist', 'histlog']:
     # HISTOGRAM FINEHET
-    
+
     figname = 'hist_%(det)s_%(run)s_%(psr)s' % locals()
-    
+
     if type == 'histlog':
         l = True
         figname += '_log'
     else:
         l = False
-    
+
     _, _, _ = plt.hist(d.real, 100, color='b', log=l, histtype='step', normed=1, label='Data')
-    
+
     # Fit gaussian
     m = np.mean(d.real)
     s = np.std(d.real)
 
     gaussian = np.random.normal(m, s, len(d))
-    
+
     _, _, _ = plt.hist(gaussian, 100, color='r', log=l, histtype='step', normed=1, label='Gaussian')
-    
+
     plt.title('Histogram of %(det)s %(run)s data heterodyned for PSR %(psr)s' % locals() )
 
     plt.xlabel('Real part of het. data')
@@ -88,9 +91,9 @@ elif type == 'dailystd':
     s = p.get_sigma()
 
     plt.plot(t, s, '+')
-    
+
     plt.title('Daily std. dev. of %(det)s %(run)s data heterodyned for PSR %(psr)s' %locals() )
-    
+
     plt.xlabel('GPS time')
     plt.ylabel('$\sigma$')
 

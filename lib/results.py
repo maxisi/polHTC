@@ -955,6 +955,43 @@ class ResultsMP(object):
             h_conf[m] = np.array(h_conf[m])
         return h_ob, s_ob, p_ob, h_conf
 
+    def sortbyob(self, target, by, methods=None, det_thrsh=.999, det_conf=.95):
+        """Returns instance of list of name 'target' sorted by 'by' (OB).
+        'target' can be 'psrlist', 'fgw' (=2*FR0) or the name of a PSR
+        parameter (e.g. 'RAS')
+        """
+        methods = methods or g.SEARCHMETHODS
+        # parse name of list to be sorted
+        if target == 'psrlist':
+            y = self.psrlist
+        elif target == 'psrs':
+            y = self._psrs
+        elif 'gw' in target:
+            # assume fgw requested
+            ylist = [psr.param['FR0'] for psr in self._psrs]
+            y = 2 * np.array(ylist).astype('float')
+        else:
+            ylist = [psr.param[target] for psr in self._psrs]
+            y = np.array(ylist).astype('float')
+        # parse name of list to be sorted BY
+        if by == 'h_ob':
+            x = self.openboxes(det_thrsh=det_thrsh, det_conf=det_conf)[0]
+        elif by == 's_ob':
+            x = self.openboxes(det_thrsh=det_thrsh, det_conf=det_conf)[1]
+        elif by == 'p_ob':
+            x = self.openboxes(det_thrsh=det_thrsh, det_conf=det_conf,
+                               p_fitorder=2)[2]
+        else:
+            print 'ERROR: unsupported `by` argument: %r' % by
+            return
+        ## PROCESS
+        y_sort = {}
+        x_sort = {}
+        for m in methods:
+            y_sort[m] = np.array([yi for (xi, yi) in sorted(zip(x[m], y))])
+            x_sort[m] = sorted(x[m])
+        return y_sort, x_sort
+
     #--------------------------------------------------------------------------
     # Plots
     def plot(self, psrparam, statkinds, det_thrsh=.999, det_conf=.95,
@@ -1177,9 +1214,9 @@ class ResultsMP(object):
             return
         # open boxes
         if 'p_ob' in kinds:
-            det_thrsh = det_thrsh or .999
-            det_conf = det_conf or .95
-            band_conf = band_conf or .95
+            # det_thrsh = det_thrsh or .999
+            # det_conf = det_conf or .95
+            # band_conf = band_conf or .95
             p_fitorder = p_fitorder or 2
         elif 'h_conf' in kinds:
             det_thrsh = det_thrsh or .999
@@ -1213,7 +1250,7 @@ class ResultsMP(object):
                     plt.plot(x, y[m], g.plotcolor[m]+'+', label=m)
             # Style
             if legend:
-                plt.legend(loc=legend_loc, numpoints=1)
+                plt.legend(loc=legend_loc, numpoints=1, prop={'size': 14})
             if log:
                 ax.set_yscale('log')
             if 'gw' in psrparam:
