@@ -6,8 +6,8 @@ PSRIN=$3
 NINST=$4
 NINJ=$5
 
-arg=("$DET" "$RUN" "$PSRIN" "$NINST" "$NINJ")
+arg=("$DET" "$RUN" "$PSRIN" "$NINST" "$NINJ" "gauss")
 
-./analysis_gauss/writedag_full_gauss.py "${arg[@]}"
+./analyses/full/writedag.py "${arg[@]}"
 
-condor_submit_dag dags/fullgauss_"$DET""$RUN"_"$PSRIN".dag
+condor_submit_dag tmp/htc/fullgauss_"$DET""$RUN"_"$PSRIN".dag
