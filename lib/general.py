@@ -479,7 +479,6 @@ class Pair(object):
                 for A in signal.templates[kind].keys():
                     dm += [A(psi=pol) + 0j]
 
-        print 'DM ' + kind
         # factor of two following MP (2.12)
         return np.array(dm)/2.
 
@@ -517,11 +516,8 @@ class Pair(object):
             # note that dm will be complex-valued, but the imaginary part is 0.
             # this is useful later when dotting with b
 
-            print 'A ' + m + str(len(A))
-
             # define data vector
             b = data / std
-            print 'b ' + m  +  str(len(b))
 
             # perform SVD decomposition (note Transpose, NOT hermitian)
             U, s, V = np.linalg.svd(A.T, full_matrices=False)
@@ -529,11 +525,9 @@ class Pair(object):
             # Note that np.linalg.svd returns Vt, not V. in NR notation
             # (http://docs.scipy.org/doc/numpy/reference/generated/numpy
             # .linalg.svd.html)
-            print 'SVD ' + m
 
             # define covariance matrix
             cov = np.dot(np.dot(herm(V), W ** 2), V)
-            print 'Cov ' + m
             # see 'Covariance' page in Polarizations tab of LIGO 2013 Notebook
 
             VtW = np.dot(herm(V), W)

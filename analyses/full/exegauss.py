@@ -106,37 +106,33 @@ ph0_lst = np.zeros(ninst)
 ph0_lst[injLocations] = ph0s
 
 ###############################################################################
-## PRELUDE
-
 # setup results
-results = res.Results(det, run, psr, injkind, prefix='gauss')
-results.hinj = hinj_lst
+results = res.Results(det, run, psr, injkind)
+results.hinj = []
 
-# setup random seed
-random.seed(3)
 
 for n in range(ninst):
 
-    # get search parameters
-    polsrch = pol_lst[n]
-    incsrch = inc_lst[n]
+    freq = freq_lst[n]
 
-    # get injection parameters
     hinj = hinj_lst[n]
-    polinj = pol_lst[n]
-    incinj = inc_lst[n]
+    pol = pol_lst[n]
+    inc = inc_lst[n]
     ph0 = ph0_lst[n]
 
-    ## Create Gaussian noise
-    log.info('Create white noise.')
-    inst = np.array([random.gauss(0., datastd) for n in range(len(pair.data))])
+    ## RE-HETERODYNE
+    log.info('Reheterodyne.')
+    inst = g.het(freq, pair.data, pair.time)
 
     ## SEARCH
     # inject if needed
     if hinj != 0:
         log.info('Injecting.')
-        inst += hinj * pair.signal(injkind, polinj, incinj)
-
+        inst += hinj * pair.signal(injkind, pol, inc, ph0)
+        # assuming already rescaled by 1/2
+        h = [hinj * ap(inc, ph0) for _, ap in
+             pair.Signal.templates[injkind].iteritems()]
+        hinj = np.linalg.norm(h)
     # search
     results_n = pair.search(data=inst, pol=pair.psr.param['POL'])
     # unpack results

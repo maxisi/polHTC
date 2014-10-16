@@ -103,8 +103,6 @@ ph0_lst[injLocations] = ph0s
 
 ###############################################################################
 
-## PRELUDE
-
 # setup results
 results = res.Results(det, run, psr, injkind)
 results.hinj = []
