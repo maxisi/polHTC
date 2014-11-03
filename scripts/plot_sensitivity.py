@@ -20,8 +20,8 @@ parser.add_argument("injkind")
 parser.add_argument("-d", "--det", default='H1')
 parser.add_argument("-r", "--run", default='S5')
 parser.add_argument("-t", "--tmp", nargs='+')
-parser.add_argument("-fl", "--flim", nargs='+', type=int, default=[10.1, 1500])
-parser.add_argument("-dp", "--datapath", default='/home/misi/results/H1S5/')
+parser.add_argument("-fl", "--flim", nargs='+', type=int, default=[30, 1500])
+parser.add_argument("-dp", "--datapath", default='/home/misi/results/')
 parser.add_argument("-lp", "--linepath", default='/home/misi/Documents/'
                                                  'P1200104-v4/')
 parser.add_argument("-pp", "--plotpath", default='tmp/plots/')
@@ -131,8 +131,8 @@ plt.setp(plt.gca().get_legend().get_texts(), fontsize='12')
 
 #fig.subplots_adjust(left=0.18, bottom=0.15)
 
-fig.savefig(args.plotpath + 'senscurve_%s%s_%s.%s'
+fig.savefig(args.plotpath + args.prefix + 'senscurve_%s%s_%s.%s'
             % (det, run, kind, args.filetype))
 
-print "Plot saved: " + args.plotpath + 'senscurve_%s%s_%s.%s'\
+print "Plot saved: " + args.plotpath + args.prefix + 'senscurve_%s%s_%s.%s'\
                                        % (det, run, kind, args.filetype)
