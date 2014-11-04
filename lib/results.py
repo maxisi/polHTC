@@ -178,6 +178,7 @@ class Results(object):
                 grp.create_dataset('hrec', data=self.hrec[m])
                 grp.create_dataset('srec', data=self.srec[m])
                 # grp.create_dataset('arec', data=self.arec[m])
+        self.log.info('Results exported: ' + export_path)
 
     def load(self, path=None):
         """Loads results from HDf5 file.
@@ -768,6 +769,7 @@ class ResultsMP(object):
         self.run = run
         self.injkind = injkind
         self.prefix = ''
+        self.suffix = ''
         self.psrlist = []
         self._psrs = []
         self._results = OrderedDict()
@@ -791,6 +793,7 @@ class ResultsMP(object):
         print 'Loading PSR results.'
         ### SETUP ###
         self.prefix = prefix or self.prefix
+        self.suffix = prefix or self.suffix
         # Determine source file path:
         #   if a path was provided, use it;
         #   if not, create Cluster object and use its public d
@@ -1104,6 +1107,9 @@ class ResultsMP(object):
                  lp = '/home/misi/Documents/P1200104-v4/', filetype='pdf'):
 
         methods = methods or ['Sid', self.injkind]
+
+        prefix = prefix or self.prefix
+        suffix = suffix or self.suffix
 
         # LOAD SENSITIVITY CURVES
         if self.run == 'S5':

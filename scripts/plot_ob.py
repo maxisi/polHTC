@@ -40,16 +40,22 @@ for d in detectors:
                 if injkind == 'GR':
                     obcontainer[d+run][results.psrlist[n]]['Sid'] = pob['Sid'][n]
 
-tableob = {}
+latextable = {}
+asciitable = {}
 for d in detectors:
     for run in runs:
-        t = [('PSR', 'p GR', 'p G4v', 'p Sid')]
+        tex = [('PSR', 'p GR', 'p G4v', 'p Sid')]
+        asciitable[d + run] = 'PSR ROT_FREQ H_DEP H_INDEP\n'
+
         for psr, pobs in obcontainer[d+run].iteritems():
-            t.append((psr, r'\num{%.3f}' % pobs['GR'],
-                      r'\num{%.3f}' % pobs['G4v'],
-                      r'\num{%.3f}' % pobs['Sid']))
-        tableob[d+run] = tabulate(t, headers='firstrow', tablefmt='latex')
-        tableob[d+run] = tableob[d+run].replace(r'\textbackslash{}', '\\').\
+            tex.append((psr, r'\num{%.3f}' % pobs['GR'],
+                       r'\num{%.3f}' % pobs['G4v'],
+                       r'\num{%.3f}' % pobs['Sid']))
+            asciitable[d + run] += '%s %.3f %.3f %.3f\n' % (psr, pobs['GR'],
+                                                          pobs['G4v'],
+                                                          pobs['Sid'])
+        latextable[d+run] = tabulate(tex, headers='firstrow', tablefmt='latex')
+        latextable[d+run] = latextable[d+run].replace(r'\textbackslash{}', '\\').\
             replace(r'\{', r'{').replace(r'\}', r'}')
 
 with open(tablepath, 'w') as f:
@@ -57,5 +63,11 @@ with open(tablepath, 'w') as f:
         for run in runs:
             f.write('\n\n')
             f.write('%%' + d + run + ' sensitivity\n')
-            f.write(tableob[d + run])
-    print 'Table saved: %r' % tablepath
+            f.write(latextable[d + run])
+    print 'LaTex table saved: %r' % tablepath
+
+for d in detectors:
+    for run in runs:
+        with open('tmp/plots/results%s%s.txt' % (d, run), 'w') as f:
+            f.write(asciitable[d + run])
+        print 'ASCII tables saved: tmp/plots/results%s%s.txt' % (d, run)
