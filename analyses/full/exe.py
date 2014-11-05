@@ -100,7 +100,6 @@ ph0_lst = np.zeros(ninst)
 # injection strength index (indicates hinj_lst for each inst):
 ph0_lst[injLocations] = ph0s
 
-
 ###############################################################################
 
 # setup results

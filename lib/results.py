@@ -38,7 +38,7 @@ class Results(object):
     def __init__(self, det, run, psr, kind, methods=g.SEARCHMETHODS,
                  prefix='', suffix='', verbose=False):
 
-        self.log = logging.getLogger('results.'+kind+'.'+psr)
+        self.log = logging.getLogger('results.' + kind + '.' + psr)
 
         self.verbose = verbose
 
@@ -112,7 +112,7 @@ class Results(object):
         hinj_new = []
         for h, i in zip(hinj, incinj):
             h = [h * ap(i, 0) for _, ap in
-	    g.Signal().templates[self.injkind].iteritems()]
+        g.Signal().templates[self.injkind].iteritems()]
             hinj_new.append(np.linalg.norm(h))
 
         self.hinj = np.array(hinj_new)

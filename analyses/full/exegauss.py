@@ -107,7 +107,7 @@ ph0_lst[injLocations] = ph0s
 
 ###############################################################################
 # setup results
-results = res.Results(det, run, psr, injkind)
+results = res.Results(det, run, psr, injkind, prefix='gauss_')
 results.hinj = []
 
 
@@ -134,7 +134,7 @@ for n in range(ninst):
              pair.Signal.templates[injkind].iteritems()]
         hinj = np.linalg.norm(h)
     # search
-    results_n = pair.search(data=inst, pol=pair.psr.param['POL'])
+    results_n = pair.search(data=inst, pol=pair.psr.param['POL'], std=datastd)
     # unpack results
     results.hinj.append(hinj)
     for m in g.SEARCHMETHODS:

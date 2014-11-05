@@ -483,7 +483,7 @@ class Pair(object):
         return np.array(dm)/2.
 
     def search(self, data=None, methods=SEARCHMETHODS, pol=None, inc=None,
-               save=False):
+               std=None, save=False):
 
         def herm(x):
             return x.T.conj()
@@ -501,9 +501,9 @@ class Pair(object):
         if not self.det.check_vectors(self.time, filename=self.psr.name):
             self.det.create_vectors(self.time, filename=self.psr.name)
 
-
         # get sigma
-        std = self.sigma or self.get_sigma()
+        if std is None:
+            std = self.sigma or self.get_sigma()
 
         results = {}
 
