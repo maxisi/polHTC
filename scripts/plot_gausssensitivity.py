@@ -128,13 +128,13 @@ plt.loglog(fs, sens, color=args.linecolor, alpha=args.linealpha,
 plt.hold(True)
 
 for m in methods:
+    plt.loglog(freq_gauss, hmin_gauss[m], '.k',
+               label="%s template (Gaussian)" % m, markersize=args.markersize)
+               # markerfacecolor='none',
+               # markeredgecolor=args.markercolor or g.plotcolor[m])
     plt.loglog(freq, hmin[m], args.marker, label="%s template" % m,
                markersize=args.markersize,
                color=args.markercolor or g.plotcolor[m])
-    plt.loglog(freq_gauss, hmin_gauss[m], 'v',
-               label="%s template (Gaussian)" % m, markersize=args.markersize,
-               markerfacecolor='none',
-               markeredgecolor=args.markercolor or g.plotcolor[m])
 
 plt.xlim(flim[0], flim[1])
 plt.ylim(1e-27, 1e-23)

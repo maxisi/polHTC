@@ -31,18 +31,18 @@ crab_gr.load(path=p)
 # # CRAB RESULTS PLOTS
 #
 # # GR
-# crab_gr.plot('s', methods=['GR', 'Sid'], band_conf=0, title=False,
-#              suffix='_sid')
-# crab_gr.plot('s', methods=['GR', 'G4v'], band_conf=0, title=False,
-#              suffix='_g4v')
-# # G4v
-# crab_g4v = r.Results('H1', 'S5', 'J0534+2200', 'G4v')
-# crab_g4v.load(path=p)
-# #
-# crab_g4v.plot('s', methods=['G4v', 'Sid'], band_conf=0, title=False,
-#              suffix='_sid')
-# crab_g4v.plot('s', methods=['GR', 'G4v'], band_conf=0, title=False,
-#              suffix='_gr')
+crab_gr.plot('s', methods=['GR', 'Sid'], band_conf=0, title=False,
+             suffix='_sid')
+crab_gr.plot('s', methods=['GR', 'G4v'], band_conf=0, title=False,
+             suffix='_g4v')
+# G4v
+crab_g4v = r.Results('H1', 'S5', 'J0534+2200', 'G4v')
+crab_g4v.load(path=p)
+#
+crab_g4v.plot('s', methods=['G4v', 'Sid'], band_conf=0, title=False,
+             suffix='_sid')
+crab_g4v.plot('s', methods=['GR', 'G4v'], band_conf=0, title=False,
+             suffix='_gr')
 
 # cgrob = crab_gr.openbox(methods=['GR', 'Sid'], det_thrsh=.999, p_fitorder=2)
 # cg4vob = crab_g4v.openbox(methods=['G4v', 'Sid'], det_thrsh=.999, p_fitorder=2)
@@ -52,11 +52,11 @@ crab_gr.load(path=p)
 #
 # ###############################################################################
 # # ALL PSRs RESULTS PLOTS
-detectors = ['H1']#, 'L1']#, 'H2']
-runs = ['S5']#,'S6']
-injections = ['GR', 'G4v']
-mpbest = {}
-
+# detectors = ['H1']#, 'L1']#, 'H2']
+# runs = ['S5']#,'S6']
+# injections = ['GR', 'G4v']
+# mpbest = {}
+#
 # for d in detectors:
 #     for run in runs:
 #         mpbest[d + run] = [(' ', 'PSR', r'$\nu$', r'$h_{\rm dep}$',
@@ -73,9 +73,9 @@ mpbest = {}
 #                 results.plot('fgw', 's_noise', methods=['GR', 'G4v', 'Sid'],
 #                              logx=1, title=0, xlim=(30, 1500))
 #
-#             # create gest-hmin tables
-#             names, hmin = results.sortby('psrlist', 'hmin')
-#             freq, _ = results.sortby('FR0', 'hmin')
+            # create gest-hmin tables
+            # names, hmin = results.sortby('psrlist', 'hmin')
+            # freq, _ = results.sortby('FR0', 'hmin')
 
             # # LaTex
             # mpbest[d + run].append((injkind, names[injkind][0],
@@ -86,13 +86,13 @@ mpbest = {}
 # ###############################################################################
 # # GAUSSIAN NOISE RESULTS PLOTS
 
-for d in detectors:
-    for run in runs:
-        for injkind in injections:
-            results = r.ResultsMP(injkind, det=d, run=run)
-            results.load(path=p, prefix='gauss_')
-            # produce plot
-            results.plot_ref()
+# for d in detectors:
+#     for run in runs:
+#         for injkind in injections:
+#             results = r.ResultsMP(injkind, det=d, run=run)
+#             results.load(path=p, prefix='gauss_')
+#             # produce plot
+#             results.plot_ref()
 
 ###############################################################################
 # TABLES
