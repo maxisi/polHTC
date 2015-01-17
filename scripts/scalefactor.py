@@ -95,9 +95,39 @@ freq = 2 * np.array([psr.param['FR0'] for psr in mp._psrs]).astype(float)
 hmin = mp.getstat('hmin', det_thrsh=.99, det_conf=0)
 
 ###############################################################################
-# PRINT
+# PRINT MP ratios
+print '###########'
+print 'FIGURE OF MERIT: %s %s %s' % (det, run, kind)
+print '-----------'
+print 'Average over PSRs:'
+
+plt.figure()
+for m in methods:
+    scale_vector = hmin[m]/ (intf(freq)/np.sqrt(ts))
+    scale_factor = np.mean(scale_vector)
+    print '%s: %2f' % (m, scale_factor)
+
+    # histogram
+    _, _, _ = plt.hist(scale_vector, 10, color=g.plotcolor[m], histtype='step', label=m)
+
+#plt.title(r'Histogram of $\rho$: %s injections on %s %s data' % (kind, det, run))
+plt.xlabel(r'$\rho$')
+plt.ylabel('Count')
+plt.legend(numpoints=1)
+plt.savefig(args.plotpath + 'rho_' + det + run + '_' + kind + '.pdf', bbox_inches='tight')
+print '-----------'
+
+###############################################################################
+# PRINT CRAB RATIO
+crab = r.Results(det, run, 'J0534+2200', kind)
+crab.load(path=args.datapath)
+crab_hmin = crab.min_h_det(.999)
+crab_freq = 2.0 * g.Pulsar(crab.psr).param['FR0']
+
+print 'Crab:'
 
 for m in methods:
-    scale_vector = hmin[m]/ np.sqrt(intf(freq)/ts)
-    scale_factor = np.mean(scale_vector)
-    print scale_factor
+    scale_factor = crab_hmin[m]/ (intf(crab_freq)/np.sqrt(ts))
+    print '%s: %2f' % (m, scale_factor)
+
+print '###########'

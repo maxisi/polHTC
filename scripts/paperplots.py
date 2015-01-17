@@ -31,18 +31,18 @@ crab_gr.load(path=p)
 # # CRAB RESULTS PLOTS
 #
 # # GR
-crab_gr.plot('s', methods=['GR', 'Sid'], band_conf=0, title=False,
-             suffix='_sid')
-crab_gr.plot('s', methods=['GR', 'G4v'], band_conf=0, title=False,
-             suffix='_g4v')
-# G4v
-crab_g4v = r.Results('H1', 'S5', 'J0534+2200', 'G4v')
-crab_g4v.load(path=p)
+#crab_gr.plot('s', methods=['GR', 'Sid'], band_conf=0, title=False,
+#             suffix='_sid')
+#crab_gr.plot('s', methods=['GR', 'G4v'], band_conf=0, title=False,
+#             suffix='_g4v')
+## G4v
+#crab_g4v = r.Results('H1', 'S5', 'J0534+2200', 'G4v')
+#crab_g4v.load(path=p)
 #
-crab_g4v.plot('s', methods=['G4v', 'Sid'], band_conf=0, title=False,
-             suffix='_sid')
-crab_g4v.plot('s', methods=['GR', 'G4v'], band_conf=0, title=False,
-             suffix='_gr')
+#crab_g4v.plot('s', methods=['G4v', 'Sid'], band_conf=0, title=False,
+#             suffix='_sid')
+#crab_g4v.plot('s', methods=['GR', 'G4v'], band_conf=0, title=False,
+#             suffix='_gr')
 
 # cgrob = crab_gr.openbox(methods=['GR', 'Sid'], det_thrsh=.999, p_fitorder=2)
 # cg4vob = crab_g4v.openbox(methods=['G4v', 'Sid'], det_thrsh=.999, p_fitorder=2)
@@ -119,7 +119,7 @@ crab_g4v.plot('s', methods=['GR', 'G4v'], band_conf=0, title=False,
 # t2 = t2.replace(r'\textbackslash{}', '\\').replace(r'\{', r'{').replace(r'\}',
 #                                                                         r'}')
 
-# MP sesnsitivity
+# MP sensitivity
 # mpbest_table = {}
 # for d in detectors:
 #     for run in runs:
