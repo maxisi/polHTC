@@ -50,7 +50,7 @@ pair.load_finehet(run, check_vectors=True)
 
 ## ANALYSIS PARAMETERS
 # frequencies for re-heterodynes
-frange = [1.0e-7, 1.0e-5]
+frange = [1.0e-7, 0.85e-3]
 # injection strengths proportional to overall noise magnitude
 hinj_magnitude = np.ceil(np.log10(abs(max(pair.data)))) - 3
 hinjrange = [1.0E-27, 10**hinj_magnitude]

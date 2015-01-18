@@ -41,7 +41,7 @@ log.info('Performing ' + str(ninj) + ' injections on ' + str(ninst) + ' instanti
 
 
 ## ANALYSIS PARAMETERS
-frange = [1.0e-7, 1.0e-5] # frequencies for re-heterodynes
+frange = [1.0e-7, 0.85e-3] # frequencies for re-heterodynes
 hinjrange=[1.0E-27, 1.0E-24] # injection strengths IMP! MIGHT NEED TO BE TUNED!
 
 if 'J1701-3006C' == psr:
