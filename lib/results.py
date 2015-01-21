@@ -776,6 +776,8 @@ class ResultsMP(object):
         self.failed = []
         self._statkinds = ['hmin', 's_slope', 'h_slope', 's_noise',
                            'h_noise', 's_rmse', 'h_rmse']
+        self.asd = None
+        self.ts = None
         if path is not None:
             self.load(path=path)
 
@@ -819,6 +821,45 @@ class ResultsMP(object):
         self.psrlist = list(goodpsrs - set(self.failed))
         self._loadpsrs()
 
+    def load_asd(self, path='/home/misi/Documents/P1200104-v4/'):
+        if self.asd is None:
+            self.log.info('ASD already loaded.')
+        else:
+            if self.run == 'S5':
+                if self.det == 'H1':
+                    self.ts = 527.*86400.
+                    self.asd = np.loadtxt(path + 'lho4k_070318_strain.txt',
+                                          comments='%')
+                elif self.det == 'H2':
+                    self.asd = np.loadtxt(path + 'lho2k_070514_strain.txt',
+                                          comments='%')
+                    self.ts = 535.*86400.
+                elif self.det == 'L1':
+                    self.ts = 405.*86400.
+                    self.asd = np.loadtxt(path + 'llo_060604_strain.txt',
+                                          comments='%')
+                else:
+                    print 'ERROR: invalid detector run combination: %r and %r'\
+                          % (self.det, self.run)
+                    return
+            elif self.run == 'S6':
+                if self.det == 'H1':
+                    self.ts = 238.*86400.
+                    self.asd = np.loadtxt(path + 'lho4k_15May2010_05hrs17min45'
+                                                 'secUTC_strain.txt',
+                                          comments='%')
+                elif self.det == 'L1':
+                    self.ts = 225.*86400.
+                    self.asd = np.loadtxt(path + 'llo4k_31May2010_09hrs05min45s'
+                                                 'ecUTC_strain.txt',
+                                          comments='%')
+                else:
+                    print 'ERROR: invalid detector run combination: %r and %r'\
+                          % (self.det, self.run)
+                    return
+            else:
+                print "ERROR: %r injections are not supported." % self.run
+                return
     #--------------------------------------------------------------------------
     # Statistics
     def getstat(self, kindstat, det_thrsh=.999, det_conf=.95, verbose=False):
@@ -914,6 +955,11 @@ class ResultsMP(object):
         for psr in self._psrs:
             paramlist.append(psr.param[paramname])
         return np.array(paramlist)
+
+    def scalefactor(self):
+        """
+        Obtain ratio (\rho) between obtained hmin and expected sensitivity.
+        """
 
     #--------------------------------------------------------------------------
     # Open boxes
@@ -1111,49 +1157,19 @@ class ResultsMP(object):
         prefix = prefix or self.prefix
         suffix = suffix or self.suffix
 
-        # LOAD SENSITIVITY CURVES
-        if self.run == 'S5':
-            if self.det == 'H1':
-                ts = 527.*86400.
-                asd = np.loadtxt(lp + 'lho4k_070318_strain.txt', comments='%')
-            elif self.det == 'H2':
-                asd = np.loadtxt(lp + 'lho2k_070514_strain.txt', comments='%')
-                ts = 535.*86400.
-            elif self.det == 'L1':
-                ts = 405.*86400.
-                asd = np.loadtxt(lp + 'llo_060604_strain.txt', comments='%')
-            else:
-                print 'ERROR: invalid detector run combination: %r and %r'\
-                      % (self.det, self.run)
-                return
-        elif self.run == 'S6':
-            if self.det == 'H1':
-                ts = 238.*86400.
-                asd = np.loadtxt(lp + 'lho4k_15May2010_05hrs17min45secUTC'
-                                      '_strain.txt', comments='%')
-            elif self.det == 'L1':
-                ts = 225.*86400.
-                asd = np.loadtxt(lp + 'llo4k_31May2010_09hrs05min45secUTC'
-                                      '_strain.txt', comments='%')
-            else:
-                print 'ERROR: invalid detector run combination: %r and %r'\
-                      % (self.det, self.run)
-                return
-        else:
-            print "ERROR: %r injections are not supported." % self.run
-            return
+        self.load_asd(path=lp)
 
         # get a range of frequencies
         fs = np.arange(xlim[0], xlim[1], 0.1)
         # interpolate amplitude spectral densities to same freq range
-        intf = interp1d(asd[:, 0], asd[:, 1], kind='linear')
+        intf = interp1d(self.asd[:, 0], self.asd[:, 1], kind='linear')
         # convert to power spectra
         sint = np.square(intf(fs))
 
         # scale factor for sensitivity estimate (Dupuis 2005)
         sf = 10.8
         # get the harmonic mean of the S5 time weighted sensitivities
-        sens = sf * np.sqrt(sint/ts)  # ! MIGHT BE WRONG
+        sens = sf * np.sqrt(sint/self.ts)  # ! MIGHT BE WRONG
 
         freq = 2 * np.array([psr.param['FR0']
                              for psr in self._psrs]).astype(float)
