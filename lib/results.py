@@ -860,6 +860,7 @@ class ResultsMP(object):
             else:
                 print "ERROR: %r injections are not supported." % self.run
                 return
+            
     #--------------------------------------------------------------------------
     # Statistics
     def getstat(self, kindstat, det_thrsh=.999, det_conf=.95, verbose=False):
@@ -956,10 +957,62 @@ class ResultsMP(object):
             paramlist.append(psr.param[paramname])
         return np.array(paramlist)
 
-    def scalefactor(self):
+    def scalefactor(self, psr=None, det_thrsh=.999, det_conf=.95,
+                    methods=None, hist=True, plotpath=g.paths['plots']):
         """
         Obtain ratio (\rho) between obtained hmin and expected sensitivity.
         """
+        methods = methods or ['Sid', self.injkind]
+
+        self.load_asd()
+        # get a range of frequencies
+        fs = np.arange(30, 1500, 0.1)
+        # interpolate amplitude spectral densities to same freq range
+        intf = interp1d(self.asd[:, 0], self.asd[:, 1], kind='linear')
+        # convert to power spectra
+        sint = np.square(intf(self.fs))
+
+        # scale factor for sensitivity estimate (Dupuis 2005)
+        sf = 10.8
+        # get the harmonic mean of the S5 time weighted sensitivities
+        sens = sf * np.sqrt(sint/self.ts)  # ! MIGHT BE WRONG
+
+        hmin = self.getstat('hmin', det_thrsh=det_thrsh, det_conf=det_conf)
+
+        if hist:
+            plt.figure()
+
+        for m in methods:
+            if psr is None:
+                freq = 2 * np.array([psr.param['FR0']
+                                     for psr in self._psrs]).astype(float)
+                scale_vector = hmin[m] / (intf(freq)/np.sqrt(self.ts))
+                scale_factor = np.mean(scale_vector)
+
+                # plot if requested
+                if hist:
+                    _, _, _ = plt.hist(scale_vector, 10, color=g.plotcolor[m],
+                                       histtype='step', label=m)
+
+            elif isinstance(psr, basestring):
+                for (p, h) in zip(self._psrs, hmin[m]):
+                    if p.name == psr:
+                        h_psr = h
+                        f_psr = 2.0 * p.param['FR0']
+                scale_factor = h_psr / (intf(f_psr)/np.sqrt(self.ts))
+
+        # histogram config
+        if hist:
+            #plt.title(r'Histogram of $\rho$: %s injections on %s %s data' %
+            #          (kind, det, run))
+            plt.xlabel(r'$\rho$')
+            plt.ylabel('Count')
+            plt.legend(numpoints=1)
+            figname = "%srho_%s%s_%s.pdf" % (plotpath, self.det, self.run,
+                                             self.injkind)
+            plt.savefig(figname, bbox_inches='tight')
+            plt.close()
+        return scale_factor
 
     #--------------------------------------------------------------------------
     # Open boxes
