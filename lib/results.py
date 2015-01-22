@@ -822,8 +822,8 @@ class ResultsMP(object):
         self._loadpsrs()
 
     def load_asd(self, path='/home/misi/Documents/P1200104-v4/'):
-        if self.asd is None:
-            self.log.info('ASD already loaded.')
+        if self.asd is not None:
+            print '(ASD already loaded.)'
         else:
             if self.run == 'S5':
                 if self.det == 'H1':
@@ -970,24 +970,24 @@ class ResultsMP(object):
         # interpolate amplitude spectral densities to same freq range
         intf = interp1d(self.asd[:, 0], self.asd[:, 1], kind='linear')
         # convert to power spectra
-        sint = np.square(intf(self.fs))
+        sint = np.square(intf(fs))
 
-        # scale factor for sensitivity estimate (Dupuis 2005)
-        sf = 10.8
         # get the harmonic mean of the S5 time weighted sensitivities
-        sens = sf * np.sqrt(sint/self.ts)  # ! MIGHT BE WRONG
+        sens = np.sqrt(sint/self.ts)  # ! MIGHT BE WRONG
 
         hmin = self.getstat('hmin', det_thrsh=det_thrsh, det_conf=det_conf)
 
-        if hist:
+        if hist and psr is None:
+            print "Plotting rho histogram"
             plt.figure()
 
+        scale_factor = {}
         for m in methods:
             if psr is None:
-                freq = 2 * np.array([psr.param['FR0']
-                                     for psr in self._psrs]).astype(float)
+                freq = 2 * np.array([p.param['FR0']
+                                     for p in self._psrs]).astype(float)
                 scale_vector = hmin[m] / (intf(freq)/np.sqrt(self.ts))
-                scale_factor = np.mean(scale_vector)
+                scale_factor[m] = np.mean(scale_vector)
 
                 # plot if requested
                 if hist:
@@ -999,10 +999,10 @@ class ResultsMP(object):
                     if p.name == psr:
                         h_psr = h
                         f_psr = 2.0 * p.param['FR0']
-                scale_factor = h_psr / (intf(f_psr)/np.sqrt(self.ts))
+                scale_factor[m] = h_psr / (intf(f_psr)/np.sqrt(self.ts))
 
         # histogram config
-        if hist:
+        if hist and psr is None:
             #plt.title(r'Histogram of $\rho$: %s injections on %s %s data' %
             #          (kind, det, run))
             plt.xlabel(r'$\rho$')
@@ -1012,6 +1012,7 @@ class ResultsMP(object):
                                              self.injkind)
             plt.savefig(figname, bbox_inches='tight')
             plt.close()
+            print "Plot saved: %s" % figname
         return scale_factor
 
     #--------------------------------------------------------------------------

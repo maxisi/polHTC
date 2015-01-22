@@ -52,15 +52,19 @@ crab_g4v.plot_p('s', methods=['G4v','Sid'], star=cg4vob[1], fit=0, manyfiles=1)
 
 ###############################################################################
 # ALL PSRs RESULTS PLOTS
-detectors = ['H1']#, 'L1']#, 'H2']
+detectors = ['H1', 'L1']#, 'H2']
 runs = ['S5']#,'S6']
 injections = ['GR', 'G4v']
 mpbest = {}
+mp_rho = {}
+cr_rho = {}
 
 for d in detectors:
     for run in runs:
         mpbest[d + run] = [(' ', 'PSR', r'$\nu$', r'$h_{\rm dep}$',
                             r'$h_{\rm indep}$')]
+	mp_rho[d + run] = [(' ', 'GR', 'G4v', 'Sid')]
+	cr_rho[d + run] = [(' ', 'GR', 'G4v', 'Sid')]
 
         for injkind in injections:
             results = r.ResultsMP(injkind, det=d, run=run, path=p)
@@ -72,6 +76,11 @@ for d in detectors:
                              logx=1, logy=1, title=0, xlim=(30, 1500))
                 results.plot('fgw', 's_noise', methods=['GR', 'G4v', 'Sid'],
                              logx=1, title=0, xlim=(30, 1500))
+                
+		# scale factors
+		sf_avg = results.scalefactor(methods=['GR', 'G4v', 'Sid'])
+		sf_crab = results.scalefactor(psr='J0534+2200',
+		            methods=['GR', 'G4v', 'Sid'])
 
             # create gest-hmin tables
             names, hmin = results.sortby('psrlist', 'hmin')
@@ -82,6 +91,15 @@ for d in detectors:
                                      r'\num{%.2f}' % freq[injkind][0],
                                      r'\num{%.3g}' % hmin[injkind][0],
                                      r'\num{%.3g}' % hmin['Sid'][0]))
+	    mp_rho[d+run].append((injkind,
+	                        r'\num{%.2f}' % sf_avg['GR'],
+				r'\num{%.2f}' % sf_avg['G4v'],
+				r'\num{%.2f}' % sf_avg['Sid']))
+	    cr_rho[d+run].append((injkind,
+	                        r'\num{%.2f}' % sf_crab['GR'],
+				r'\num{%.2f}' % sf_crab['G4v'],
+				r'\num{%.2f}' % sf_crab['Sid']))
+
 
 ###############################################################################
 # GAUSSIAN NOISE RESULTS PLOTS
@@ -120,12 +138,24 @@ t2 = t2.replace(r'\textbackslash{}', '\\').replace(r'\{', r'{').replace(r'\}',
                                                                         r'}')
 # MP sensitivity
 mpbest_table = {}
+mprho_table = {}
+crrho_table = {}
 for d in detectors:
     for run in runs:
         t = tabulate(mpbest[d+run], headers='firstrow', tablefmt='latex')
         mpbest_table[d + run] = t.replace(r'\textbackslash{}', '\\').\
             replace(r'\{', r'{').replace(r'\}', r'}').replace(r'\$', '$').\
             replace(r'\_', '_')
+	t3 = tabulate(mp_rho[d+run], headers='firstrow', tablefmt='latex')
+	mprho_table[d + run] = t3.replace(r'\textbackslash{}', '\\').\
+            replace(r'\{', r'{').replace(r'\}', r'}').replace(r'\$', '$').\
+            replace(r'\_', '_')
+	# crab
+	t4 =tabulate(cr_rho[d+run], headers='firstrow', tablefmt='latex')
+	crrho_table[d + run] = t4.replace(r'\textbackslash{}', '\\').\
+            replace(r'\{', r'{').replace(r'\}', r'}').replace(r'\$', '$').\
+            replace(r'\_', '_')
+
 
 with open('tmp/plots/tables.txt', 'w') as f:
     f.write('%% Crab sensitivity\n')
@@ -138,3 +168,10 @@ with open('tmp/plots/tables.txt', 'w') as f:
             f.write('\n\n')
             f.write('%%' + d + run + ' sensitivity\n')
             f.write(mpbest_table[d + run])
+            f.write('\n\n')
+            f.write('%%' + d + run + ' avg rho\n')
+            f.write(mprho_table[d + run])
+            f.write('\n\n')
+            f.write('%%' + d + run + ' Crab rho\n')
+            f.write(crrho_table[d + run])
+
