@@ -1230,34 +1230,37 @@ class ResultsMP(object):
         hmin = self.getstat('hmin', det_thrsh=det_thrsh, det_conf=det_conf)
 
         # PLOT
-        fig = plt.figure(figsize=(14, 10), dpi=300)
+        fig, ax = plt.subplots(1, figsize=(14, 10), dpi=300)
+#        fig = plt.figure(figsize=(14, 10), dpi=300)
 
-        plt.loglog(fs, sens, color=linecolor, alpha=linealpha,
+        ax.loglog(fs, sens, color=linecolor, alpha=linealpha,
                    linewidth=linewidth, label='Expected: %s %s'
                                               % (self.det, self.run))
-        plt.hold(True)
+        ax.hold(True)
 
         for m in methods:
-            plt.loglog(freq, hmin[m], marker or g.plotmarker[m],
+            ax.loglog(freq, hmin[m], marker or g.plotmarker[m],
                        label="%s template" % m, markersize=markersize,
                        color=markercolor or g.plotcolor[m])
 
-        plt.xlim(xlim[0], xlim[1])
-        plt.ylim(ylim[0], ylim[1])
-        plt.xlabel(r'Gravitational-wave Frequency (Hz)', fontsize=20,
+        ax.set_xlim(xlim[0], xlim[1])
+        ax.set_ylim(ylim[0], ylim[1])
+        ax.set_xlabel(r'Gravitational-wave Frequency (Hz)', fontsize=20,
                    fontweight=100)
-        plt.ylabel(r'Strain Sensitivity %.2f (%i pulsars)' % (det_conf,
-                                                              len(freq)),
-                   fontsize=20, fontweight=100)
+        ax.set_ylabel(r'Detection threshold (strain)')
 
-        plt.legend(numpoints=1, loc=legendloc)
+        ax.text(.02, 0.075, 'Number of pulsars: ' + str(len(freq)), fontsize=10, transform=ax.transAxes)
+        ax.text(.02, 0.05, 'Detection threshold: ' + str(det_thrsh), fontsize=10, transform=ax.transAxes)
+        ax.text(.02, 0.025, 'Detection confidence: ' + str(det_conf), fontsize=10, transform=ax.transAxes)
+
+        ax.legend(numpoints=1, loc=legendloc)
 
         plt.setp(plt.gca().get_legend().get_texts(), fontsize='12')
         #fig.subplots_adjust(left=0.18, bottom=0.15)
         p = path + '%ssenscurve_%s%s_%s%s.%s' \
                    % (prefix, self.det, self.run, self.injkind, suffix,
                       filetype)
-        fig.savefig(p)
+        fig.savefig(p, bbox_inches='tight')
         plt.close()
         print "Plot saved: %r" % p
 

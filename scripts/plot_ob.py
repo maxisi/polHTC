@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-"""Generates all plots for paper
+"""Generates all OB plots for paper
 """
 import os
 import sys

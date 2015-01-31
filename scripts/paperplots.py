@@ -77,12 +77,7 @@ for d in detectors:
                 results.plot('fgw', 's_noise', methods=['GR', 'G4v', 'Sid'],
                              logx=1, title=0, xlim=(30, 1500))
                 
-		# scale factors
-		sf_avg = results.scalefactor(methods=['GR', 'G4v', 'Sid'])
-		sf_crab = results.scalefactor(psr='J0534+2200',
-		            methods=['GR', 'G4v', 'Sid'])
-
-            # create gest-hmin tables
+            # create best-hmin tables
             names, hmin = results.sortby('psrlist', 'hmin')
             freq, _ = results.sortby('FR0', 'hmin')
 
@@ -91,14 +86,20 @@ for d in detectors:
                                      r'\num{%.2f}' % freq[injkind][0],
                                      r'\num{%.3g}' % hmin[injkind][0],
                                      r'\num{%.3g}' % hmin['Sid'][0]))
-	    mp_rho[d+run].append((injkind,
-	                        r'\num{%.2f}' % sf_avg['GR'],
-				r'\num{%.2f}' % sf_avg['G4v'],
-				r'\num{%.2f}' % sf_avg['Sid']))
-	    cr_rho[d+run].append((injkind,
-	                        r'\num{%.2f}' % sf_crab['GR'],
-				r'\num{%.2f}' % sf_crab['G4v'],
-				r'\num{%.2f}' % sf_crab['Sid']))
+
+    	    # scale factors
+	    sf_avg = results.scalefactor(methods=['GR', 'G4v', 'Sid'])
+	    sf_crab = results.scalefactor(psr='J0534+2200',
+	                methods=['GR', 'G4v', 'Sid'])
+
+            mp_rho[d+run].append((injkind,
+                            r'\num{%.2f}' % sf_avg['GR'],
+		    	    r'\num{%.2f}' % sf_avg['G4v'],
+			    r'\num{%.2f}' % sf_avg['Sid']))
+            cr_rho[d+run].append((injkind,
+                            r'\num{%.2f}' % sf_crab['GR'],
+		   	    r'\num{%.2f}' % sf_crab['G4v'],
+			    r'\num{%.2f}' % sf_crab['Sid']))
 
 
 ###############################################################################
