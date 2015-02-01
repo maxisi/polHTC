@@ -20,6 +20,7 @@ mplparams = {
     'text.usetex': True,  # use LaTeX for all text
     'axes.linewidth': 1,  # set axes linewidths to 0.5
     'axes.grid': False,  # add a grid
+    'axes.labelweight': 'normal',
     #'axes.axisbelow': True,
     #'grid.linestyle': '-',  # grid as solid lines not dashed
     #'grid.color': 'gray',  # grid lines grey
@@ -48,29 +49,37 @@ signal = g.Signal.from_names(ifo, psr, t)
 
 ### PLOTS
 tick_locs = np.linspace(t[0], t[-1], 5)
-tick_name = ['00:00', '06:00', '12:00', '18:00', '24:00']
+tick_name = [r'00:00', r'06:00', r'12:00', r'18:00', r'24:00']
 
 for p in g.pols.keys():
-    plt.plot(t, signal(p, pol=src.param['POL']), label='$%s$' % g.pol_sym[p])
+    fig, ax = plt.subplots(1)
+    ax.plot(t, signal(p, pol=src.param['POL']), label='$%s$' % g.pol_sym[p])
 
-    plt.ylim(-1,1)
-    plt.xlim(t[0], t[-1])
+    ax.set_xticks(tick_locs)
+    ax.set_xticklabels(tick_name)
+    ax.set_ylim(-1,1)
+    ax.set_xlim(t[0], t[-1])
 
-    plt.grid(b=True, axis='y')
+    ax.grid(b=True, axis='y')
 
-    plt.ylabel('$A_{%s}$' % g.pol_sym[p])
-    plt.xlabel('UTC Time (h)')
+    ax.set_ylabel('$A_{%s}$' % g.pol_sym[p])
+    ax.set_xlabel('UTC Time (h)')
 
-    plt.xticks(tick_locs, tick_name)
-
-#    matplotlib.rc('font', size=14)
+    fontProperties = {'family':'serief','weight': 'light'}
+    a = plt.gca()
+    a.set_xticklabels(tick_name, fontProperties)
+    a.set_yticklabels(a.get_yticks(), fontProperties)
+    matplotlib.rc('font', size=16)
 #    matplotlib.rc('axes', labelsize=20)
+
+#    matplotlib.rc('font', weight='normal')
 
     figname = '%(plots_dir)spol_%(p)s_%(ifo)s_%(psr)s.pdf' % locals()
 
-    plt.savefig(figname, bbox_inches='tight')
+    fig.savefig(figname, bbox_inches='tight')
     plt.close()
     print '%s AP plot: %s' % (p, figname)
+#    sys.exit(0)
 
 
 ###############################################################################
@@ -80,9 +89,9 @@ for tmpkind in ['GR', 'G4v']:
     # Build signal
     sig = signal(tmpkind,pol=src.param['POL'], inc=src.param['INC'])
 
-    plt.plot(t, sig.real, 'b', label='Re')
-    plt.plot(t, sig.imag, 'r', label='Im')
-    plt.plot(t, abs(sig), linestyle='dashed', color='0.5', label='Norm')
+    plt.plot(t, 2.*sig.real, 'b', label='Re')
+    plt.plot(t, 2.*sig.imag, 'r', label='Im')
+    plt.plot(t, 2.*abs(sig), linestyle='dashed', color='0.5', label='Norm')
 
     plt.ylim(-1,1)
     plt.xlim(t[0], t[-1])
@@ -96,7 +105,11 @@ for tmpkind in ['GR', 'G4v']:
 
     plt.xticks(tick_locs, tick_name)
 
-    figname = '%(plots_dir)stem_%(tmpkind)s_%(kind)s_%(psr)s.pdf' % locals()
+    a = plt.gca()
+    a.set_xticklabels(tick_name, fontProperties)
+    a.set_yticklabels(a.get_yticks(), fontProperties)
+
+    figname = '%(plots_dir)stem_%(tmpkind)s_%(psr)s.pdf' % locals()
     plt.savefig(figname, bbox_inches='tight')
     plt.close()
 
@@ -117,7 +130,7 @@ plt.xlabel('GPS time')
 plt.ylabel('Het. strain (Re)')
 plt.xlim(t[0], t[-1])
 
-figname = '%(plots_dir)sreFinehet_%(det)s_%(run)s_%(psr)s' % locals()
+figname = '%(plots_dir)sreFinehet_%(ifo)s_%(run)s_%(psr)s' % locals()
 
 plt.savefig(figname, bbox_inches='tight')
 plt.close()
@@ -129,13 +142,14 @@ print 'Finehet plot: ' + figname
 # PLOT DAILY STANDARD DEVIATION
 s = p.get_sigma()
 
-plt.plot(t, s, '+')
+fig, ax = plt.subplots(1)
+ax.plot(t, s, '+')
+ax.grid(b=True, axis='both')
+ax.set_xlabel('GPS time', fontsize=20)
+ax.set_ylabel(r'$\sigma$', fontsize=22)
 
-plt.xlabel('GPS time')
-plt.ylabel(r'$\sigma$')
-
-figname = '%(plots_dir)sstd_%(det)s_%(run)s_%(psr)s' % locals()
-plt.savefig(figname, bbox_inches='tight')
+figname = '%(plots_dir)sstd_%(ifo)s_%(run)s_%(psr)s' % locals()
+fig.savefig(figname, bbox_inches='tight')
 plt.close()
 
 print 'Daily STD plot: ' + figname
