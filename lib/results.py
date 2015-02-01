@@ -29,7 +29,7 @@ mplparams = {
     #'grid.color': 'gray',  # grid lines grey
     #'grid.linewidth': 0.5,
     'font.family': 'serif',
-    'font.size': 18
+    'font.size': 24
 }
 matplotlib.rcParams.update(mplparams)
 
@@ -479,7 +479,7 @@ class Results(object):
              methods=None, title=True, filetype='png', alpha=.3, shade=True,
              scale=1., hide_data=False, legend=True, xlim=None, ylim=None,
              rollwindow=2e-26, rollcolor=None, band=True, bestonly=False,
-             suffix='', path=g.paths['plots'], bbox='tight', legendfont=14):
+             suffix='', path=g.paths['plots'], bbox='tight', legendfont=18):
         """Plots 'kind' (hrec/srec) vs hinj for methods listed in 'methods'.
         """
 
@@ -565,10 +565,10 @@ class Results(object):
         # add labels indicating noise threshold and band confidence
         if det_thrsh:
             ax.text(.02, .7, 'Detection threshold: ' + str(det_thrsh),
-                    fontsize=10, transform=ax.transAxes)
+                    fontsize=14, transform=ax.transAxes)
         if band_conf:
             ax.text(.02, .65, 'Band confidence: ' + str(band_conf),
-                    fontsize=10, transform=ax.transAxes)
+                    fontsize=14, transform=ax.transAxes)
         # style
         ax.set_xlabel(r'$h_{\rm inj}$')
         ax.set_ylabel(kindname)
@@ -593,7 +593,7 @@ class Results(object):
 
     def plot_p(self, kind, methods=None, nbins=100, star=None, starsize=10,
                starcolor='y', fit=True, title=True, legend=True, legendloc=3,
-               legendfont=14, xlim=False, ylim=(1e-4,1), path=g.paths['plots'],
+               legendfont=18, xlim=False, ylim=(1e-4,1), path=g.paths['plots'],
                suffix='', filetype='png', hidedata=False, manyfiles=False,
                grid=False):
 
@@ -1099,9 +1099,9 @@ class ResultsMP(object):
     # Plots
     def plot(self, psrparam, statkinds, det_thrsh=.999, det_conf=.95,
              suffix='', methods=None, path=g.paths['plots'], filetype='pdf',
-             logy=False, title=True, legend=True, legend_loc='lower right',
+             logy=False, title=True, legend=True, legend_loc='upper left',
              logx=False, xlim=None, ylim=None, grid=True, bbox='tight',
-             legendfont=14):
+             legendfont=18):
         """Produces plot of efficiency indicator (noise, min-hrec) vs a PSR
         parameter (e.g. FR0, DEC, 'RAS').
         """
@@ -1245,17 +1245,17 @@ class ResultsMP(object):
 
         ax.set_xlim(xlim[0], xlim[1])
         ax.set_ylim(ylim[0], ylim[1])
-        ax.set_xlabel(r'Gravitational-wave Frequency (Hz)', fontsize=20,
+        ax.set_xlabel(r'Gravitational-wave Frequency (Hz)', fontsize=22,
                    fontweight=100)
-        ax.set_ylabel(r'Detection threshold (strain)')
+        ax.set_ylabel(r'Detection threshold (strain)', fontsize=22)
 
-        ax.text(.02, 0.075, 'Number of pulsars: ' + str(len(freq)), fontsize=10, transform=ax.transAxes)
-        ax.text(.02, 0.05, 'Detection threshold: ' + str(det_thrsh), fontsize=10, transform=ax.transAxes)
-        ax.text(.02, 0.025, 'Detection confidence: ' + str(det_conf), fontsize=10, transform=ax.transAxes)
+        ax.text(.02, 0.15, 'Number of pulsars: ' + str(len(freq)), fontsize=14, transform=ax.transAxes)
+        ax.text(.02, 0.1, 'Detection threshold: ' + str(det_thrsh), fontsize=14, transform=ax.transAxes)
+        ax.text(.02, 0.05, 'Detection confidence: ' + str(det_conf), fontsize=14, transform=ax.transAxes)
 
         ax.legend(numpoints=1, loc=legendloc)
 
-        plt.setp(plt.gca().get_legend().get_texts(), fontsize='12')
+        plt.setp(plt.gca().get_legend().get_texts(), fontsize='18')
         #fig.subplots_adjust(left=0.18, bottom=0.15)
         p = path + '%ssenscurve_%s%s_%s%s.%s' \
                    % (prefix, self.det, self.run, self.injkind, suffix,
