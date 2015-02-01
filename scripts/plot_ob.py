@@ -44,6 +44,7 @@ latextable = {}
 asciitable = {}
 for d in detectors:
     for run in runs:
+        detbest = (1, 'Z', 'Z')
         tex = [('PSR', 'p GR', 'p G4v', 'p Sid')]
         asciitable[d + run] = 'PSR ROT_FREQ H_DEP H_INDEP\n'
 
@@ -54,7 +55,11 @@ for d in detectors:
             asciitable[d + run] += '%s %.3f %.3f %.3f\n' % (psr, pobs['GR'],
                                                           pobs['G4v'],
                                                           pobs['Sid'])
-        latextable[d+run] = tabulate(tex, headers='firstrow', tablefmt='latex')
+	    best = min([(pobs[m], m, psr) for m in ['GR', 'G4v', 'Sid']])
+	    detbest = min(detbest, best)
+
+        print 'Best OB %s %s: %r' % (run, d, detbest)
+	latextable[d+run] = tabulate(tex, headers='firstrow', tablefmt='latex')
         latextable[d+run] = latextable[d+run].replace(r'\textbackslash{}', '\\').\
             replace(r'\{', r'{').replace(r'\}', r'}')
 

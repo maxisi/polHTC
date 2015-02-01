@@ -34,7 +34,7 @@ parser.add_argument("--prefix", default='')
 parser.add_argument("--suffix", default='')
 parser.add_argument("--linecolor", default='k')
 parser.add_argument("--linewidth", default=1)
-parser.add_argument("--linealpha", default=.6, type=float)
+parser.add_argument("--linealpha", default=.3, type=float)
 parser.add_argument("--marker", default='*')
 parser.add_argument("--markercolor")
 parser.add_argument("--markersize", default=10)
@@ -147,7 +147,7 @@ plt.setp(plt.gca().get_legend().get_texts(), fontsize='12')
 #fig.subplots_adjust(left=0.18, bottom=0.15)
 
 fig.savefig(args.plotpath + args.prefix + 'gausscomp_senscurve_%s%s_%s.%s'
-            % (det, run, kind, args.filetype))
+            % (det, run, kind, args.filetype), bbox_inches='tight')
 
 print "Plot saved: " + args.plotpath + args.prefix +\
       'gausscomp_senscurve_%s%s_%s.%s' % (det, run, kind, args.filetype)
