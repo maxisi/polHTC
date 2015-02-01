@@ -860,7 +860,7 @@ class ResultsMP(object):
             else:
                 print "ERROR: %r injections are not supported." % self.run
                 return
-            
+
     #--------------------------------------------------------------------------
     # Statistics
     def getstat(self, kindstat, det_thrsh=.999, det_conf=.95, verbose=False):

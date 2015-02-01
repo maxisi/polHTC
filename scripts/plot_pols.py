@@ -32,7 +32,7 @@ t = np.array([x+ 630720013 for x in range(0, int(days*g.SS), 60)])
 
 src = g.Pulsar(psr)
 #
-# det = g.Detector(detname)
+# det = g.Detector(ifo)
 # det.load_vectors(t)
 
 signal = g.Signal.from_names(detname, psr, t)
@@ -49,7 +49,7 @@ if 'all' in kind:
         plt.plot(t, signal(p, pol=src.param['POL']), label='$' + g.pol_sym[p] + '$')
 
         if kind == 'all':
-            #plt.title(g.detnames(detname) + ' response to ' + g.pols[p] + ' signals from ' + psr)
+            #plt.title(g.detnames(ifo) + ' response to ' + g.pols[p] + ' signals from ' + psr)
 
             plt.ylim(-1,1)
             plt.xlim(t[0], t[-1])
@@ -64,7 +64,7 @@ if 'all' in kind:
             matplotlib.rc('font', size=14)
             matplotlib.rc('axes', labelsize=20)
 
-            plt.savefig('%(plots_dir)spol_%(p)s_%(detname)s_%(psr)s.pdf' % locals(), bbox_inches='tight')
+            plt.savefig('%(plots_dir)spol_%(p)s_%(ifo)s_%(psr)s.pdf' % locals(), bbox_inches='tight')
             plt.close()
 
     if kind != 'all':
@@ -82,7 +82,7 @@ if 'all' in kind:
 
         plt.xticks(tick_locs, tick_name)
 
-        plt.savefig('%(plots_dir)spol_all_%(detname)s_%(psr)s.pdf' % locals())#, bbox_inches='tight')
+        plt.savefig('%(plots_dir)spol_all_%(ifo)s_%(psr)s.pdf' % locals())#, bbox_inches='tight')
         plt.close()
 
 elif kind in g.pols.keys():
@@ -105,7 +105,7 @@ elif kind in g.pols.keys():
 
     plt.xticks(tick_locs, tick_name)
 
-    plt.savefig('%(plots_dir)spol_%(p)s_%(detname)s_%(psr)s.pdf' % locals(), bbox_inches='tight')
+    plt.savefig('%(plots_dir)spol_%(p)s_%(ifo)s_%(psr)s.pdf' % locals(), bbox_inches='tight')
     plt.close()
 
 elif kind in ['scalar', 'vector', 'tensor']:
@@ -128,7 +128,7 @@ elif kind in ['scalar', 'vector', 'tensor']:
 
     plt.legend(numpoints=1, loc='lower left')
 
-    plt.savefig('%(plots_dir)spol_%(kind)s_%(detname)s_%(psr)s.pdf' % locals(), bbox_inches='tight')
+    plt.savefig('%(plots_dir)spol_%(kind)s_%(ifo)s_%(psr)s.pdf' % locals(), bbox_inches='tight')
     plt.close()
 
 elif kind in ['GRp', 'GRm', 'GR0', 'G4vp', 'G4vm', 'G4v0']:
@@ -142,7 +142,7 @@ elif kind in ['GRp', 'GRm', 'GR0', 'G4vp', 'G4vm', 'G4v0']:
 
     # Format plot
 
-    # plt.title(g.detnames(detname) + ' response to ' + kind + ' signals from ' + psr)
+    # plt.title(g.detnames(ifo) + ' response to ' + kind + ' signals from ' + psr)
 
     plt.plot(t, sig.real, 'b', label='Re')
     plt.plot(t, sig.imag, 'r', label='Im')
