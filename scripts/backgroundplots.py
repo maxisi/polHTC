@@ -171,15 +171,15 @@ for l in [True, False]:
 
     plt.xlabel('Het. strain (Re)')
     plt.ylabel('Normed count')
-    plt.legend(numpoints=1)
-
-    figname = '%(plots_dir)shist_%(det)s_%(run)s_%(psr)s' % locals()
+    plt.legend(numpoints=1, borderpad=0.5, handlelength=0.5,  markerscale=0.5)
+    plt.setp(plt.gca().get_legend().get_texts(), fontsize='18')
+    figname = '%(plots_dir)shist_%(ifo)s_%(run)s_%(psr)s' % locals()
     if l:
         figname += '_log'
     plt.savefig(figname + '.pdf', bbox_inches='tight')
     plt.close()
 
-    print 'Finehet histogram: %s' % figname
+    print 'Finehet histogram: %s.pdf' % figname
 
 ###############################################################################
 # GAUSSIANITY TESTS
@@ -196,6 +196,7 @@ def normedks(segment):
 # Anderson-Darling test
 # http://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.anderson.html
 ad = {
+    'kind': 'ad',
     'stat': lambda x : scipy.stats.anderson(x)[0],
     'yname': 'AD Stat',
     'tname': 'Anderson-Darling test'
@@ -203,6 +204,7 @@ ad = {
 
 # Kolmogorov-Smirnov test
 ks = {
+    'kind': 'ks',
     'stat': lambda x : normedks(x)[1],
     'yname': 'p',
     'tname': 'Kolmogorov-Smirnov test'
@@ -214,7 +216,7 @@ d = p.data.real
 # generate gaussian noise
 d_gauss = np.random.randn(len(t))
 # find number of days which the data spans
-ndays = int(np.ceil((t[-1]-t[0])/g.ss))
+ndays = int(np.ceil((t[-1]-t[0])/g.SS))
 # this will also be the number of bins over which the data will be split
 count = np.histogram(t, bins=ndays)[0]
 # Note from histogram manual: All but the last (righthand-most) bins are
@@ -224,6 +226,7 @@ for test in [ad, ks]:
     stat = test['stat']
     yname = test['yname']
     tname = test['tname']
+    kind = test['kind']
 
     # Split data series based on the count. Define initial and final indices for
     # each day, i_0 and i_f.
@@ -247,10 +250,11 @@ for test in [ad, ks]:
     plt.plot(a_gauss, 'r+', label='Gaussian')
 
     plt.xlabel('Days')
-    figname = '%(plots_dir)s%(kind)s_%(det)s_%(run)s_%(psr)s.pdf' % locals()
+    figname = '%(plots_dir)s%(kind)s_%(ifo)s_%(run)s_%(psr)s.pdf' % locals()
 
     plt.ylabel(yname)
-    plt.legend(numpoints=1)
+    plt.legend(numpoints=1, markerscale=2, handlelength=0.5, borderpad=0.5)
+    plt.setp(plt.gca().get_legend().get_texts(), fontsize='18')
     plt.savefig(figname, bbox_inches='tight')
     plt.close()
 

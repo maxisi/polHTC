@@ -1005,8 +1005,8 @@ class ResultsMP(object):
         if hist and psr is None:
             #plt.title(r'Histogram of $\rho$: %s injections on %s %s data' %
             #          (kind, det, run))
-            plt.xlabel(r'$\rho$')
-            plt.ylabel('Count')
+            plt.xlabel(r'$\rho$', fontsize=30)
+            plt.ylabel('Count', fontsize=30)
             plt.legend(numpoints=1)
             figname = "%srho_%s%s_%s.pdf" % (plotpath, self.det, self.run,
                                              self.injkind)
