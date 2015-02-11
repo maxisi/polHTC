@@ -79,9 +79,14 @@ if injtmp:
     if verbose:
         print "Injecting %s with h0 = %.1e" % (injtmp, args.h0)
     pair.det.load_vectors(time, filename=psrname)
-    data += args.h0 * pair.signal(injtmp, pair.psr.param['POL'],
-                                  pair.psr.param['INC'], PHI0)
-    description_inj = injtmp
+    inc = pair.psr.param['INC']
+    pol = pair.psr.param['POL']
+    data += args.h0 * pair.signal(injtmp, pol, inc, PHI0)
+    # find effective injection strength
+    h = [args.h0 * ap(inc, PHI0) for _, ap in
+         pair.Signal.templates[injtmp].iteritems()]
+    hinj = np.linalg.norm(h)
+    description_inj = "%s (h = %.1e)" % (injtmp, hinj)
 else:
     description_inj = "no"
 
