@@ -8,9 +8,6 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-sys.path.append(os.getcwd())
-from lib import general as g
-
 commandname, inputfile, outputfile = sys.argv
 
 '''
