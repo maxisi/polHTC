@@ -3,8 +3,6 @@
 import random
 import os
 import sys
-import h5py
-import cPickle as pickle
 import logging
 import numpy as np
 
@@ -52,11 +50,6 @@ hinj_magnitude = int(np.round(np.log10(abs(datastd))) - 1)
 hinjrange = [1.0E-27, 10**hinj_magnitude]
 
 ## GET SEARCH AND INJECTION RANDOM PARAMETERS
-
-## RE-HETERODYNES
-log.info('Producing frequency list for re-heterodyne')
-
-freq_lst = np.linspace(frange[0], frange[1], ninst)
 
 log.info('Preparing search parameters.')
 
@@ -112,8 +105,6 @@ results.hinj = []
 
 
 for n in range(ninst):
-
-    freq = freq_lst[n]
 
     hinj = hinj_lst[n]
     pol = pol_lst[n]
