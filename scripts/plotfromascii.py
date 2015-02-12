@@ -27,6 +27,7 @@ plt.plot(time, data.imag, 'r', label='Im')
 plt.ylabel('h (strain)')
 plt.xlabel('Time (GPS)')
 plt.xlim(time[0], time[-1])
+plt.ylim(-1, 1)
 plt.legend(numpoints=1)
 
 plt.savefig(outputfile, bbox_inches='tight')
