@@ -7,7 +7,7 @@ import sys
 from tabulate import tabulate
 
 sys.path.append(os.getcwd())
-from lib import results as r
+from polHTC import results as r
 
 ###############################################################################
 # CONFIG
@@ -76,7 +76,7 @@ for d in detectors:
                              logx=1, logy=1, title=0, xlim=(30, 1500))
                 results.plot('fgw', 's_noise', methods=['GR', 'G4v', 'Sid'],
                              logx=1, title=0, xlim=(30, 1500))
-                
+
             # create best-hmin tables
             names, hmin = results.sortby('psrlist', 'hmin')
             freq, _ = results.sortby('FR0', 'hmin')

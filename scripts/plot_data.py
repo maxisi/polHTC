@@ -12,7 +12,7 @@ import scipy.stats
 import matplotlib.pyplot as plt
 
 sys.path.append(os.getcwd())
-from lib import general as g
+from polHTC import general as g
 
 ### SETUP
 

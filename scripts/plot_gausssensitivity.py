@@ -16,8 +16,8 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 sys.path.append(os.getcwd())
-from lib import results as r
-from lib import general as g
+from polHTC import results as r
+from polHTC import general as g
 
 # PARSE ARGUMENTS
 parser = argparse.ArgumentParser()

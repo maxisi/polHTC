@@ -2,7 +2,7 @@
 
 import os
 import sys
-from lib import general as g
+from polHTC import general as g
 
 pname, det, run, psrIN, ninstSTR, ninjSTR = sys.argv
 

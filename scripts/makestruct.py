@@ -8,15 +8,15 @@ import os
 
 # Create global directory structure
 globalpaths = (
-            'lib/',
-            'data/',
-            'tmp/vectors/',
-	    'tmp/plots/',
-	    'tmp/htc/',
-	    'tmp/injsrch/',
-            'logs/',
-            'config/',
-            )
+    'polHTC/',
+    'data/',
+    'tmp/vectors/',
+    'tmp/plots/',
+    'tmp/htc/',
+    'tmp/injsrch/',
+    'logs/',
+    'config/',
+)
 
 print 'Creating global file structure:'
 
@@ -30,7 +30,7 @@ for d in globalpaths:
 # (maybe next section can be moved to script that imports the data)
 
 # for det, runs in general.detruns.iteritems():
-#     for run in runs:
+# for run in runs:
 #         p = 'globals/data/' + det + '/' + run
 #         try:
 #             os.makedirs(p)

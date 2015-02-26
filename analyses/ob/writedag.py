@@ -1,10 +1,10 @@
-#! /usr/bin/env python 
+#! /usr/bin/env python
 
 import os
 import sys
 
 sys.path.append(os.path.expanduser('~') +'/polHTC/')
-from lib import general as g
+from polHTC import general as g
 
 processname, det, run, psrIN, gridsize = sys.argv
 
@@ -85,14 +85,14 @@ def lines(det, run, psr, method, gridsize):
         'RETRY %(jobname)s 3' % locals(), # retry job 3 times
         '\n'
         ]
-    
+
     return l
 
 
 with open(dagname, 'w') as f:
     f.write('# %(det)s %(run)s %(psrIN)s %(gridsize)s\n\n' % locals() )
     f.write('CONFIG '+ config + '\n\n') # points to configuration file with DAGman variables
-    
+
     for psr in goodpsrs:
             for method in ['GR', 'G4v', 'Sid']:
                 for l in lines(det, run, psr, method, gridsize):

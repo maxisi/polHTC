@@ -48,7 +48,7 @@ class Results(object):
         self.injkind = kind
         self.pair = None
 
-        # Defining local srchmethods to avoid relying on lib.general.
+        # Defining local srchmethods to avoid relying on polHTC.general.
         # This also allows one to load only results of a specific method.
         if isinstance(methods, basestring):
             # assuming only one method was requested, e.g. 'GR'

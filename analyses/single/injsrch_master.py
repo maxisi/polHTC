@@ -9,7 +9,7 @@ import random
 import h5py
 
 sys.path.append(os.getcwd())
-from lib import general as g
+from polHTC import general as g
 
 '''
 Sets up analysis given PSR, detector, injection kind, search method, number of

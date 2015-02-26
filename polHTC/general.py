@@ -2,6 +2,7 @@ import logging
 import cPickle as pickle
 
 import sys
+import os
 import math
 
 import socket
@@ -11,11 +12,16 @@ import scipy.stats
 
 import h5py
 
+###############################################################################
+# Where am I?
+basedir = os.path.dirname(os.path.dirname(__file__))
 
-# #############################################################################
-# # LOGGING
 
-def setuplog(logname, logpath='logs/', logsave='DEBUG', logprint='WARNING'):
+###############################################################################
+# LOGGING
+
+def setuplog(logname, logpath=os.path.join(basedir, 'tmp/logs/'),
+             logsave='DEBUG', logprint='WARNING'):
     """
     Set up logging (from Logging Cookbook, Python online resources).
     Name of log will be: logname+'d'+DATETIME.log (spaces replaced by '_')
@@ -351,10 +357,15 @@ class Pair(object):
         self.log.info('Checking finehet data is available.')
 
         if p == '':
-            datapath = paths['data'] + self.det.name + '/' + run
+            datapath = os.path.join(paths['data'], self.det.name, run)
             dataname = 'finehet_' + self.psr.name + '_' + self.det.name + \
                        '.hdf5'
-            p = datapath + '/' + dataname
+            p = os.path.join(datapath, dataname)
+        elif os.path.isdir(p):
+            datapath = os.path.join(p, self.det.name, run)
+            dataname = 'finehet_' + self.psr.name + '_' + self.det.name + \
+                       '.hdf5'
+            p = os.path.join(datapath, dataname)
 
         try:
             finehet = h5py.File(p, 'r')
@@ -654,6 +665,7 @@ class Signal(object):
                 signal += 0.5 * a(inc, phi0) * (A(psi=pol) + 0j)
 
         elif kind in ['pl', 'cr', 'xz', 'yz', 'br', 'lo']:
+            # note there is no scaling by 1/2 when requesting single AP
             signal = getattr(self, kind)(psi=pol)
 
         return signal
@@ -987,7 +999,8 @@ def read_psrlist(name='', det=False, run=False):
                             badpsrs += [line.strip()]
                             # (.strip() removes \n character)
                 except:
-                    log.warning('No PSR exclusion list found')
+                    log.warning('No PSR exclusion list found in %s'
+                                % paths['badpsrs'])
         else:
             try:
                 with open(paths['badpsrs'], 'r') as f:
@@ -995,7 +1008,8 @@ def read_psrlist(name='', det=False, run=False):
                         badpsrs += [line.strip()]
                         # (.strip() removes \n character)
             except:
-                log.warning('No PSR exclusion list found')
+                log.warning('No PSR exclusion list found in %s'
+                            % paths['badpsrs'])
 
         return badpsrs
 
@@ -1087,25 +1101,25 @@ def mjd_gps(mjd):
 
 # #############################################################################
 # PATHS
-
 paths = {
-    'data': 'data/',
+    'data': os.path.join(basedir, 'data/'),
     # 'originalData' : '/home/matthew/analyses/S6_all/results',
-    'extrapsrparam': 'config/psrextra.txt',
-    'psrcat': 'config/psrcat.p',
-    'psrlist': 'config/psrlist',
-    'badpsrs': 'config/badpsrs.txt',
-    'vectors': 'tmp/vectors',
-    'ob': 'tmp/ob/',
-    'plots': 'tmp/plots/',
-    'subs': 'tmp/htc/',
-    'dags': 'tmp/htc/'
+    'extrapsrparam': os.path.join(basedir, 'config/psrextra.txt'),
+    'psrcat': os.path.join(basedir, 'config/psrcat.p'),
+    'psrlist': os.path.join(basedir, 'config/psrlist'),
+    'badpsrs': os.path.join(basedir, 'config/badpsrs.txt'),
+    'vectors': os.path.join(basedir, 'tmp/vectors'),
+    'ob': os.path.join(basedir, 'tmp/ob/'),
+    'plots': os.path.join(basedir, 'tmp/plots/'),
+    'subs': os.path.join(basedir, 'tmp/htc/'),
+    'dags': os.path.join(basedir, 'tmp/htc/'),
+    'logs': os.path.join(basedir, 'tmp/logs/')
 }
 
 
 def analysis_path(det, run, psr, kind):
     analysis = 'injsrch_' + det + run + '_' + psr + '_' + kind
-    pathname = 'tmp/injsrch/' + det + '/' + run + '/' + analysis
+    pathname = os.path.join(basedir, 'tmp/injsrch', det, run, analysis)
     return pathname
 
 
@@ -1124,3 +1138,5 @@ localpaths = [
     'logs/',
     'results/'
 ]
+
+localpaths = [os.path.join(basedir, lp) for lp in localpaths]

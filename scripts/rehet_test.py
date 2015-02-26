@@ -8,7 +8,7 @@ import os
 sys.path.append(os.path.expanduser('~') + '/polHTC/')
 sys.path.append(os.getcwd())
 
-from lib import general as g
+from polHTC import general as g
 
 """
 Injects signal on Crab data, then reheterodynes and checks the signal is gone.

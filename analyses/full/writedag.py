@@ -5,7 +5,7 @@ import sys
 
 sys.path.append(os.path.expanduser('~') + '/polHTC/')
 sys.path.append(os.getcwd())
-from lib import general as g
+from polHTC import general as g
 
 """
 Writes DAG file for a complete MANY-PSR analysis; namely, injecting GR, G4v on

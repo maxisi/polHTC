@@ -11,7 +11,7 @@ import numpy as np
 sys.path.append(os.path.expanduser('~') + '/polHTC/')
 sys.path.append(os.getcwd())
 
-from lib import general as g
+from polHTC import general as g
 
 '''
 Gets location parameters for pulsars in input list from ATNF online catalogue.

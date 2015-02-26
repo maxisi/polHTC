@@ -21,9 +21,9 @@ ninj = int(ninjSTR)
 sys.path.append(os.path.expanduser('~') + '/polHTC/')
 sys.path.append(os.getcwd())
 
-from lib import general as g
+from polHTC import general as g
 g.setuplog('fullGauss_%(det)s%(run)s_%(psr)s_%(injkind)s' % locals())
-from lib import results as res
+from polHTC import results as res
 
 # setup log
 log = logging.getLogger('InjSrch Prep')

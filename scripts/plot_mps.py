@@ -6,7 +6,7 @@ import os
 import numpy as np
 from scipy.interpolate import interp1d
 sys.path.append(os.getcwd())
-from lib import results as r
+from polHTC import results as r
 # set up plotting backend
 import matplotlib
 #matplotlib.use('Agg')

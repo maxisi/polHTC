@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 plt.rcParams['mathtext.fontset'] = "stix"
 
 sys.path.append(os.getcwd())
-from lib import general as g
+from polHTC import general as g
 
 
 ###############################################################################

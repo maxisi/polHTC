@@ -1,4 +1,4 @@
-#! /usr/bin/env python 
+#! /usr/bin/env python
 
 import random
 import cPickle as pickle
@@ -17,9 +17,9 @@ OPENS BOX for a given PSR, detector and search method.
 # unpack
 process_name, psr, det, run, method, gridsizeSTR = sys.argv
 
-from lib import general as g
+from polHTC import general as g
 g.setuplog('ob_%(det)s%(run)s_%(psr)s_%(method)s' % locals()) # argument added to log filename
-from lib import results as res
+from polHTC import results as res
 
 #note: arguments are taken as strings: need to convert to numerical values.
 gridsize = int(gridsizeSTR)
@@ -73,10 +73,10 @@ if method in ['GR', 'G4v']:
     a = []
     pols = []
     incs = []
-    
+
     ## SEARCH
     log.info('Searching.')
-    
+
     for pol in polsrch:
         for inc in incsrch:
             r_ob = pair.search_finehet(methods=[method], pol=pol, inc=inc)
@@ -85,12 +85,12 @@ if method in ['GR', 'G4v']:
             a += [r_ob['a']]
             pols += [pol]
             incs += [inc]
-    
+
     log.info('Taking best values.')
-    
+
     # take set of values that returned highest significance
     best = sorted(zip(s, h, a, pols, incs))[-1]
-    
+
     # pack into final results
     results = {
                 's'  : best[0],
@@ -102,7 +102,7 @@ if method in ['GR', 'G4v']:
 else:
     log.info('Searching.')
     results = pair.search_finehet(methods=[method])
-            
+
 
 log.info('Saving results')
 try:

@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 import sys
-from lib import results as res
+from polHTC import results as res
 
 '''
 Collect results of single PSR analysis and export to public directory.

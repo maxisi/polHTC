@@ -7,7 +7,7 @@ import sys
 from tabulate import tabulate
 
 sys.path.append(os.getcwd())
-from lib import results as r
+from polHTC import results as r
 
 ###############################################################################
 # CONFIG

@@ -6,7 +6,7 @@ import numpy as np
 import argparse
 import random
 sys.path.append(os.getcwd())
-from lib import general as g
+from polHTC import general as g
 
 # PARSE ARGUMENTS
 parser = argparse.ArgumentParser()
@@ -21,6 +21,10 @@ parser.add_argument("--start_time", default=630720013.0, type=float)
 parser.add_argument("--days", default=1, type=int)
 parser.add_argument("--end_time", default=0, type=float)
 parser.add_argument("-v", "--verbose", action="store_true")
+parser.add_argument("-f", "--frequency", default=0.85e-3, type=float)
+parser.add_argument("--fid", default=None, type=int)
+parser.add_argument("--ninst", default=1e4, type=int)
+parser.add_argument("--actual-time", action="store_true")
 
 args = parser.parse_args()
 verbose = args.verbose
@@ -29,11 +33,27 @@ detname = args.det
 psrname = args.psr
 injtmp = args.inject
 
-REHETFREQ = 0.85-3
 NOISESTD = 1e-23
 PHI0 = 0
 
-if args.real_noise or injtmp:
+# If the fid option is passed, the reheterodyne frequency will be the fid-th
+# entry in the following standard vector (same as used in polMethods searches)
+if args.fid is not None:
+    FREQ_RANGE = [1.0e-7, 0.85e-3]
+    FREQ_ARRAY = freq_lst = np.linspace(FREQ_RANGE[0], FREQ_RANGE[1],
+                                        args.ninst)
+    if args.fid > (args.ninst - 1):
+        print "Error: frequency index (%i) exceeds number of frequencies (%i)." %\
+              (args.fid, args.ninst - 1)
+        sys.exit(1)
+    rehetfreq = FREQ_ARRAY[args.fid]
+else:
+    rehetfreq = args.frequency
+
+if verbose and args.real_noise:
+    print "Reheterodyne frequency: %.2e" % rehetfreq
+
+if args.real_noise or injtmp or args.actual_time:
     pair = g.Pair(psrname, detname)
     pair.load_finehet(run)
 
@@ -50,6 +70,9 @@ if not args.real_noise:
         elif verbose:
             print "Time vector: (%.f, %.f)" % (t0, tf)
         time = np.arange(t0, tf, 60)
+    elif args.actual_time:
+        # use actual time vector
+        time = pair.time
     else:
         # use number of days requested
         time = np.arange(t0, t0 + args.days * g.SS, 60)
@@ -65,7 +88,7 @@ if not args.real_noise:
 else:
     if verbose:
         print "Using actual %s %s noise for PSR %s." % (run, detname, psrname)
-    data = g.het(REHETFREQ, pair.data, pair.time)
+    data = g.het(rehetfreq, pair.data, pair.time)
     time = pair.time
     description_noise = "Actual"
 
