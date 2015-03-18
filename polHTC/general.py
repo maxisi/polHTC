@@ -61,8 +61,8 @@ TSAMPLING = 1 / 16384.  # LIGO data sampling period (s), from M. Pitkin
 
 C = 299792458.  # Speed of light (m/s)
 
-SEARCHMETHODS = ['GR', 'G4v', 'Sid']
-# 'AP', 'Sid'] # ECONOMIC VERSION WITH JUST SID
+SEARCHMETHODS = ['GR', 'G4v', 'Indep']
+# 'AP', 'Indep'] # ECONOMIC VERSION WITH JUST SID
 
 
 # #############################################################################
@@ -465,12 +465,12 @@ class Pair(object):
     def design_matrix(self, kind, pol=0, inc=None):
         """ Returns design matrix for template `kind`.
 
-        :param kind: template type ('GR', 'G4v', 'Sid' or 'AP')
+        :param kind: template type ('GR', 'G4v', 'Indep' or 'AP')
         :param pol: [optional] source polarization angle
         :return: dm: design matrix
         """
 
-        if kind == 'Sid':
+        if kind == 'Indep':
             theta = SIDFREQ * self.time
             dm = [
                 np.ones(len(theta)),
@@ -815,14 +815,14 @@ plotcolor = {
     'GR': 'g',
     'G4v': 'r',
     'AP': 'm',
-    'Sid': 'b'
+    'Indep': 'b'
 }
 
 plotmarker = {
     'GR': '*',
     'G4v': '*',
     'AP': '^',
-    'Sid': '^'
+    'Indep': '^'
 }
 # #############################################################################
 # DETECTOR INFORMATION

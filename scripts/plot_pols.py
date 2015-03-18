@@ -19,7 +19,7 @@ processname, kind = sys.argv
 psr = 'J0534+2200'
 detname = 'H1'
 
-plots_dir = '/Users/maxisi/Dropbox/LIGO/papers/polMethods/plots/patterns/'#g.paths['plots']
+plots_dir = '/Users/maxisi/Desktop/'#g.paths['plots']
 
 days=1
 
@@ -137,16 +137,16 @@ elif kind in ['GRp', 'GRm', 'GR0', 'G4vp', 'G4vm', 'G4v0']:
     pdif = kind[-1]
 
     # Build signal
-    sig = signal(tmpkind, pdif=pdif,pol=src.param['POL'],
+    sig = signal(tmpkind,pol=src.param['POL'],
                  inc=src.param['INC'])
 
     # Format plot
 
     # plt.title(g.detnames(ifo) + ' response to ' + kind + ' signals from ' + psr)
 
-    plt.plot(t, sig.real, 'b', label='Re')
-    plt.plot(t, sig.imag, 'r', label='Im')
-    plt.plot(t, abs(sig), linestyle='dashed', color='0.5', label='Norm')
+    plt.plot(t, sig.real, 'b', label='Re', lw=2, color="#005851")
+    plt.plot(t, sig.imag, 'r', label='Im', lw=2, color="7A303F")
+    plt.plot(t, abs(sig), linestyle='dashed', color='0.5', label='Norm', lw=2)
 
     plt.ylim(-1,1)
     plt.xlim(t[0], t[-1])

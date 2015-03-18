@@ -415,7 +415,7 @@ class Results(object):
     def openbox(self, methods=None, det_thrsh=None, det_conf=.95,
                 p_nbins=100, p_fitorder=3, band_conf=None):
 
-        methods = methods or [self.injkind, 'Sid']
+        methods = methods or [self.injkind, 'Indep']
 
         self.log.info('Opening box.')
         # try to load search results from file; otherwise, search
@@ -962,7 +962,7 @@ class ResultsMP(object):
         """
         Obtain ratio (\rho) between obtained hmin and expected sensitivity.
         """
-        methods = methods or ['Sid', self.injkind]
+        methods = methods or ['Indep', self.injkind]
 
         self.load_asd()
         # get a range of frequencies
@@ -1206,7 +1206,7 @@ class ResultsMP(object):
                  xlim=(30, 1500), path=g.paths['plots'],
                  lp = '/home/misi/Documents/P1200104-v4/', filetype='pdf'):
 
-        methods = methods or ['Sid', self.injkind]
+        methods = methods or ['Indep', self.injkind]
 
         prefix = prefix or self.prefix
         suffix = suffix or self.suffix
