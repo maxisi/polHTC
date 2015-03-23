@@ -31,7 +31,7 @@ crab_gr.plot('h', methods=['GR'], title=False, legend=False, suffix='_ex',
 # CRAB RESULTS PLOTS
 
 # GR
-crab_gr.plot('s', methods=['GR', 'Sid'], band_conf=0, title=False,
+crab_gr.plot('s', methods=['GR', 'Indep'], band_conf=0, title=False,
              suffix='_sid')
 crab_gr.plot('s', methods=['GR', 'G4v'], band_conf=0, title=False,
              suffix='_g4v')
@@ -39,16 +39,16 @@ crab_gr.plot('s', methods=['GR', 'G4v'], band_conf=0, title=False,
 crab_g4v = r.Results('H1', 'S5', 'J0534+2200', 'G4v')
 crab_g4v.load(path=p)
 
-crab_g4v.plot('s', methods=['G4v', 'Sid'], band_conf=0, title=False,
+crab_g4v.plot('s', methods=['G4v', 'Indep'], band_conf=0, title=False,
              suffix='_sid')
 crab_g4v.plot('s', methods=['GR', 'G4v'], band_conf=0, title=False,
              suffix='_gr')
 
-cgrob = crab_gr.openbox(methods=['GR', 'Sid'], det_thrsh=.999, p_fitorder=2)
-cg4vob = crab_g4v.openbox(methods=['G4v', 'Sid'], det_thrsh=.999, p_fitorder=2)
+cgrob = crab_gr.openbox(methods=['GR', 'Indep'], det_thrsh=.999, p_fitorder=2)
+cg4vob = crab_g4v.openbox(methods=['G4v', 'Indep'], det_thrsh=.999, p_fitorder=2)
 
-crab_gr.plot_p('s', methods=['GR','Sid'], star=cgrob[1], fit=0, manyfiles=True)
-crab_g4v.plot_p('s', methods=['G4v','Sid'], star=cg4vob[1], fit=0, manyfiles=1)
+crab_gr.plot_p('s', methods=['GR','Indep'], star=cgrob[1], fit=0, manyfiles=True)
+crab_g4v.plot_p('s', methods=['G4v','Indep'], star=cg4vob[1], fit=0, manyfiles=1)
 
 ###############################################################################
 # ALL PSRs RESULTS PLOTS
@@ -63,8 +63,8 @@ for d in detectors:
     for run in runs:
         mpbest[d + run] = [(' ', 'PSR', r'$\nu$', r'$h_{\rm dep}$',
                             r'$h_{\rm indep}$')]
-	mp_rho[d + run] = [(' ', 'GR', 'G4v', 'Sid')]
-	cr_rho[d + run] = [(' ', 'GR', 'G4v', 'Sid')]
+	mp_rho[d + run] = [(' ', 'GR', 'G4v', 'Indep')]
+	cr_rho[d + run] = [(' ', 'GR', 'G4v', 'Indep')]
 
         for injkind in injections:
             results = r.ResultsMP(injkind, det=d, run=run, path=p)
@@ -72,9 +72,9 @@ for d in detectors:
             results.plot_ref()
 
             if d == 'H1':
-                results.plot('fgw', 's_slope', methods=['GR', 'G4v', 'Sid'],
+                results.plot('fgw', 's_slope', methods=['GR', 'G4v', 'Indep'],
                              logx=1, logy=1, title=0, xlim=(30, 1500))
-                results.plot('fgw', 's_noise', methods=['GR', 'G4v', 'Sid'],
+                results.plot('fgw', 's_noise', methods=['GR', 'G4v', 'Indep'],
                              logx=1, title=0, xlim=(30, 1500))
 
             # create best-hmin tables
@@ -85,21 +85,21 @@ for d in detectors:
             mpbest[d + run].append((injkind, names[injkind][0],
                                      r'\num{%.2f}' % freq[injkind][0],
                                      r'\num{%.3g}' % hmin[injkind][0],
-                                     r'\num{%.3g}' % hmin['Sid'][0]))
+                                     r'\num{%.3g}' % hmin['Indep'][0]))
 
     	    # scale factors
-	    sf_avg = results.scalefactor(methods=['GR', 'G4v', 'Sid'])
+	    sf_avg = results.scalefactor(methods=['GR', 'G4v', 'Indep'])
 	    sf_crab = results.scalefactor(psr='J0534+2200',
-	                methods=['GR', 'G4v', 'Sid'])
+	                methods=['GR', 'G4v', 'Indep'])
 
             mp_rho[d+run].append((injkind,
                             r'\num{%.2f}' % sf_avg['GR'],
 		    	    r'\num{%.2f}' % sf_avg['G4v'],
-			    r'\num{%.2f}' % sf_avg['Sid']))
+			    r'\num{%.2f}' % sf_avg['Indep']))
             cr_rho[d+run].append((injkind,
                             r'\num{%.2f}' % sf_crab['GR'],
 		   	    r'\num{%.2f}' % sf_crab['G4v'],
-			    r'\num{%.2f}' % sf_crab['Sid']))
+			    r'\num{%.2f}' % sf_crab['Indep']))
 
 
 ###############################################################################
@@ -121,7 +121,7 @@ crab_gr_hmin = crab_gr.min_h_det(.999)
 crab_g4v_hmin = crab_g4v.min_h_det(.999)
 
 crabhmin = {' ': ('GR', 'G4v')}
-for m in ['GR', 'G4v', 'Sid']:
+for m in ['GR', 'G4v', 'Indep']:
     crabhmin[m] = (r'\num{%.3g}' % crab_gr_hmin[m],
                    r'\num{%.3g}' % crab_g4v_hmin[m])
 
@@ -131,7 +131,7 @@ t1 = t1.replace(r'\textbackslash{}', '\\').replace(r'\{', r'{').replace(r'\}',
 
 # Crab sensitivity relative to matching template
 crabhmin_rel = {' ': ('GR', 'G4v')}
-for m in ['GR', 'G4v', 'Sid']:
+for m in ['GR', 'G4v', 'Indep']:
     crabhmin_rel[m] = (r'num{%.2f}' % (crab_gr_hmin[m]/crab_gr_hmin['GR']),
                        r'num{%.2f}' % (crab_g4v_hmin[m]/crab_g4v_hmin['G4v']))
 t2 = tabulate(crabhmin_rel, headers=crabhmin_rel.keys(), tablefmt='latex')

@@ -113,7 +113,7 @@ for n in range(ninst):
 
     ## Create Gaussian noise
     log.info('Create white noise.')
-    inst = np.array([random.gauss(0., datastd) for n in range(len(pair.data))])
+    inst = np.array([random.gauss(0., datastd) for n in pair.data])
 
     ## SEARCH
     # inject if needed

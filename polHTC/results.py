@@ -201,8 +201,21 @@ class Results(object):
             self.ninj = len(self.hinj[self.hinj > 0])
             # load recovered h and s
             for m in self.search_methods:
-                self.hrec[m] = f[m + '/hrec'][:]
-                self.srec[m] = f[m + '/srec'][:]
+                try:
+                    self.hrec[m] = f[m + '/hrec'][:]
+                    self.srec[m] = f[m + '/srec'][:]
+                except KeyError:
+                    # this might be due to a mismatch in the names of model
+                    # independent search results
+                    if m == 'Indep':
+                        self.hrec[m] = f['Sid/hrec'][:]
+                        self.srec[m] = f['Sid/srec'][:]
+                    elif m == 'Sid':
+                        self.hrec[m] = f['Indep/hrec'][:]
+                        self.srec[m] = f['Indep/srec'][:]
+                    else:
+                       print sys.exc_info()
+                       sys.exit(1)
 
     def pickseries(self, kind, verbose=False):
         """
