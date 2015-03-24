@@ -6,9 +6,8 @@ import numpy as np
 import scipy.stats
 
 import matplotlib
-#matplotlib.use('Agg')
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-plt.rcParams['mathtext.fontset'] = "stix"
 
 sys.path.append(os.getcwd())
 from polHTC import general as g
@@ -21,13 +20,15 @@ mplparams = {
     'text.usetex': True,  # use LaTeX for all text
     'axes.linewidth': 1,  # set axes linewidths to 0.5
     'axes.grid': False,  # add a grid
-    'axes.labelweight': 'normal',
+    'axes.labelweight': 'bold',
     #'axes.axisbelow': True,
     #'grid.linestyle': '-',  # grid as solid lines not dashed
     #'grid.color': 'gray',  # grid lines grey
     #'grid.linewidth': 0.5,
     'font.family': 'serif',
-    'font.size': 24
+    'font.weight': 'bold',
+    'font.size': 28,
+    'font.serif': 'Computer Modern Roman'
 }
 matplotlib.rcParams.update(mplparams)
 plots_dir = g.paths['plots']
@@ -66,14 +67,10 @@ for p in g.pols.keys():
     ax.set_ylabel('$A_{%s}$' % g.pol_sym[p])
     ax.set_xlabel('UTC Time (h)')
 
-    fontProperties = {'family':'serief','weight': 'light'}
     a = plt.gca()
-    a.set_xticklabels(tick_name, fontProperties)
-    a.set_yticklabels(a.get_yticks(), fontProperties)
-    matplotlib.rc('font', size=16)
-#    matplotlib.rc('axes', labelsize=20)
-
-#    matplotlib.rc('font', weight='normal')
+    a.set_xticklabels(tick_name)
+    a.set_yticklabels(a.get_yticks())
+#    matplotlib.rc('font', size=16)
 
     figname = '%(plots_dir)spol_%(p)s_%(ifo)s_%(psr)s.pdf' % locals()
 
@@ -99,7 +96,9 @@ for tmpkind in ['GR', 'G4v']:
 
     plt.grid(b=True, axis='y')
 
-    plt.legend(numpoints=1, loc='lower right')
+    plt.legend(numpoints=1, loc='lower right', markerscale=2, handlelength=1,
+              borderpad=0.2, labelspacing=0.1, handletextpad=.3, borderaxespad=.3)
+    plt.setp(plt.gca().get_legend().get_texts(), fontsize='24')
 
     plt.ylabel('$\Lambda$ (' + tmpkind + ')')
     plt.xlabel('UTC Time (h)')
@@ -107,14 +106,15 @@ for tmpkind in ['GR', 'G4v']:
     plt.xticks(tick_locs, tick_name)
 
     a = plt.gca()
-    a.set_xticklabels(tick_name, fontProperties)
-    a.set_yticklabels(a.get_yticks(), fontProperties)
+    a.set_xticklabels(tick_name)
+    a.set_yticklabels(a.get_yticks())
 
     figname = '%(plots_dir)stem_%(tmpkind)s_%(psr)s.pdf' % locals()
     plt.savefig(figname, bbox_inches='tight')
     plt.close()
 
     print '%s signal plot: %s' % (tmpkind, figname)
+
 
 ##############################################################################
 # PLOT FINEHET
@@ -127,9 +127,12 @@ plt.figure(figsize=(16, 3), dpi=127)
 
 plt.plot(t, d.real)
 
+matplotlib.rc('font', size=20)
 plt.xlabel('GPS time')
 plt.ylabel('Het. strain (Re)')
 plt.xlim(t[0], t[-1])
+
+plt.yticks(np.linspace(-2e-22, 2e-22, 5))
 
 figname = '%(plots_dir)sreFinehet_%(ifo)s_%(run)s_%(psr)s' % locals()
 
@@ -138,7 +141,7 @@ plt.close()
 
 print 'Finehet plot: ' + figname
 
-
+sys.exit(0)
 ###############################################################################
 # PLOT DAILY STANDARD DEVIATION
 s = p.get_sigma()
@@ -171,8 +174,9 @@ for l in [True, False]:
 
     plt.xlabel('Het. strain (Re)')
     plt.ylabel('Normed count')
-    plt.legend(numpoints=1, borderpad=0.5, handlelength=0.5,  markerscale=0.5)
-    plt.setp(plt.gca().get_legend().get_texts(), fontsize='18')
+    plt.legend(numpoints=1, markerscale=2, handlelength=0.5,
+              borderpad=0.2, labelspacing=0.1, handletextpad=.3, borderaxespad=.3)
+    plt.setp(plt.gca().get_legend().get_texts(), fontsize='24')
     figname = '%(plots_dir)shist_%(ifo)s_%(run)s_%(psr)s' % locals()
     if l:
         figname += '_log'
@@ -253,8 +257,9 @@ for test in [ad, ks]:
     figname = '%(plots_dir)s%(kind)s_%(ifo)s_%(run)s_%(psr)s.pdf' % locals()
 
     plt.ylabel(yname)
-    plt.legend(numpoints=1, markerscale=2, handlelength=0.5, borderpad=0.5)
-    plt.setp(plt.gca().get_legend().get_texts(), fontsize='18')
+    plt.legend(numpoints=1, markerscale=2, handlelength=0.5,
+              borderpad=0.2, labelspacing=0.1, handletextpad=.3, borderaxespad=.3)
+    plt.setp(plt.gca().get_legend().get_texts(), fontsize='24')
     plt.savefig(figname, bbox_inches='tight')
     plt.close()
 

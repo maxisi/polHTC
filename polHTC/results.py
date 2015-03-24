@@ -29,7 +29,8 @@ mplparams = {
     #'grid.color': 'gray',  # grid lines grey
     #'grid.linewidth': 0.5,
     'font.family': 'serif',
-    'font.size': 24
+    'font.size': 28,
+    'font.serif': 'Computer Modern Roman'
 }
 matplotlib.rcParams.update(mplparams)
 
@@ -578,10 +579,10 @@ class Results(object):
         # add labels indicating noise threshold and band confidence
         if det_thrsh:
             ax.text(.02, .7, 'Detection threshold: ' + str(det_thrsh),
-                    fontsize=14, transform=ax.transAxes)
+                    fontsize=20, transform=ax.transAxes)
         if band_conf:
             ax.text(.02, .65, 'Band confidence: ' + str(band_conf),
-                    fontsize=14, transform=ax.transAxes)
+                    fontsize=20, transform=ax.transAxes)
         # style
         ax.set_xlabel(r'$h_{\rm inj}$')
         ax.set_ylabel(kindname)
@@ -1258,17 +1259,17 @@ class ResultsMP(object):
 
         ax.set_xlim(xlim[0], xlim[1])
         ax.set_ylim(ylim[0], ylim[1])
-        ax.set_xlabel(r'Gravitational-wave Frequency (Hz)', fontsize=22,
+        ax.set_xlabel(r'Gravitational-wave Frequency (Hz)',
                    fontweight=100)
-        ax.set_ylabel(r'Detection threshold (strain)', fontsize=22)
+        ax.set_ylabel(r'Detection threshold (strain)')
 
-        ax.text(.02, 0.15, 'Number of pulsars: ' + str(len(freq)), fontsize=14, transform=ax.transAxes)
-        ax.text(.02, 0.1, 'Detection threshold: ' + str(det_thrsh), fontsize=14, transform=ax.transAxes)
-        ax.text(.02, 0.05, 'Detection confidence: ' + str(det_conf), fontsize=14, transform=ax.transAxes)
+        ax.text(.02, 0.15, 'Number of pulsars: ' + str(len(freq)), fontsize=20, transform=ax.transAxes)
+        ax.text(.02, 0.1, 'Detection threshold: ' + str(det_thrsh), fontsize=20, transform=ax.transAxes)
+        ax.text(.02, 0.05, 'Detection confidence: ' + str(det_conf), fontsize=20, transform=ax.transAxes)
 
         ax.legend(numpoints=1, loc=legendloc)
 
-        plt.setp(plt.gca().get_legend().get_texts(), fontsize='18')
+        plt.setp(plt.gca().get_legend().get_texts(), fontsize='20')
         #fig.subplots_adjust(left=0.18, bottom=0.15)
         p = path + '%ssenscurve_%s%s_%s%s.%s' \
                    % (prefix, self.det, self.run, self.injkind, suffix,
@@ -1342,7 +1343,7 @@ class ResultsMP(object):
                     plt.plot(x, y[m], g.plotcolor[m]+'+', label=m)
             # Style
             if legend:
-                plt.legend(loc=legend_loc, numpoints=1, prop={'size': 14})
+                plt.legend(loc=legend_loc, numpoints=1, prop={'size': 20})
             if log:
                 ax.set_yscale('log')
             if 'gw' in psrparam:
