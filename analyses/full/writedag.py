@@ -52,7 +52,7 @@ config  = g.paths['dags'] + 'dagman.config'
 # WRITE SUBMIT
 
 home = os.path.expanduser('~')
-project_dir = home + '/polHTC'
+project_dir = os.path.join(home, 'polHTC/')
 
 analysis_folder = '/analyses/full/'
 # (this serves to separate unrelated executables)
@@ -96,8 +96,8 @@ with open(dagname, 'w') as f:
 
                 txt_lines = [
                     '# ' + psr + ' ' + injkind + '\n',
-                    'JOB ' + jobname + ' ' + project_dir + '/' + subname,
-                    'VARS %(jobname)s psr="%(psr)s"' % locals(),
+                    'JOB %s %s' % (jobname, subname),
+                    'VARS %s psr="%s"' % (jobname, psr),
                     'VARS %(jobname)s det="%(det)s"' % locals(),
                     'VARS %(jobname)s run="%(run)s"' % locals(),
                     'VARS %(jobname)s injkind="%(injkind)s"' % locals(),
