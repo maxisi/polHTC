@@ -16,11 +16,11 @@ PSRs from the pulsar list.
 # PARSE ARGUMENTS
 
 args = sys.argv
-if len(args) == 6:
+if len(args) == 7:
     processname, det, run, psrIN, ninstSTR, ninjSTR, injtype = args
 
     name = ''
-elif len(args) == 7:
+elif len(args) == 8:
     processname, det, run, psrIN, ninstSTR, ninjSTR, injtype, name = args
 
 else:
@@ -31,8 +31,11 @@ analysis_name = 'full' + name
 
 if injtype == "both":
     injkinds = ["GR", "G4v"]
-else:
+elif injtype in ["GR", "G4v"]:
     injkinds = [injtype]
+else:
+    print 'Invalid injection type.'
+    sys.exit(1)
 
 # determine what PSRs to analyze from argument
 psrlist = g.read_psrlist(det=det, run=run, name=psrIN)
