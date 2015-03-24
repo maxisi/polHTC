@@ -46,7 +46,8 @@ datastd = np.std(pair.data)
 # frequencies for re-heterodynes
 frange = [1.0e-7, 0.85-3]
 # injection strengths proportional to overall noise magnitude
-hinj_magnitude = int(np.round(np.log10(abs(datastd))) - 1)
+# ATTENTION: MODIFIED MAGNITUDE!
+hinj_magnitude = int(np.round(np.log10(abs(datastd))))
 hinjrange = [1.0E-27, 10**hinj_magnitude]
 
 ## GET SEARCH AND INJECTION RANDOM PARAMETERS
