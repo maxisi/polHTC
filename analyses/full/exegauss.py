@@ -40,14 +40,12 @@ pair.det.load_vectors(pair.time, filename=psr)
 
 # obtain overall standard deviation of data
 # (will be used to create Gaussian noise)
-datastd = np.std(pair.data)
+datastd = np.std(pair.data.real) + 1j*np.std(pair.data.imag)
 
 ## ANALYSIS PARAMETERS
-# frequencies for re-heterodynes
-frange = [1.0e-7, 0.85-3]
 # injection strengths proportional to overall noise magnitude
 # ATTENTION: MODIFIED MAGNITUDE!
-hinj_magnitude = int(np.round(np.log10(abs(datastd))))
+hinj_magnitude = int(np.round(np.log10(abs(datastd.real))))
 hinjrange = [1.0E-27, 10**hinj_magnitude]
 
 ## GET SEARCH AND INJECTION RANDOM PARAMETERS
@@ -114,7 +112,8 @@ for n in range(ninst):
 
     ## Create Gaussian noise
     log.info('Create white noise.')
-    inst = np.array([random.gauss(0., datastd) for n in pair.data])
+    inst = np.array([random.gauss(0., datastd.real) +
+                     1j*random.gauss(0., datastd.imag) for n in pair.data])
 
     ## SEARCH
     # inject if needed
