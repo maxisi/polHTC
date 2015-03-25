@@ -44,8 +44,7 @@ datastd = np.std(pair.data.real) + 1j*np.std(pair.data.imag)
 
 ## ANALYSIS PARAMETERS
 # injection strengths proportional to overall noise magnitude
-# ATTENTION: MODIFIED MAGNITUDE!
-hinj_magnitude = int(np.round(np.log10(abs(datastd.real))))
+hinj_magnitude = int(np.round(np.log10(abs(datastd.real))) - 1)
 hinjrange = [1.0E-27, 10**hinj_magnitude]
 
 ## GET SEARCH AND INJECTION RANDOM PARAMETERS
