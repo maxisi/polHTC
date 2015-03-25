@@ -25,12 +25,12 @@ crab_gr_unlocked.plot_hs(title=False, methods=["GR"], suffix="_unlocked")
 
 # p--value
 crab_gr.plot_p('s', title=False, star=10, starsize=20,
-            xlim=(0, 12), legend=False, methods=['G4v'])
+               xlim=(0, 12), legend=False, methods=['G4v'])
 # s/hrec vs hinj example
 crab_gr.plot('s', methods=['GR'], title=False, legend=False, suffix='_ex')
 crab_gr.plot('h', methods=['GR'], title=False, legend=False, suffix='_ex',
-             ylim=(0,1.2e-24),)
-sys.exit(0)
+             ylim=(0, 1.2e-24),)
+
 
 ###############################################################################
 # CRAB RESULTS PLOTS
@@ -76,7 +76,7 @@ for d in detectors:
             results = r.ResultsMP(injkind, det=d, run=run, path=p)
             # produce plot
             results.plot_ref()
-    
+
             if d == 'H1':
                 results.plot('fgw', 's_slope', methods=['GR', 'G4v', 'Indep'],
                              logx=1, logy=1, title=0, xlim=(30, 1500), legend_loc="lower left",
@@ -84,21 +84,21 @@ for d in detectors:
                 results.plot('fgw', 's_noise', methods=['GR', 'G4v', 'Indep'],
                              logx=1, title=0, xlim=(30, 1500), legend_loc="upper left",
                              legendfont=22)
-    
+
             # create best-hmin tables
             names, hmin = results.sortby('psrlist', 'hmin')
             freq, _ = results.sortby('FR0', 'hmin')
-    
+
             # LaTex
             mpbest[d + run].append((injkind, names[injkind][0],
                                      r'\num{%.2f}' % freq[injkind][0],
                                      r'\num{%.3g}' % hmin[injkind][0],
                                      r'\num{%.3g}' % hmin['Indep'][0]))
-    
+
             # scale factors
             sf_avg = results.scalefactor(methods=['GR', 'G4v', 'Indep'])
             sf_crab = results.scalefactor(psr='J0534+2200', methods=['GR', 'G4v', 'Indep'])
-        
+
             mp_rho[d+run].append((injkind, r'\num{%.2f}' % sf_avg['GR'],
                                 r'\num{%.2f}' % sf_avg['G4v'], r'\num{%.2f}' % sf_avg['Indep']))
             cr_rho[d+run].append((injkind, r'\num{%.2f}' % sf_crab['GR'],
